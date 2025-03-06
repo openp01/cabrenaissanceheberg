@@ -14,6 +14,10 @@ export default function Home() {
   const handleViewSchedule = () => {
     setLocation("/schedule");
   };
+  
+  const handleViewInvoices = () => {
+    setLocation("/invoices");
+  };
 
   return (
     <>
@@ -29,6 +33,13 @@ export default function Home() {
               >
                 <span className="material-icons mr-2 text-sm">schedule</span>
                 Emploi du temps
+              </button>
+              <button 
+                onClick={handleViewInvoices}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <span className="material-icons mr-2 text-sm">receipt</span>
+                Factures
               </button>
               <button 
                 onClick={handleViewAppointments}
