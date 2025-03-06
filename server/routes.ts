@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPatientSchema, patientFormSchema, appointmentFormSchema } from "@shared/schema";
+import { insertPatientSchema, patientFormSchema, appointmentFormSchema, insertInvoiceSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -228,6 +228,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ available: isAvailable });
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la vérification de disponibilité" });
+    }
+  });
+
+  // Invoice routes
+  app.get("/api/invoices", async (req, res) => {
+    try {
+      const invoices = await storage.getInvoices();
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des factures" });
+    }
+  });
+
+  app.get("/api/invoices/patient/:patientId", async (req, res) => {
+    try {
+      const patientId = parseInt(req.params.patientId);
+      if (isNaN(patientId)) {
+        return res.status(400).json({ error: "ID de patient invalide" });
+      }
+      
+      const invoices = await storage.getInvoicesForPatient(patientId);
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des factures du patient" });
+    }
+  });
+
+  app.get("/api/invoices/therapist/:therapistId", async (req, res) => {
+    try {
+      const therapistId = parseInt(req.params.therapistId);
+      if (isNaN(therapistId)) {
+        return res.status(400).json({ error: "ID de thérapeute invalide" });
+      }
+      
+      const invoices = await storage.getInvoicesForTherapist(therapistId);
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des factures du thérapeute" });
+    }
+  });
+
+  app.get("/api/invoices/appointment/:appointmentId", async (req, res) => {
+    try {
+      const appointmentId = parseInt(req.params.appointmentId);
+      if (isNaN(appointmentId)) {
+        return res.status(400).json({ error: "ID de rendez-vous invalide" });
+      }
+      
+      const invoice = await storage.getInvoiceForAppointment(appointmentId);
+      if (!invoice) {
+        return res.status(404).json({ error: "Facture non trouvée pour ce rendez-vous" });
+      }
+      
+      res.json(invoice);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération de la facture" });
+    }
+  });
+
+  app.get("/api/invoices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de facture invalide" });
+      }
+      
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Facture non trouvée" });
+      }
+      
+      res.json(invoice);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération de la facture" });
+    }
+  });
+
+  app.post("/api/invoices", async (req, res) => {
+    try {
+      const validatedData = insertInvoiceSchema.parse(req.body);
+      const invoice = await storage.createInvoice(validatedData);
+      res.status(201).json(invoice);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la création de la facture" });
+      }
+    }
+  });
+
+  app.put("/api/invoices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de facture invalide" });
+      }
+      
+      const validatedData = insertInvoiceSchema.partial().parse(req.body);
+      const updatedInvoice = await storage.updateInvoice(id, validatedData);
+      
+      if (!updatedInvoice) {
+        return res.status(404).json({ error: "Facture non trouvée" });
+      }
+      
+      res.json(updatedInvoice);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la mise à jour de la facture" });
+      }
+    }
+  });
+
+  app.delete("/api/invoices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de facture invalide" });
+      }
+      
+      const success = await storage.deleteInvoice(id);
+      if (!success) {
+        return res.status(404).json({ error: "Facture non trouvée" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la suppression de la facture" });
     }
   });
 
