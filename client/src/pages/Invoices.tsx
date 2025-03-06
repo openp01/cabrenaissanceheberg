@@ -1,17 +1,33 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { InvoiceWithDetails, Therapist } from "@shared/schema";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Invoices() {
   const [selectedTherapist, setSelectedTherapist] = useState<string>('all');
   const [, setLocation] = useLocation();
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Récupérer toutes les factures
   const { data: invoices, isLoading, error } = useQuery({
@@ -31,6 +47,34 @@ export default function Invoices() {
       if (!response.ok) throw new Error("Erreur lors du chargement des thérapeutes");
       return response.json() as Promise<Therapist[]>;
     }
+  });
+  
+  // Mutation pour mettre à jour le statut de la facture
+  const updateInvoiceStatus = useMutation({
+    mutationFn: async ({ invoiceId, status }: { invoiceId: number, status: string }) => {
+      return apiRequest(
+        'PUT',
+        `/api/invoices/${invoiceId}`,
+        { status }
+      );
+    },
+    onSuccess: () => {
+      // Invalider le cache pour forcer un rechargement des factures
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({
+        title: "Statut mis à jour",
+        description: "Le statut de la facture a été mis à jour avec succès.",
+        variant: "default",
+      });
+      setSelectedInvoice(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la mise à jour du statut.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -132,7 +176,7 @@ export default function Invoices() {
                       <Badge 
                         variant={
                           invoice.status === "Payée" 
-                            ? "success" as any
+                            ? "success"
                             : invoice.status === "En attente" 
                               ? "outline" 
                               : "destructive"
@@ -141,7 +185,7 @@ export default function Invoices() {
                         {invoice.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right flex items-center justify-end gap-2">
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -149,6 +193,43 @@ export default function Invoices() {
                       >
                         Détails
                       </Button>
+                      
+                      {invoice.status === "En attente" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800"
+                              onClick={() => setSelectedInvoice(invoice)}
+                            >
+                              Marquer payée
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmer le paiement</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Êtes-vous sûr de vouloir marquer la facture {invoice.invoiceNumber} comme payée ?
+                                Cette action ne peut pas être annulée.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => {
+                                  updateInvoiceStatus.mutate({
+                                    invoiceId: invoice.id,
+                                    status: "Payée"
+                                  });
+                                }}
+                              >
+                                Confirmer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
