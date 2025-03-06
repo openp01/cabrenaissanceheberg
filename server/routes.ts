@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = appointmentFormSchema.parse(req.body);
       
-      // Check availability
+      // Check availability for first appointment
       const isAvailable = await storage.checkAvailability(
         validatedData.therapistId,
         validatedData.date,
@@ -149,18 +149,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle recurring appointments
       if (validatedData.isRecurring && validatedData.recurringFrequency && validatedData.recurringCount) {
-        const appointments = await storage.createRecurringAppointments(
-          validatedData,
-          validatedData.recurringFrequency,
-          validatedData.recurringCount
-        );
-        res.status(201).json(appointments);
+        try {
+          const appointments = await storage.createRecurringAppointments(
+            validatedData,
+            validatedData.recurringFrequency,
+            validatedData.recurringCount
+          );
+          res.status(201).json(appointments);
+        } catch (recurringError) {
+          console.error("Erreur lors de la création des rendez-vous récurrents:", recurringError);
+          res.status(409).json({ 
+            error: "Certains créneaux récurrents sont déjà réservés. Veuillez choisir d'autres dates ou horaires." 
+          });
+        }
       } else {
         // Create single appointment
         const appointment = await storage.createAppointment(validatedData);
         res.status(201).json(appointment);
       }
     } catch (error) {
+      console.error("Erreur lors de la création du rendez-vous:", error);
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
         res.status(400).json({ error: validationError.message });

@@ -486,6 +486,44 @@ export class PgStorage implements IStorage {
   ): Promise<Appointment[]> {
     const appointments: Appointment[] = [];
     
+    // Calculer toutes les dates récurrentes à l'avance pour vérifier la disponibilité
+    const recurringDates: { date: string; time: string }[] = [];
+    
+    // Ajouter la date de base
+    recurringDates.push({ date: baseAppointment.date, time: baseAppointment.time });
+    
+    // Calculer les dates suivantes
+    for (let i = 1; i < count; i++) {
+      let nextDate = new Date();
+      const [day, month, year] = baseAppointment.date.split('/').map(n => parseInt(n));
+      nextDate = new Date(year, month - 1, day);
+      
+      // Calculer la date du prochain rendez-vous en fonction de la fréquence
+      if (frequency === 'weekly') {
+        nextDate.setDate(nextDate.getDate() + (7 * i));
+      } else if (frequency === 'biweekly') {
+        nextDate.setDate(nextDate.getDate() + (14 * i));
+      } else if (frequency === 'monthly') {
+        nextDate.setMonth(nextDate.getMonth() + i);
+      }
+      
+      const newDate = format(nextDate, 'dd/MM/yyyy');
+      recurringDates.push({ date: newDate, time: baseAppointment.time });
+    }
+    
+    // Vérifier la disponibilité pour toutes les dates calculées (sauf la première qui a déjà été vérifiée)
+    for (let i = 1; i < recurringDates.length; i++) {
+      const isAvailable = await this.checkAvailability(
+        baseAppointment.therapistId,
+        recurringDates[i].date,
+        recurringDates[i].time
+      );
+      
+      if (!isAvailable) {
+        throw new Error(`Le créneau du ${recurringDates[i].date} à ${recurringDates[i].time} est déjà réservé`);
+      }
+    }
+    
     // Créer le premier rendez-vous
     const firstAppointment = await this.createAppointment({
       ...baseAppointment,
@@ -502,27 +540,12 @@ export class PgStorage implements IStorage {
     
     // Créer les rendez-vous récurrents
     for (let i = 1; i < count; i++) {
-      let nextDate = new Date();
-      const [day, month, year] = baseAppointment.date.split('/').map(n => parseInt(n));
-      nextDate = new Date(year, month - 1, day);
-      
-      // Calculer la date du prochain rendez-vous en fonction de la fréquence
-      if (frequency === 'weekly') {
-        nextDate.setDate(nextDate.getDate() + (7 * i));
-      } else if (frequency === 'biweekly') {
-        nextDate.setDate(nextDate.getDate() + (14 * i));
-      } else if (frequency === 'monthly') {
-        nextDate.setMonth(nextDate.getMonth() + i);
-      }
-      
-      const newDate = format(nextDate, 'dd/MM/yyyy');
-      
       // Désactiver la génération automatique de facture en utilisant un flag spécial
       const skipInvoiceGeneration = true;
       
       const recurringAppointment = await this.createAppointment({
         ...baseAppointment,
-        date: newDate,
+        date: recurringDates[i].date,
         isRecurring: true,
         recurringFrequency: frequency,
         recurringCount: null,
@@ -534,7 +557,7 @@ export class PgStorage implements IStorage {
       // Si une facture a été générée pour le premier rendez-vous, mettre à jour ses notes
       // pour mentionner ce rendez-vous supplémentaire
       if (firstInvoice) {
-        const updatedNotes = `${firstInvoice.notes}\nInclude également la séance du ${newDate}`;
+        const updatedNotes = `${firstInvoice.notes}\nInclut également la séance du ${recurringDates[i].date}`;
         await this.updateInvoice(firstInvoice.id, { 
           notes: updatedNotes
         });
