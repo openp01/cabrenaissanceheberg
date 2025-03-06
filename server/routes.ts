@@ -210,13 +210,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "ID de rendez-vous invalide" });
       }
       
+      console.log(`Tentative de suppression du rendez-vous ${id}`);
       const success = await storage.deleteAppointment(id);
       if (!success) {
         return res.status(404).json({ error: "Rendez-vous non trouvé" });
       }
       
+      console.log(`Rendez-vous ${id} supprimé avec succès`);
       res.status(204).send();
     } catch (error) {
+      console.error(`Erreur détaillée lors de la suppression du rendez-vous ${req.params.id}:`, error);
       res.status(500).json({ error: "Erreur lors de la suppression du rendez-vous" });
     }
   });

@@ -662,79 +662,88 @@ export class PgStorage implements IStorage {
   }
 
   async deleteAppointment(id: number): Promise<boolean> {
-    // Récupérer les informations sur le rendez-vous
-    const appointment = await this.getAppointment(id);
-    
-    if (!appointment) {
-      return false;
-    }
-    
-    // Vérifier si ce rendez-vous est récurrent et s'il est le premier d'une série
-    const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
-    
-    // Si c'est un rendez-vous parent, récupérer tous les rendez-vous enfants
-    let childAppointments: Appointment[] = [];
-    if (isParentAppointment) {
-      const result = await pool.query(
-        'SELECT * FROM appointments WHERE parentAppointmentId = $1',
-        [id]
-      );
+    try {
+      // Récupérer les informations sur le rendez-vous
+      const appointment = await this.getAppointment(id);
       
-      childAppointments = result.rows.map(row => ({
-        id: row.id,
-        patientId: row.patientid,
-        therapistId: row.therapistid,
-        date: row.date,
-        time: row.time,
-        duration: row.duration,
-        type: row.type,
-        notes: row.notes,
-        status: row.status,
-        isRecurring: row.isrecurring,
-        recurringFrequency: row.recurringfrequency,
-        recurringCount: row.recurringcount,
-        parentAppointmentId: row.parentappointmentid
-      }));
-    }
-    
-    // Vérifier s'il existe des factures liées à ce rendez-vous
-    const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
-    
-    // Si des factures existent, mettre à jour leur statut plutôt que de les supprimer
-    if (invoiceResult.rows.length > 0) {
-      for (const row of invoiceResult.rows) {
-        console.log(`Mise à jour de la facture ${row.id} suite à la suppression du rendez-vous ${id}`);
-        await this.updateInvoice(row.id, { status: 'Annulée' });
+      if (!appointment) {
+        return false;
       }
-    }
-    
-    // Supprimer le rendez-vous
-    const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
-    
-    // Si c'est un rendez-vous parent et qu'il a des enfants, mettre à jour ou supprimer également ces rendez-vous
-    if (isParentAppointment && childAppointments.length > 0) {
-      console.log(`Suppression de ${childAppointments.length} rendez-vous récurrents liés au rendez-vous parent ${id}`);
       
-      for (const childAppointment of childAppointments) {
-        // Vérifier s'il existe une facture pour ce rendez-vous enfant
-        const childInvoiceResult = await pool.query(
-          'SELECT id FROM invoices WHERE appointmentId = $1',
-          [childAppointment.id]
+      // Vérifier si ce rendez-vous est récurrent et s'il est le premier d'une série
+      const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
+      
+      // Si c'est un rendez-vous parent, récupérer tous les rendez-vous enfants
+      let childAppointments: Appointment[] = [];
+      if (isParentAppointment) {
+        const result = await pool.query(
+          'SELECT * FROM appointments WHERE parentAppointmentId = $1',
+          [id]
         );
         
-        // Mettre à jour le statut des factures associées
-        if (childInvoiceResult.rows.length > 0) {
-          for (const row of childInvoiceResult.rows) {
-            await this.updateInvoice(row.id, { status: 'Annulée' });
+        childAppointments = result.rows.map(row => ({
+          id: row.id,
+          patientId: row.patientid,
+          therapistId: row.therapistid,
+          date: row.date,
+          time: row.time,
+          duration: row.duration,
+          type: row.type,
+          notes: row.notes,
+          status: row.status,
+          isRecurring: row.isrecurring,
+          recurringFrequency: row.recurringfrequency,
+          recurringCount: row.recurringcount,
+          parentAppointmentId: row.parentappointmentid
+        }));
+      }
+      
+      // Traiter les enfants d'abord si c'est un rendez-vous parent
+      if (isParentAppointment && childAppointments.length > 0) {
+        console.log(`Traitement de ${childAppointments.length} rendez-vous récurrents liés au rendez-vous parent ${id}`);
+        
+        for (const childAppointment of childAppointments) {
+          try {
+            // Vérifier s'il existe une facture pour ce rendez-vous enfant
+            const childInvoiceResult = await pool.query(
+              'SELECT id FROM invoices WHERE appointmentId = $1',
+              [childAppointment.id]
+            );
+            
+            // Mettre à jour le statut des factures associées
+            if (childInvoiceResult.rows.length > 0) {
+              for (const row of childInvoiceResult.rows) {
+                await this.updateInvoice(row.id, { status: 'Annulée' });
+              }
+            }
+            
+            // Supprimer le rendez-vous enfant
+            await pool.query('DELETE FROM appointments WHERE id = $1', [childAppointment.id]);
+          } catch (err) {
+            console.error(`Erreur lors de la suppression du rendez-vous enfant ${childAppointment.id}:`, err);
+            // Continuer avec les autres rendez-vous enfants malgré l'erreur
           }
         }
-        
-        // Supprimer le rendez-vous enfant
-        await pool.query('DELETE FROM appointments WHERE id = $1', [childAppointment.id]);
       }
+      
+      // Vérifier s'il existe des factures liées à ce rendez-vous
+      const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
+      
+      // Si des factures existent, mettre à jour leur statut plutôt que de les supprimer
+      if (invoiceResult.rows.length > 0) {
+        for (const row of invoiceResult.rows) {
+          console.log(`Mise à jour de la facture ${row.id} suite à la suppression du rendez-vous ${id}`);
+          await this.updateInvoice(row.id, { status: 'Annulée' });
+        }
+      }
+      
+      // Supprimer le rendez-vous principal
+      const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error("Erreur lors de la suppression du rendez-vous:", error);
+      throw error; // Propager l'erreur pour pouvoir la capturer dans la route
     }
-    
-    return result.rows.length > 0;
   }
 
   async checkAvailability(therapistId: number, date: string, time: string): Promise<boolean> {
@@ -748,38 +757,43 @@ export class PgStorage implements IStorage {
 
   // Méthodes pour les factures
   async getInvoices(): Promise<InvoiceWithDetails[]> {
-    const query = `
-      SELECT i.*, 
-        p.firstName || ' ' || p.lastName as patientName,
-        t.name as therapistName,
-        a.date as appointmentDate,
-        a.time as appointmentTime
-      FROM invoices i
-      JOIN patients p ON i.patientId = p.id
-      JOIN therapists t ON i.therapistId = t.id
-      JOIN appointments a ON i.appointmentId = a.id
-      ORDER BY i.issueDate DESC
-    `;
-    const result = await pool.query(query);
-    return result.rows.map(row => ({
-      id: row.id,
-      invoiceNumber: row.invoicenumber,
-      patientId: row.patientid,
-      therapistId: row.therapistid,
-      appointmentId: row.appointmentid,
-      amount: row.amount,
-      taxRate: row.taxrate,
-      totalAmount: row.totalamount,
-      status: row.status,
-      issueDate: row.issuedate,
-      dueDate: row.duedate,
-      paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      patientName: row.patientname,
-      therapistName: row.therapistname,
-      appointmentDate: row.appointmentdate,
-      appointmentTime: row.appointmenttime
-    }));
+    try {
+      const query = `
+        SELECT i.*, 
+          p.firstName || ' ' || p.lastName as patientName,
+          t.name as therapistName,
+          a.date as appointmentDate,
+          a.time as appointmentTime
+        FROM invoices i
+        JOIN patients p ON i.patientId = p.id
+        JOIN therapists t ON i.therapistId = t.id
+        LEFT JOIN appointments a ON i.appointmentId = a.id
+        ORDER BY i.issueDate DESC
+      `;
+      const result = await pool.query(query);
+      return result.rows.map(row => ({
+        id: row.id,
+        invoiceNumber: row.invoicenumber,
+        patientId: row.patientid,
+        therapistId: row.therapistid,
+        appointmentId: row.appointmentid,
+        amount: row.amount,
+        taxRate: row.taxrate,
+        totalAmount: row.totalamount,
+        status: row.status,
+        issueDate: row.issuedate,
+        dueDate: row.duedate,
+        paymentMethod: row.paymentmethod,
+        notes: row.notes,
+        patientName: row.patientname,
+        therapistName: row.therapistname,
+        appointmentDate: row.appointmentdate || 'N/A',
+        appointmentTime: row.appointmenttime || 'N/A'
+      }));
+    } catch (error) {
+      console.error("Erreur lors de la récupération des factures:", error);
+      return [];
+    }
   }
 
   async getInvoice(id: number): Promise<Invoice | undefined> {
@@ -806,75 +820,85 @@ export class PgStorage implements IStorage {
   }
 
   async getInvoicesForPatient(patientId: number): Promise<InvoiceWithDetails[]> {
-    const query = `
-      SELECT i.*, 
-        p.firstName || ' ' || p.lastName as patientName,
-        t.name as therapistName,
-        a.date as appointmentDate,
-        a.time as appointmentTime
-      FROM invoices i
-      JOIN patients p ON i.patientId = p.id
-      JOIN therapists t ON i.therapistId = t.id
-      JOIN appointments a ON i.appointmentId = a.id
-      WHERE i.patientId = $1
-      ORDER BY i.issueDate DESC
-    `;
-    const result = await pool.query(query, [patientId]);
-    return result.rows.map(row => ({
-      id: row.id,
-      invoiceNumber: row.invoicenumber,
-      patientId: row.patientid,
-      therapistId: row.therapistid,
-      appointmentId: row.appointmentid,
-      amount: row.amount,
-      taxRate: row.taxrate,
-      totalAmount: row.totalamount,
-      status: row.status,
-      issueDate: row.issuedate,
-      dueDate: row.duedate,
-      paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      patientName: row.patientname,
-      therapistName: row.therapistname,
-      appointmentDate: row.appointmentdate,
-      appointmentTime: row.appointmenttime
-    }));
+    try {
+      const query = `
+        SELECT i.*, 
+          p.firstName || ' ' || p.lastName as patientName,
+          t.name as therapistName,
+          a.date as appointmentDate,
+          a.time as appointmentTime
+        FROM invoices i
+        JOIN patients p ON i.patientId = p.id
+        JOIN therapists t ON i.therapistId = t.id
+        LEFT JOIN appointments a ON i.appointmentId = a.id
+        WHERE i.patientId = $1
+        ORDER BY i.issueDate DESC
+      `;
+      const result = await pool.query(query, [patientId]);
+      return result.rows.map(row => ({
+        id: row.id,
+        invoiceNumber: row.invoicenumber,
+        patientId: row.patientid,
+        therapistId: row.therapistid,
+        appointmentId: row.appointmentid,
+        amount: row.amount,
+        taxRate: row.taxrate,
+        totalAmount: row.totalamount,
+        status: row.status,
+        issueDate: row.issuedate,
+        dueDate: row.duedate,
+        paymentMethod: row.paymentmethod,
+        notes: row.notes,
+        patientName: row.patientname,
+        therapistName: row.therapistname,
+        appointmentDate: row.appointmentdate || 'N/A',
+        appointmentTime: row.appointmenttime || 'N/A'
+      }));
+    } catch (error) {
+      console.error(`Erreur lors de la récupération des factures pour le patient ${patientId}:`, error);
+      return [];
+    }
   }
 
   async getInvoicesForTherapist(therapistId: number): Promise<InvoiceWithDetails[]> {
-    const query = `
-      SELECT i.*, 
-        p.firstName || ' ' || p.lastName as patientName,
-        t.name as therapistName,
-        a.date as appointmentDate,
-        a.time as appointmentTime
-      FROM invoices i
-      JOIN patients p ON i.patientId = p.id
-      JOIN therapists t ON i.therapistId = t.id
-      JOIN appointments a ON i.appointmentId = a.id
-      WHERE i.therapistId = $1
-      ORDER BY i.issueDate DESC
-    `;
-    const result = await pool.query(query, [therapistId]);
-    return result.rows.map(row => ({
-      id: row.id,
-      invoiceNumber: row.invoicenumber,
-      patientId: row.patientid,
-      therapistId: row.therapistid,
-      appointmentId: row.appointmentid,
-      amount: row.amount,
-      taxRate: row.taxrate,
-      totalAmount: row.totalamount,
-      status: row.status,
-      issueDate: row.issuedate,
-      dueDate: row.duedate,
-      paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      patientName: row.patientname,
-      therapistName: row.therapistname,
-      appointmentDate: row.appointmentdate,
-      appointmentTime: row.appointmenttime
-    }));
+    try {
+      const query = `
+        SELECT i.*, 
+          p.firstName || ' ' || p.lastName as patientName,
+          t.name as therapistName,
+          a.date as appointmentDate,
+          a.time as appointmentTime
+        FROM invoices i
+        JOIN patients p ON i.patientId = p.id
+        JOIN therapists t ON i.therapistId = t.id
+        LEFT JOIN appointments a ON i.appointmentId = a.id
+        WHERE i.therapistId = $1
+        ORDER BY i.issueDate DESC
+      `;
+      const result = await pool.query(query, [therapistId]);
+      return result.rows.map(row => ({
+        id: row.id,
+        invoiceNumber: row.invoicenumber,
+        patientId: row.patientid,
+        therapistId: row.therapistid,
+        appointmentId: row.appointmentid,
+        amount: row.amount,
+        taxRate: row.taxrate,
+        totalAmount: row.totalamount,
+        status: row.status,
+        issueDate: row.issuedate,
+        dueDate: row.duedate,
+        paymentMethod: row.paymentmethod,
+        notes: row.notes,
+        patientName: row.patientname,
+        therapistName: row.therapistname,
+        appointmentDate: row.appointmentdate || 'N/A',
+        appointmentTime: row.appointmenttime || 'N/A'
+      }));
+    } catch (error) {
+      console.error(`Erreur lors de la récupération des factures pour le thérapeute ${therapistId}:`, error);
+      return [];
+    }
   }
 
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
