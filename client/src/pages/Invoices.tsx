@@ -29,21 +29,29 @@ export default function Invoices() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Récupérer toutes les factures
-  const { data: invoices, isLoading, error } = useQuery({
+  // Récupérer toutes les factures avec option de rafraîchissement
+  const { data: invoices, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/invoices"],
     queryFn: async () => {
-      const response = await fetch("/api/invoices");
+      // Ajout d'un timestamp pour éviter la mise en cache par le navigateur
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/invoices?_=${timestamp}`, {
+        cache: "no-store"
+      });
       if (!response.ok) throw new Error("Erreur lors du chargement des factures");
       return response.json() as Promise<InvoiceWithDetails[]>;
-    }
+    },
+    refetchOnWindowFocus: true
   });
   
   // Récupérer tous les thérapeutes pour le filtre
   const { data: therapists } = useQuery({
     queryKey: ["/api/therapists"],
     queryFn: async () => {
-      const response = await fetch("/api/therapists");
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/therapists?_=${timestamp}`, {
+        cache: "no-store"
+      });
       if (!response.ok) throw new Error("Erreur lors du chargement des thérapeutes");
       return response.json() as Promise<Therapist[]>;
     }
@@ -59,8 +67,12 @@ export default function Invoices() {
       );
     },
     onSuccess: () => {
-      // Invalider le cache pour forcer un rechargement des factures
+      // Invalider le cache et forcer un rechargement des factures
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      // Effectuer un refetch manuel pour être sûr d'avoir les dernières données
+      setTimeout(() => {
+        refetch();
+      }, 300); // Petit délai pour permettre à l'API de traiter la requête
       toast({
         title: "Statut mis à jour",
         description: "Le statut de la facture a été mis à jour avec succès.",
@@ -116,9 +128,23 @@ export default function Invoices() {
             <CardTitle className="text-2xl font-bold">Factures</CardTitle>
             <CardDescription>Gestion des factures pour les séances d'orthophonie</CardDescription>
           </div>
-          <Button onClick={() => setLocation("/")}>
-            Retour à l'accueil
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                refetch();
+                toast({
+                  title: "Actualisation",
+                  description: "Les factures ont été rechargées.",
+                });
+              }}
+            >
+              Actualiser
+            </Button>
+            <Button onClick={() => setLocation("/")}>
+              Retour à l'accueil
+            </Button>
+          </div>
         </CardHeader>
         
         <CardContent>
