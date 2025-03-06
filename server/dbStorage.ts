@@ -392,7 +392,7 @@ export class PgStorage implements IStorage {
     }));
   }
 
-  async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
+  async createAppointment(appointment: InsertAppointment, skipInvoiceGeneration: boolean = false): Promise<Appointment> {
     const result = await pool.query(
       `INSERT INTO appointments (
         patientId, therapistId, date, time, duration, type, notes, status,
@@ -432,10 +432,13 @@ export class PgStorage implements IStorage {
     };
     
     // Générer automatiquement une facture si le rendez-vous est confirmé
+    // et que skipInvoiceGeneration n'est pas activé
     console.log("Statut du rendez-vous créé:", newAppointment.status);
-    if (newAppointment.status === 'Confirmé' || newAppointment.status === 'confirmed') {
+    if (!skipInvoiceGeneration && (newAppointment.status === 'Confirmé' || newAppointment.status === 'confirmed')) {
       console.log("Génération d'une facture pour le rendez-vous", newAppointment.id);
       await this.generateInvoiceForAppointment(newAppointment);
+    } else if (skipInvoiceGeneration) {
+      console.log("Génération de facture désactivée pour le rendez-vous récurrent", newAppointment.id);
     } else {
       console.log("Pas de génération de facture car statut !=", 'Confirmé');
     }
@@ -494,6 +497,9 @@ export class PgStorage implements IStorage {
     
     appointments.push(firstAppointment);
     
+    // Récupérer la facture générée pour le premier rendez-vous (si elle existe)
+    const firstInvoice = await this.getInvoiceForAppointment(firstAppointment.id);
+    
     // Créer les rendez-vous récurrents
     for (let i = 1; i < count; i++) {
       let nextDate = new Date();
@@ -511,6 +517,9 @@ export class PgStorage implements IStorage {
       
       const newDate = format(nextDate, 'dd/MM/yyyy');
       
+      // Désactiver la génération automatique de facture en utilisant un flag spécial
+      const skipInvoiceGeneration = true;
+      
       const recurringAppointment = await this.createAppointment({
         ...baseAppointment,
         date: newDate,
@@ -518,15 +527,40 @@ export class PgStorage implements IStorage {
         recurringFrequency: frequency,
         recurringCount: null,
         parentAppointmentId: firstAppointment.id
-      });
+      }, skipInvoiceGeneration);
       
       appointments.push(recurringAppointment);
+      
+      // Si une facture a été générée pour le premier rendez-vous, mettre à jour ses notes
+      // pour mentionner ce rendez-vous supplémentaire
+      if (firstInvoice) {
+        const updatedNotes = `${firstInvoice.notes}\nInclude également la séance du ${newDate}`;
+        await this.updateInvoice(firstInvoice.id, { 
+          notes: updatedNotes
+        });
+      }
+    }
+    
+    // Mettre à jour la facture du premier rendez-vous pour indiquer qu'elle couvre plusieurs séances
+    if (firstInvoice) {
+      const totalAmount = (parseFloat(firstInvoice.amount) * count).toFixed(2);
+      await this.updateInvoice(firstInvoice.id, {
+        notes: `Facture groupée pour ${count} séances d'orthophonie (${frequency})`,
+        amount: (parseFloat(firstInvoice.amount) * count).toString(),
+        totalAmount: totalAmount
+      });
     }
     
     return appointments;
   }
 
   async updateAppointment(id: number, appointmentUpdate: Partial<InsertAppointment>): Promise<Appointment | undefined> {
+    // Récupérer le rendez-vous avant la mise à jour
+    const oldAppointment = await this.getAppointment(id);
+    if (!oldAppointment) {
+      return undefined;
+    }
+    
     // Construire la requête de mise à jour de manière dynamique
     let query = 'UPDATE appointments SET ';
     const values: any[] = [];
@@ -553,7 +587,7 @@ export class PgStorage implements IStorage {
     }
     
     const row = result.rows[0];
-    return {
+    const updatedAppointment = {
       id: row.id,
       patientId: row.patientid,
       therapistId: row.therapistid,
@@ -568,18 +602,115 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid
     };
+    
+    // Si le statut a changé, mettre à jour la facture correspondante
+    if (appointmentUpdate.status && oldAppointment.status !== appointmentUpdate.status) {
+      console.log(`Statut du rendez-vous ${id} modifié: ${oldAppointment.status} -> ${appointmentUpdate.status}`);
+      
+      const invoice = await this.getInvoiceForAppointment(id);
+      
+      if (invoice) {
+        // Mettre à jour le statut de la facture en fonction du statut du rendez-vous
+        let invoiceStatus = invoice.status;
+        
+        if (appointmentUpdate.status === 'Annulé' || appointmentUpdate.status === 'canceled') {
+          invoiceStatus = 'En suspens';
+          console.log(`Facture ${invoice.id} mise en suspens suite à l'annulation du rendez-vous`);
+        } else if (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') {
+          invoiceStatus = 'En attente';
+          console.log(`Facture ${invoice.id} mise en attente suite à la confirmation du rendez-vous`);
+        } else if (appointmentUpdate.status === 'Terminé' || appointmentUpdate.status === 'completed') {
+          invoiceStatus = 'À payer';
+          console.log(`Facture ${invoice.id} mise à payer suite à la complétion du rendez-vous`);
+        }
+        
+        await this.updateInvoice(invoice.id, { status: invoiceStatus });
+      } else if (
+        (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') &&
+        !updatedAppointment.parentAppointmentId // Ne pas générer de facture pour les rendez-vous récurrents enfants
+      ) {
+        // Si le statut passe à Confirmé et qu'il n'y a pas de facture, en créer une
+        console.log(`Création d'une facture pour le rendez-vous ${id} qui vient d'être confirmé`);
+        await this.generateInvoiceForAppointment(updatedAppointment);
+      }
+    }
+    
+    return updatedAppointment;
   }
 
   async deleteAppointment(id: number): Promise<boolean> {
+    // Récupérer les informations sur le rendez-vous
+    const appointment = await this.getAppointment(id);
+    
+    if (!appointment) {
+      return false;
+    }
+    
+    // Vérifier si ce rendez-vous est récurrent et s'il est le premier d'une série
+    const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
+    
+    // Si c'est un rendez-vous parent, récupérer tous les rendez-vous enfants
+    let childAppointments: Appointment[] = [];
+    if (isParentAppointment) {
+      const result = await pool.query(
+        'SELECT * FROM appointments WHERE parentAppointmentId = $1',
+        [id]
+      );
+      
+      childAppointments = result.rows.map(row => ({
+        id: row.id,
+        patientId: row.patientid,
+        therapistId: row.therapistid,
+        date: row.date,
+        time: row.time,
+        duration: row.duration,
+        type: row.type,
+        notes: row.notes,
+        status: row.status,
+        isRecurring: row.isrecurring,
+        recurringFrequency: row.recurringfrequency,
+        recurringCount: row.recurringcount,
+        parentAppointmentId: row.parentappointmentid
+      }));
+    }
+    
     // Vérifier s'il existe des factures liées à ce rendez-vous
     const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
     
-    // Si des factures existent, les supprimer d'abord (contrainte de clé étrangère)
+    // Si des factures existent, mettre à jour leur statut plutôt que de les supprimer
     if (invoiceResult.rows.length > 0) {
-      await pool.query('DELETE FROM invoices WHERE appointmentId = $1', [id]);
+      for (const row of invoiceResult.rows) {
+        console.log(`Mise à jour de la facture ${row.id} suite à la suppression du rendez-vous ${id}`);
+        await this.updateInvoice(row.id, { status: 'Annulée' });
+      }
     }
     
+    // Supprimer le rendez-vous
     const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
+    
+    // Si c'est un rendez-vous parent et qu'il a des enfants, mettre à jour ou supprimer également ces rendez-vous
+    if (isParentAppointment && childAppointments.length > 0) {
+      console.log(`Suppression de ${childAppointments.length} rendez-vous récurrents liés au rendez-vous parent ${id}`);
+      
+      for (const childAppointment of childAppointments) {
+        // Vérifier s'il existe une facture pour ce rendez-vous enfant
+        const childInvoiceResult = await pool.query(
+          'SELECT id FROM invoices WHERE appointmentId = $1',
+          [childAppointment.id]
+        );
+        
+        // Mettre à jour le statut des factures associées
+        if (childInvoiceResult.rows.length > 0) {
+          for (const row of childInvoiceResult.rows) {
+            await this.updateInvoice(row.id, { status: 'Annulée' });
+          }
+        }
+        
+        // Supprimer le rendez-vous enfant
+        await pool.query('DELETE FROM appointments WHERE id = $1', [childAppointment.id]);
+      }
+    }
+    
     return result.rows.length > 0;
   }
 
