@@ -49,27 +49,131 @@ export class MemStorage implements IStorage {
     
     // Initialize with default therapists
     this.initializeTherapists();
+    
+    // Initialize with example patients and appointments
+    this.initializeExampleData();
+  }
+  
+  private initializeExampleData() {
+    // Ajouter des patients de démonstration
+    const examplePatients: InsertPatient[] = [
+      {
+        firstName: "Lucas",
+        lastName: "Dupont",
+        email: "lucas.dupont@exemple.fr",
+        phone: "06 12 34 56 78",
+        notes: "Enfant de 7 ans, dyslexie"
+      },
+      {
+        firstName: "Emma",
+        lastName: "Martin",
+        email: "emma.martin@exemple.fr",
+        phone: "06 98 76 54 32",
+        notes: "Retard de langage, 4 ans"
+      },
+      {
+        firstName: "Thomas",
+        lastName: "Bernard",
+        email: "thomas.bernard@exemple.fr",
+        phone: "06 45 67 89 01",
+        notes: "Bégaiement, adulte"
+      },
+      {
+        firstName: "Léa",
+        lastName: "Petit",
+        email: "lea.petit@exemple.fr",
+        phone: "06 23 45 67 89",
+        notes: "Troubles d'articulation, 5 ans"
+      }
+    ];
+    
+    // Créer les patients
+    const createdPatients: Patient[] = [];
+    examplePatients.forEach(async patient => {
+      const createdPatient = await this.createPatient(patient);
+      createdPatients.push(createdPatient);
+    });
+    
+    // Créer quelques rendez-vous
+    setTimeout(async () => {
+      if (createdPatients.length > 0) {
+        // Obtenir la date actuelle
+        const today = new Date();
+        const formattedToday = format(today, 'dd/MM/yyyy');
+        const tomorrow = addDays(today, 1);
+        const formattedTomorrow = format(tomorrow, 'dd/MM/yyyy');
+        
+        // Créer des rendez-vous pour aujourd'hui et demain
+        const exampleAppointments: InsertAppointment[] = [
+          {
+            patientId: 1,
+            therapistId: 1,
+            date: formattedToday,
+            time: "9:00",
+            status: "Confirmé"
+          },
+          {
+            patientId: 2,
+            therapistId: 1,
+            date: formattedToday,
+            time: "10:00",
+            status: "Confirmé"
+          },
+          {
+            patientId: 3,
+            therapistId: 2,
+            date: formattedToday,
+            time: "14:00",
+            status: "Confirmé"
+          },
+          {
+            patientId: 4,
+            therapistId: 3,
+            date: formattedTomorrow,
+            time: "11:00",
+            status: "Confirmé"
+          },
+          {
+            patientId: 1,
+            therapistId: 4,
+            date: formattedTomorrow,
+            time: "16:00",
+            status: "Confirmé"
+          }
+        ];
+        
+        for (const appointment of exampleAppointments) {
+          await this.createAppointment(appointment);
+        }
+      }
+    }, 100); // Petit délai pour s'assurer que les patients sont bien créés
   }
 
   private initializeTherapists() {
     const defaultTherapists: InsertTherapist[] = [
       { 
-        name: "Thérapeute 1", 
-        specialty: "Psychothérapie", 
+        name: "Dr. Sophie Martin", 
+        specialty: "Troubles du langage", 
         availableDays: "Lun-Ven", 
         workHours: "9h-17h" 
       },
       { 
-        name: "Thérapeute 2", 
-        specialty: "Thérapie familiale", 
+        name: "Dr. Thomas Dubois", 
+        specialty: "Retard de parole", 
         availableDays: "Mar-Sam", 
         workHours: "10h-18h" 
       },
       { 
-        name: "Thérapeute 3", 
-        specialty: "TCC", 
-        availableDays: "Mer-Dim", 
+        name: "Dr. Élise Bernard", 
+        specialty: "Dyslexie", 
+        availableDays: "Mer-Ven", 
         workHours: "8h-16h" 
+      },
+      { 
+        name: "Dr. Jean Petit", 
+        specialty: "Bégaiement", 
+        availableDays: "Lun-Jeu", 
+        workHours: "9h-17h" 
       }
     ];
 
