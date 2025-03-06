@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +27,7 @@ export default function Invoices() {
   const [selectedTherapist, setSelectedTherapist] = useState<string>('all');
   const [, setLocation] = useLocation();
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithDetails | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -69,10 +71,19 @@ export default function Invoices() {
     onSuccess: () => {
       // Invalider le cache et forcer un rechargement des factures
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      // Effectuer un refetch manuel pour être sûr d'avoir les dernières données
-      setTimeout(() => {
-        refetch();
+      
+      // Effectuer un refetch manuel avec un indicateur visuel
+      setIsRefreshing(true);
+      setTimeout(async () => {
+        try {
+          await refetch();
+        } catch (err) {
+          console.error("Erreur lors du rechargement des factures:", err);
+        } finally {
+          setIsRefreshing(false);
+        }
       }, 300); // Petit délai pour permettre à l'API de traiter la requête
+      
       toast({
         title: "Statut mis à jour",
         description: "Le statut de la facture a été mis à jour avec succès.",
@@ -131,15 +142,34 @@ export default function Invoices() {
           <div className="flex gap-2">
             <Button 
               variant="outline"
-              onClick={() => {
-                refetch();
-                toast({
-                  title: "Actualisation",
-                  description: "Les factures ont été rechargées.",
-                });
+              onClick={async () => {
+                setIsRefreshing(true);
+                try {
+                  await refetch();
+                  toast({
+                    title: "Actualisation",
+                    description: "Les factures ont été rechargées.",
+                  });
+                } catch (err) {
+                  toast({
+                    title: "Erreur",
+                    description: "Échec de l'actualisation des factures.",
+                    variant: "destructive"
+                  });
+                } finally {
+                  setIsRefreshing(false);
+                }
               }}
+              disabled={isRefreshing}
             >
-              Actualiser
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Actualisation...
+                </>
+              ) : (
+                "Actualiser"
+              )}
             </Button>
             <Button onClick={() => setLocation("/")}>
               Retour à l'accueil
@@ -249,8 +279,14 @@ export default function Invoices() {
                                     status: "Payée"
                                   });
                                 }}
+                                disabled={updateInvoiceStatus.isPending}
                               >
-                                Confirmer
+                                {updateInvoiceStatus.isPending && invoice.id === selectedInvoice?.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Traitement...
+                                  </>
+                                ) : "Confirmer"}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
