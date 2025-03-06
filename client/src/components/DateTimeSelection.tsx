@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { format, parse, addDays, startOfWeek, isSameDay } from "date-fns";
+import { format, parse, addDays, startOfWeek, isSameDay, isSameMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import { BookingFormData } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import RecurringOptions from "./RecurringOptions";
 
 interface DateTimeSelectionProps {
@@ -21,13 +24,21 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   const [recurringCount, setRecurringCount] = useState(4);
   const [recurringDates, setRecurringDates] = useState<string[]>([]);
   
-  // Time slots
+  const { toast } = useToast();
+
+  // Time slots avec des tranches de 30 minutes pour les séances d'orthophonie
   const timeSlots = [
-    "9:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"
+    "9:00", "9:30", "10:00", "10:30", "11:00", "11:30", 
+    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
   ];
   
   // Week days in French
   const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  
+  // Requête pour vérifier la disponibilité des créneaux
+  const { data: appointments } = useQuery({
+    queryKey: ['/api/appointments'],
+  });
   
   useEffect(() => {
     generateCalendarDays(currentDate);
@@ -81,7 +92,32 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     }
   };
   
+  // Vérifie si un créneau est disponible
+  const isTimeSlotAvailable = (date: Date, time: string) => {
+    if (!formData.therapist || !appointments) return true;
+    
+    const formattedDate = format(date, 'dd/MM/yyyy');
+    
+    return !appointments.some(app => 
+      app.therapistId === formData.therapist?.id && 
+      app.date === formattedDate && 
+      app.time === time
+    );
+  };
+  
   const handleTimeSelect = (time: string) => {
+    if (!selectedDate) return;
+    
+    // Vérifier la disponibilité
+    if (!isTimeSlotAvailable(selectedDate, time)) {
+      toast({
+        title: "Créneau non disponible",
+        description: "Ce créneau horaire est déjà réservé pour cet orthophoniste.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSelectedTime(time);
     
     // Generate recurring dates if needed
@@ -218,18 +254,28 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
           <h4 className="text-md font-medium text-gray-900 mb-4">
             Horaires disponibles pour {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
           </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
-            {timeSlots.map((time, index) => (
-              <button 
-                key={index}
-                className={`py-2 px-3 border rounded-md text-center text-sm hover:border-primary
-                  ${selectedTime === time ? 'bg-primary text-white' : ''}
-                `}
-                onClick={() => handleTimeSelect(time)}
-              >
-                {time}
-              </button>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6">
+            {timeSlots.map((time, index) => {
+              const isAvailable = selectedDate ? isTimeSlotAvailable(selectedDate, time) : true;
+              return (
+                <button 
+                  key={index}
+                  className={`py-2 px-3 border rounded-md text-center text-sm relative
+                    ${selectedTime === time ? 'bg-primary text-white' : ''}
+                    ${!isAvailable ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'hover:border-primary'}
+                  `}
+                  onClick={() => isAvailable && handleTimeSelect(time)}
+                  disabled={!isAvailable}
+                >
+                  {time}
+                  {!isAvailable && (
+                    <span className="absolute top-1 right-1 text-xs text-red-500">
+                      <span className="material-icons" style={{ fontSize: '12px' }}>block</span>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           
           {/* Recurring Options */}

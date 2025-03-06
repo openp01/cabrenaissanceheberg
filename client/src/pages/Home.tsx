@@ -10,6 +10,10 @@ export default function Home() {
   const handleViewAppointments = () => {
     setLocation("/appointments");
   };
+  
+  const handleViewSchedule = () => {
+    setLocation("/schedule");
+  };
 
   return (
     <>
@@ -17,14 +21,23 @@ export default function Home() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Centre Thérapeutique</h1>
-            <button 
-              onClick={handleViewAppointments}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              <span className="material-icons mr-2 text-sm">calendar_today</span>
-              Mes rendez-vous
-            </button>
+            <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+            <div className="flex space-x-2">
+              <button 
+                onClick={handleViewSchedule}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <span className="material-icons mr-2 text-sm">schedule</span>
+                Emploi du temps
+              </button>
+              <button 
+                onClick={handleViewAppointments}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <span className="material-icons mr-2 text-sm">calendar_today</span>
+                Liste des rendez-vous
+              </button>
+            </div>
           </div>
         </div>
       </header>

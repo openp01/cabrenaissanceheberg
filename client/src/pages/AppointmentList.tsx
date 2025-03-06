@@ -40,6 +40,10 @@ export default function AppointmentList() {
   const handleNewAppointment = () => {
     setLocation("/");
   };
+  
+  const handleViewSchedule = () => {
+    setLocation("/schedule");
+  };
 
   const handleCancelAppointment = (id: number) => {
     if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous ?")) {
@@ -79,7 +83,23 @@ export default function AppointmentList() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Centre Thérapeutique</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+            <div className="flex space-x-2">
+              <button 
+                onClick={handleViewSchedule}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <span className="material-icons mr-2 text-sm">schedule</span>
+                Emploi du temps
+              </button>
+              <button 
+                onClick={handleNewAppointment}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <span className="material-icons mr-2 text-sm">add</span>
+                Nouveau rendez-vous
+              </button>
+            </div>
           </div>
         </div>
       </header>
