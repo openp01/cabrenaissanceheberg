@@ -269,7 +269,9 @@ export class PgStorage implements IStorage {
       specialty: row.specialty,
       email: row.email,
       phone: row.phone,
-      color: row.color
+      color: row.color,
+      availableDays: row.availabledays,
+      workHours: row.workhours
     }));
   }
 
@@ -285,14 +287,16 @@ export class PgStorage implements IStorage {
       specialty: row.specialty,
       email: row.email,
       phone: row.phone,
-      color: row.color
+      color: row.color,
+      availableDays: row.availabledays,
+      workHours: row.workhours
     };
   }
 
   async createTherapist(therapist: InsertTherapist): Promise<Therapist> {
     const result = await pool.query(
-      'INSERT INTO therapists (name, specialty, email, phone, color) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [therapist.name, therapist.specialty, therapist.email, therapist.phone, therapist.color]
+      'INSERT INTO therapists (name, specialty, email, phone, color, availableDays, workHours) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [therapist.name, therapist.specialty, therapist.email, therapist.phone, therapist.color, therapist.availableDays, therapist.workHours]
     );
     const row = result.rows[0];
     return {
@@ -301,7 +305,9 @@ export class PgStorage implements IStorage {
       specialty: row.specialty,
       email: row.email,
       phone: row.phone,
-      color: row.color
+      color: row.color,
+      availableDays: row.availabledays,
+      workHours: row.workhours
     };
   }
 
@@ -426,8 +432,12 @@ export class PgStorage implements IStorage {
     };
     
     // Générer automatiquement une facture si le rendez-vous est confirmé
-    if (newAppointment.status === 'Confirmé') {
+    console.log("Statut du rendez-vous créé:", newAppointment.status);
+    if (newAppointment.status === 'Confirmé' || newAppointment.status === 'confirmed') {
+      console.log("Génération d'une facture pour le rendez-vous", newAppointment.id);
       await this.generateInvoiceForAppointment(newAppointment);
+    } else {
+      console.log("Pas de génération de facture car statut !=", 'Confirmé');
     }
     
     return newAppointment;
