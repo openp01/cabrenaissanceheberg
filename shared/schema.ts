@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -101,4 +101,47 @@ export interface BookingFormData {
 export interface AppointmentWithDetails extends Appointment {
   patientName: string;
   therapistName: string;
+}
+
+// Invoice table
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  invoiceNumber: text("invoice_number").notNull(),
+  patientId: integer("patient_id").notNull(),
+  therapistId: integer("therapist_id").notNull(),
+  appointmentId: integer("appointment_id").notNull(),
+  amount: numeric("amount").notNull(),
+  taxRate: numeric("tax_rate").notNull().default("0"),
+  totalAmount: numeric("total_amount").notNull(),
+  status: text("status").notNull().default("pending"),
+  issueDate: text("issue_date").notNull(),
+  dueDate: text("due_date").notNull(),
+  paymentMethod: text("payment_method"),
+  notes: text("notes"),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).pick({
+  invoiceNumber: true,
+  patientId: true,
+  therapistId: true,
+  appointmentId: true,
+  amount: true,
+  taxRate: true,
+  totalAmount: true,
+  status: true,
+  issueDate: true,
+  dueDate: true,
+  paymentMethod: true,
+  notes: true,
+});
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+// For displaying invoices with related data
+export interface InvoiceWithDetails extends Invoice {
+  patientName: string;
+  therapistName: string;
+  appointmentDate: string;
+  appointmentTime: string;
 }

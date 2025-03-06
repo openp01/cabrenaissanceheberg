@@ -2,7 +2,9 @@ import {
   Patient, InsertPatient, patients,
   Therapist, InsertTherapist, therapists,
   Appointment, InsertAppointment, appointments,
-  AppointmentWithDetails
+  AppointmentWithDetails,
+  Invoice, InsertInvoice, invoices,
+  InvoiceWithDetails
 } from "@shared/schema";
 import { addDays, addWeeks, addMonths, format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -29,23 +31,37 @@ export interface IStorage {
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number): Promise<boolean>;
   checkAvailability(therapistId: number, date: string, time: string): Promise<boolean>;
+  
+  // Invoice methods
+  getInvoices(): Promise<InvoiceWithDetails[]>;
+  getInvoice(id: number): Promise<Invoice | undefined>;
+  getInvoicesForPatient(patientId: number): Promise<InvoiceWithDetails[]>;
+  getInvoicesForTherapist(therapistId: number): Promise<InvoiceWithDetails[]>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  deleteInvoice(id: number): Promise<boolean>;
+  getInvoiceForAppointment(appointmentId: number): Promise<Invoice | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private patientsData: Map<number, Patient>;
   private therapistsData: Map<number, Therapist>;
   private appointmentsData: Map<number, Appointment>;
+  private invoicesData: Map<number, Invoice>;
   private patientCurrentId: number;
   private therapistCurrentId: number;
   private appointmentCurrentId: number;
+  private invoiceCurrentId: number;
 
   constructor() {
     this.patientsData = new Map();
     this.therapistsData = new Map();
     this.appointmentsData = new Map();
+    this.invoicesData = new Map();
     this.patientCurrentId = 1;
     this.therapistCurrentId = 1;
     this.appointmentCurrentId = 1;
+    this.invoiceCurrentId = 1;
     
     // Initialize with default therapists
     this.initializeTherapists();
@@ -287,7 +303,46 @@ export class MemStorage implements IStorage {
       parentAppointmentId: insertAppointment.parentAppointmentId ?? null
     };
     this.appointmentsData.set(id, appointment);
+    
+    // Générer automatiquement une facture si le rendez-vous est confirmé
+    if (appointment.status === 'Confirmé') {
+      this.generateInvoiceForAppointment(appointment);
+    }
+    
     return appointment;
+  }
+  
+  private async generateInvoiceForAppointment(appointment: Appointment): Promise<Invoice> {
+    // Obtenir la date actuelle pour la date d'émission
+    const today = new Date();
+    const issueDate = format(today, 'dd/MM/yyyy');
+    
+    // Date d'échéance (30 jours plus tard)
+    const dueDate = format(addDays(today, 30), 'dd/MM/yyyy');
+    
+    // Générer un numéro de facture unique
+    const invoiceNumber = `F-${today.getFullYear()}-${String(this.invoiceCurrentId).padStart(4, '0')}`;
+    
+    // Prix standard pour une séance d'orthophonie (à adapter selon les besoins)
+    const sessionPrice = "50.00";
+    
+    // Créer la facture
+    const invoice: InsertInvoice = {
+      invoiceNumber,
+      patientId: appointment.patientId,
+      therapistId: appointment.therapistId,
+      appointmentId: appointment.id,
+      amount: sessionPrice,
+      taxRate: "0", // Pas de TVA sur les actes médicaux
+      totalAmount: sessionPrice,
+      status: "En attente",
+      issueDate,
+      dueDate,
+      paymentMethod: null,
+      notes: `Séance d'orthophonie du ${appointment.date} à ${appointment.time}`
+    };
+    
+    return this.createInvoice(invoice);
   }
 
   async createRecurringAppointments(
@@ -374,6 +429,112 @@ export class MemStorage implements IStorage {
     );
     
     return !conflict;
+  }
+  
+  // Invoice methods
+  async getInvoices(): Promise<InvoiceWithDetails[]> {
+    const invoices = Array.from(this.invoicesData.values());
+    return Promise.all(invoices.map(async invoice => {
+      const patient = await this.getPatient(invoice.patientId);
+      const therapist = await this.getTherapist(invoice.therapistId);
+      const appointment = await this.getAppointment(invoice.appointmentId);
+      
+      return {
+        ...invoice,
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+        therapistName: therapist ? therapist.name : 'Unknown',
+        appointmentDate: appointment ? appointment.date : 'Unknown',
+        appointmentTime: appointment ? appointment.time : 'Unknown'
+      };
+    }));
+  }
+  
+  async getInvoice(id: number): Promise<Invoice | undefined> {
+    return this.invoicesData.get(id);
+  }
+  
+  async getInvoicesForPatient(patientId: number): Promise<InvoiceWithDetails[]> {
+    const invoices = Array.from(this.invoicesData.values())
+      .filter(invoice => invoice.patientId === patientId);
+    
+    return Promise.all(invoices.map(async invoice => {
+      const patient = await this.getPatient(invoice.patientId);
+      const therapist = await this.getTherapist(invoice.therapistId);
+      const appointment = await this.getAppointment(invoice.appointmentId);
+      
+      return {
+        ...invoice,
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+        therapistName: therapist ? therapist.name : 'Unknown',
+        appointmentDate: appointment ? appointment.date : 'Unknown',
+        appointmentTime: appointment ? appointment.time : 'Unknown'
+      };
+    }));
+  }
+  
+  async getInvoicesForTherapist(therapistId: number): Promise<InvoiceWithDetails[]> {
+    const invoices = Array.from(this.invoicesData.values())
+      .filter(invoice => invoice.therapistId === therapistId);
+    
+    return Promise.all(invoices.map(async invoice => {
+      const patient = await this.getPatient(invoice.patientId);
+      const therapist = await this.getTherapist(invoice.therapistId);
+      const appointment = await this.getAppointment(invoice.appointmentId);
+      
+      return {
+        ...invoice,
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+        therapistName: therapist ? therapist.name : 'Unknown',
+        appointmentDate: appointment ? appointment.date : 'Unknown',
+        appointmentTime: appointment ? appointment.time : 'Unknown'
+      };
+    }));
+  }
+  
+  async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
+    const id = this.invoiceCurrentId++;
+    const invoice: Invoice = {
+      id,
+      invoiceNumber: insertInvoice.invoiceNumber,
+      patientId: insertInvoice.patientId,
+      therapistId: insertInvoice.therapistId,
+      appointmentId: insertInvoice.appointmentId,
+      amount: insertInvoice.amount,
+      taxRate: insertInvoice.taxRate || "0",
+      totalAmount: insertInvoice.totalAmount,
+      status: insertInvoice.status || "En attente",
+      issueDate: insertInvoice.issueDate,
+      dueDate: insertInvoice.dueDate,
+      paymentMethod: insertInvoice.paymentMethod || null,
+      notes: insertInvoice.notes || null
+    };
+    this.invoicesData.set(id, invoice);
+    return invoice;
+  }
+  
+  async updateInvoice(id: number, invoiceUpdate: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    const existingInvoice = this.invoicesData.get(id);
+    
+    if (!existingInvoice) {
+      return undefined;
+    }
+    
+    const updatedInvoice = {
+      ...existingInvoice,
+      ...invoiceUpdate
+    };
+    
+    this.invoicesData.set(id, updatedInvoice);
+    return updatedInvoice;
+  }
+  
+  async deleteInvoice(id: number): Promise<boolean> {
+    return this.invoicesData.delete(id);
+  }
+  
+  async getInvoiceForAppointment(appointmentId: number): Promise<Invoice | undefined> {
+    const invoices = Array.from(this.invoicesData.values());
+    return invoices.find(invoice => invoice.appointmentId === appointmentId);
   }
 }
 
