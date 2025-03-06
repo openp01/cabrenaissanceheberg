@@ -34,7 +34,7 @@ export default function RecurringOptions({
           htmlFor="recurringOption"
           className="ml-2 block text-sm text-gray-900"
         >
-          Rendez-vous récurrent
+          Séances récurrentes
         </Label>
       </div>
       

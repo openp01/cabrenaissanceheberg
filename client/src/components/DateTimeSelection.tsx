@@ -36,7 +36,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
   
   // Requête pour vérifier la disponibilité des créneaux
-  const { data: appointments } = useQuery({
+  const { data: appointments } = useQuery<any[]>({
     queryKey: ['/api/appointments'],
   });
   
@@ -98,7 +98,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     
     const formattedDate = format(date, 'dd/MM/yyyy');
     
-    return !appointments.some(app => 
+    return !appointments.some((app: any) => 
       app.therapistId === formData.therapist?.id && 
       app.date === formattedDate && 
       app.time === time

@@ -89,7 +89,14 @@ export class MemStorage implements IStorage {
 
   async createPatient(insertPatient: InsertPatient): Promise<Patient> {
     const id = this.patientCurrentId++;
-    const patient: Patient = { ...insertPatient, id };
+    const patient: Patient = { 
+      id,
+      firstName: insertPatient.firstName,
+      lastName: insertPatient.lastName,
+      email: insertPatient.email ?? null,
+      phone: insertPatient.phone ?? null,
+      notes: insertPatient.notes ?? null
+    };
     this.patientsData.set(id, patient);
     return patient;
   }
@@ -115,7 +122,13 @@ export class MemStorage implements IStorage {
 
   async createTherapist(insertTherapist: InsertTherapist): Promise<Therapist> {
     const id = this.therapistCurrentId++;
-    const therapist: Therapist = { ...insertTherapist, id };
+    const therapist: Therapist = { 
+      id,
+      name: insertTherapist.name,
+      specialty: insertTherapist.specialty ?? null,
+      availableDays: insertTherapist.availableDays ?? null,
+      workHours: insertTherapist.workHours ?? null
+    };
     this.therapistsData.set(id, therapist);
     return therapist;
   }
@@ -157,7 +170,18 @@ export class MemStorage implements IStorage {
 
   async createAppointment(insertAppointment: InsertAppointment): Promise<Appointment> {
     const id = this.appointmentCurrentId++;
-    const appointment: Appointment = { ...insertAppointment, id };
+    const appointment: Appointment = { 
+      id,
+      patientId: insertAppointment.patientId,
+      therapistId: insertAppointment.therapistId,
+      date: insertAppointment.date,
+      time: insertAppointment.time,
+      status: insertAppointment.status || 'Confirmé',
+      isRecurring: insertAppointment.isRecurring ?? null,
+      recurringFrequency: insertAppointment.recurringFrequency ?? null,
+      recurringCount: insertAppointment.recurringCount ?? null,
+      parentAppointmentId: insertAppointment.parentAppointmentId ?? null
+    };
     this.appointmentsData.set(id, appointment);
     return appointment;
   }
