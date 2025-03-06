@@ -9,6 +9,8 @@ export const patients = pgTable("patients", {
   lastName: text("last_name").notNull(),
   email: text("email"),
   phone: text("phone"),
+  address: text("address"),
+  birthDate: text("birth_date"),
   notes: text("notes"),
 });
 
@@ -17,6 +19,8 @@ export const insertPatientSchema = createInsertSchema(patients).pick({
   lastName: true,
   email: true,
   phone: true,
+  address: true,
+  birthDate: true,
   notes: true,
 });
 
@@ -25,6 +29,9 @@ export const therapists = pgTable("therapists", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   specialty: text("specialty"),
+  email: text("email"),
+  phone: text("phone"),
+  color: text("color"),
   availableDays: text("available_days"),
   workHours: text("work_hours"),
 });
@@ -32,6 +39,9 @@ export const therapists = pgTable("therapists", {
 export const insertTherapistSchema = createInsertSchema(therapists).pick({
   name: true,
   specialty: true,
+  email: true,
+  phone: true,
+  color: true,
   availableDays: true,
   workHours: true,
 });
@@ -43,6 +53,9 @@ export const appointments = pgTable("appointments", {
   therapistId: integer("therapist_id").notNull(),
   date: text("date").notNull(),
   time: text("time").notNull(),
+  duration: integer("duration"),
+  type: text("type"),
+  notes: text("notes"),
   status: text("status").notNull().default("confirmed"),
   isRecurring: boolean("is_recurring").default(false),
   recurringFrequency: text("recurring_frequency"),
@@ -55,6 +68,9 @@ export const insertAppointmentSchema = createInsertSchema(appointments).pick({
   therapistId: true,
   date: true,
   time: true,
+  duration: true,
+  type: true,
+  notes: true,
   status: true,
   isRecurring: true,
   recurringFrequency: true,

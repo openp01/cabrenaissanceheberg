@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { pgStorage as storage } from "./dbStorage"; // Utilisation du stockage PostgreSQL
 import { insertPatientSchema, patientFormSchema, appointmentFormSchema, insertInvoiceSchema } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
