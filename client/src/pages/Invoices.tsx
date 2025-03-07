@@ -64,9 +64,9 @@ export default function Invoices() {
   // Mutation pour mettre à jour le statut de la facture
   const updateInvoiceStatus = useMutation({
     mutationFn: async ({ invoiceId, status }: { invoiceId: number, status: string }) => {
-      return apiRequest(
-        'PUT',
+      return apiRequest<any>(
         `/api/invoices/${invoiceId}`,
+        "PUT",
         { status }
       );
     },
@@ -115,10 +115,9 @@ export default function Invoices() {
   // Mutation pour créer un paiement à partir d'une facture
   const createPaymentFromInvoice = useMutation({
     mutationFn: async ({ invoiceId }: { invoiceId: number }) => {
-      return apiRequest(
-        'POST',
+      return apiRequest<any>(
         `/api/create-payment-from-invoice/${invoiceId}`,
-        {}
+        "POST"
       );
     },
     onSuccess: () => {

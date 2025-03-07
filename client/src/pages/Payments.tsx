@@ -100,13 +100,13 @@ export default function Payments() {
           <span className="font-medium">Filtrer par thérapeute:</span>
           <Select 
             onValueChange={(value) => setSelectedTherapistId(value)}
-            value={selectedTherapistId || ""}
+            value={selectedTherapistId || "all"}
           >
             <SelectTrigger className="w-[250px]">
               <SelectValue placeholder="Tous les thérapeutes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les thérapeutes</SelectItem>
+              <SelectItem value="all">Tous les thérapeutes</SelectItem>
               {therapists?.map((therapist) => (
                 <SelectItem key={therapist.id} value={therapist.id.toString()}>
                   {therapist.name}
