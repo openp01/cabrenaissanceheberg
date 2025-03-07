@@ -48,7 +48,7 @@ export default function Payments() {
   // Filtrer les paiements par thérapeute si un thérapeute est sélectionné
   const filteredPayments = useMemo(() => {
     if (!payments) return [];
-    if (!selectedTherapistId) return payments;
+    if (!selectedTherapistId || selectedTherapistId === 'all') return payments;
     return payments.filter(payment => payment.therapistId.toString() === selectedTherapistId);
   }, [payments, selectedTherapistId]);
 
