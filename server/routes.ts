@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateInvoicePDF } from "./pdfGenerator";
+import { sendInvoiceDownloadNotification } from "./emailService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes with prefix /api
@@ -340,6 +341,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Générer le PDF et le transmettre directement au client
       const pdfStream = await generateInvoicePDF(invoice);
       pdfStream.pipe(res);
+      
+      // Envoyer une notification par email (asynchrone, ne bloque pas la réponse)
+      sendInvoiceDownloadNotification(invoice)
+        .then(emailResult => {
+          if (emailResult.success) {
+            console.log(`Notification d'email envoyée pour la facture ${invoice.invoiceNumber}`);
+            if (emailResult.messageUrl) {
+              console.log(`URL de prévisualisation: ${emailResult.messageUrl}`);
+            }
+          } else {
+            console.warn(`Échec de l'envoi de la notification pour la facture ${invoice.invoiceNumber}:`, emailResult.error);
+          }
+        })
+        .catch(err => {
+          console.error(`Erreur lors de l'envoi de la notification par email:`, err);
+        });
       
     } catch (error) {
       console.error("Erreur lors de la génération du PDF de la facture:", error);
