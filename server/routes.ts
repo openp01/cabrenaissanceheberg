@@ -1,7 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { pgStorage as storage } from "./dbStorage"; // Utilisation du stockage PostgreSQL
-import { insertPatientSchema, patientFormSchema, appointmentFormSchema, insertInvoiceSchema } from "@shared/schema";
+import { storage } from "./storage"; // Utilisation du stockage en mémoire
+import { 
+  insertPatientSchema, 
+  patientFormSchema, 
+  appointmentFormSchema, 
+  insertInvoiceSchema,
+  insertExpenseSchema,
+  expenseFormSchema 
+} from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -416,6 +423,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la suppression de la facture" });
+    }
+  });
+
+  // Expense routes
+  app.get("/api/expenses", async (req, res) => {
+    try {
+      const expenses = await storage.getExpenses();
+      res.json(expenses);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des dépenses" });
+    }
+  });
+
+  app.get("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de dépense invalide" });
+      }
+      
+      const expense = await storage.getExpense(id);
+      if (!expense) {
+        return res.status(404).json({ error: "Dépense non trouvée" });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération de la dépense" });
+    }
+  });
+
+  app.get("/api/expenses/category/:category", async (req, res) => {
+    try {
+      const category = req.params.category;
+      const expenses = await storage.getExpensesByCategory(category);
+      res.json(expenses);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des dépenses par catégorie" });
+    }
+  });
+
+  app.get("/api/expenses/date-range", async (req, res) => {
+    try {
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Les dates de début et de fin sont requises" });
+      }
+      
+      const expenses = await storage.getExpensesByDateRange(startDate, endDate);
+      res.json(expenses);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des dépenses par plage de dates" });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const validatedData = expenseFormSchema.parse(req.body);
+      const expense = await storage.createExpense(validatedData);
+      res.status(201).json(expense);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la création de la dépense" });
+      }
+    }
+  });
+
+  app.put("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de dépense invalide" });
+      }
+      
+      const validatedData = expenseFormSchema.partial().parse(req.body);
+      const updatedExpense = await storage.updateExpense(id, validatedData);
+      
+      if (!updatedExpense) {
+        return res.status(404).json({ error: "Dépense non trouvée" });
+      }
+      
+      res.json(updatedExpense);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la mise à jour de la dépense" });
+      }
+    }
+  });
+
+  app.post("/api/expenses/:id/receipt", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de dépense invalide" });
+      }
+      
+      const { fileUrl } = req.body;
+      if (!fileUrl) {
+        return res.status(400).json({ error: "URL du fichier requise" });
+      }
+      
+      const updatedExpense = await storage.saveExpenseReceipt(id, fileUrl);
+      
+      if (!updatedExpense) {
+        return res.status(404).json({ error: "Dépense non trouvée" });
+      }
+      
+      res.json(updatedExpense);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de l'ajout du justificatif" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de dépense invalide" });
+      }
+      
+      const success = await storage.deleteExpense(id);
+      if (!success) {
+        return res.status(404).json({ error: "Dépense non trouvée" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la suppression de la dépense" });
     }
   });
 

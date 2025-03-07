@@ -55,32 +55,67 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private patientsData: Map<number, Patient>;
-  private therapistsData: Map<number, Therapist>;
-  private appointmentsData: Map<number, Appointment>;
-  private invoicesData: Map<number, Invoice>;
-  private expensesData: Map<number, Expense>;
-  private patientCurrentId: number;
-  private therapistCurrentId: number;
-  private appointmentCurrentId: number;
-  private invoiceCurrentId: number;
-  private expenseCurrentId: number;
+  private patientsData: Map<number, Patient> = new Map();
+  private therapistsData: Map<number, Therapist> = new Map();
+  private appointmentsData: Map<number, Appointment> = new Map();
+  private invoicesData: Map<number, Invoice> = new Map();
+  private expensesData: Map<number, Expense> = new Map();
+  private patientCurrentId: number = 1;
+  private therapistCurrentId: number = 1;
+  private appointmentCurrentId: number = 1;
+  private invoiceCurrentId: number = 1;
+  private expenseCurrentId: number = 1;
 
   constructor() {
-    this.patientsData = new Map();
-    this.therapistsData = new Map();
-    this.appointmentsData = new Map();
-    this.invoicesData = new Map();
-    this.patientCurrentId = 1;
-    this.therapistCurrentId = 1;
-    this.appointmentCurrentId = 1;
-    this.invoiceCurrentId = 1;
-    
     // Initialize with default therapists
     this.initializeTherapists();
     
     // Initialize with example patients and appointments
     this.initializeExampleData();
+    
+    // Initialize with example expenses
+    this.initializeExampleExpenses();
+  }
+  
+  private initializeExampleExpenses() {
+    // Ajouter des dépenses de démonstration
+    const today = new Date();
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    const formattedToday = format(today, 'dd/MM/yyyy');
+    const formattedLastMonth = format(lastMonth, 'dd/MM/yyyy');
+    
+    const exampleExpenses: InsertExpense[] = [
+      {
+        description: "Achat de fournitures de bureau",
+        amount: 85.50,
+        date: formattedToday,
+        category: "Fournitures",
+        paymentMethod: "Carte bancaire",
+        notes: "Papier, stylos, classeurs"
+      },
+      {
+        description: "Logiciel de gestion",
+        amount: 120.00,
+        date: formattedLastMonth,
+        category: "Logiciels",
+        paymentMethod: "Virement",
+        notes: "Abonnement annuel"
+      },
+      {
+        description: "Entretien du local",
+        amount: 150.00,
+        date: formattedLastMonth,
+        category: "Maintenance",
+        paymentMethod: "Chèque",
+        notes: "Service de nettoyage mensuel"
+      }
+    ];
+    
+    exampleExpenses.forEach(expense => {
+      this.createExpense(expense);
+    });
   }
   
   private initializeExampleData() {
@@ -228,6 +263,8 @@ export class MemStorage implements IStorage {
       lastName: insertPatient.lastName,
       email: insertPatient.email ?? null,
       phone: insertPatient.phone ?? null,
+      address: insertPatient.address ?? null,
+      birthDate: insertPatient.birthDate ?? null,
       notes: insertPatient.notes ?? null
     };
     this.patientsData.set(id, patient);
@@ -259,6 +296,9 @@ export class MemStorage implements IStorage {
       id,
       name: insertTherapist.name,
       specialty: insertTherapist.specialty ?? null,
+      email: insertTherapist.email ?? null,
+      phone: insertTherapist.phone ?? null,
+      color: insertTherapist.color ?? null,
       availableDays: insertTherapist.availableDays ?? null,
       workHours: insertTherapist.workHours ?? null
     };
@@ -309,6 +349,9 @@ export class MemStorage implements IStorage {
       therapistId: insertAppointment.therapistId,
       date: insertAppointment.date,
       time: insertAppointment.time,
+      duration: insertAppointment.duration ?? null,
+      type: insertAppointment.type ?? null,
+      notes: insertAppointment.notes ?? null,
       status: insertAppointment.status || 'Confirmé',
       isRecurring: insertAppointment.isRecurring ?? null,
       recurringFrequency: insertAppointment.recurringFrequency ?? null,
@@ -548,6 +591,87 @@ export class MemStorage implements IStorage {
   async getInvoiceForAppointment(appointmentId: number): Promise<Invoice | undefined> {
     const invoices = Array.from(this.invoicesData.values());
     return invoices.find(invoice => invoice.appointmentId === appointmentId);
+  }
+
+  // Expense methods
+  async getExpenses(): Promise<Expense[]> {
+    return Array.from(this.expensesData.values());
+  }
+
+  async getExpense(id: number): Promise<Expense | undefined> {
+    return this.expensesData.get(id);
+  }
+
+  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const id = this.expenseCurrentId++;
+    const today = new Date();
+    
+    const expense: Expense = {
+      id,
+      description: insertExpense.description,
+      amount: insertExpense.amount,
+      date: insertExpense.date,
+      category: insertExpense.category,
+      paymentMethod: insertExpense.paymentMethod,
+      notes: insertExpense.notes ?? null,
+      receiptUrl: insertExpense.receiptUrl ?? null,
+      createdAt: format(today, 'dd/MM/yyyy HH:mm:ss')
+    };
+    
+    this.expensesData.set(id, expense);
+    return expense;
+  }
+
+  async updateExpense(id: number, expenseUpdate: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const existingExpense = this.expensesData.get(id);
+    
+    if (!existingExpense) {
+      return undefined;
+    }
+    
+    const updatedExpense = {
+      ...existingExpense,
+      ...expenseUpdate
+    };
+    
+    this.expensesData.set(id, updatedExpense);
+    return updatedExpense;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    return this.expensesData.delete(id);
+  }
+
+  async getExpensesByCategory(category: string): Promise<Expense[]> {
+    return Array.from(this.expensesData.values())
+      .filter(expense => expense.category === category);
+  }
+
+  async getExpensesByDateRange(startDate: string, endDate: string): Promise<Expense[]> {
+    const start = parse(startDate, 'dd/MM/yyyy', new Date());
+    const end = parse(endDate, 'dd/MM/yyyy', new Date());
+    
+    return Array.from(this.expensesData.values())
+      .filter(expense => {
+        const expenseDate = parse(expense.date, 'dd/MM/yyyy', new Date());
+        return expenseDate >= start && expenseDate <= end;
+      });
+  }
+
+  async saveExpenseReceipt(id: number, fileUrl: string): Promise<Expense | undefined> {
+    const existingExpense = this.expensesData.get(id);
+    
+    if (!existingExpense) {
+      return undefined;
+    }
+    
+    const updatedExpense = {
+      ...existingExpense,
+      receiptUrl: fileUrl
+    };
+    
+    this.expensesData.set(id, updatedExpense);
+    return updatedExpense;
   }
 }
 
