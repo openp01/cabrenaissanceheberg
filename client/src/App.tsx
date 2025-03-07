@@ -16,6 +16,9 @@ function Router() {
       <Route path="/appointments" component={AppointmentList} />
       <Route path="/schedule" component={TherapistSchedule} />
       <Route path="/invoices" component={Invoices} />
+      <Route path="/expenses" component={Expenses} />
+      <Route path="/expenses/new" component={ExpenseForm} />
+      <Route path="/expenses/:id" component={ExpenseDetails} />
       <Route component={NotFound} />
     </Switch>
   );
