@@ -1531,7 +1531,7 @@ export class PgStorage implements IStorage {
     
     // Créer un nouveau paiement
     const today = new Date();
-    const formattedToday = format(today, 'dd/MM/yyyy');
+    const formattedToday = format(today, 'yyyy-MM-dd'); // Format ISO pour la base de données
     
     // Préparation des données avec conversion explicite des types
     const invoiceAmount = invoice.amount ? parseFloat(String(invoice.amount)) : 0;
