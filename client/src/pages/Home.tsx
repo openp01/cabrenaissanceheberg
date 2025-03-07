@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Clock, FileText, WalletIcon, Plus, List, LineChart, ArrowLeft } from "lucide-react";
+import { CalendarDays, Clock, FileText, WalletIcon, Plus, List, LineChart, ArrowLeft, CreditCard } from "lucide-react";
 import BookingForm from "@/components/BookingForm";
 
 export default function Home() {
@@ -188,6 +188,36 @@ export default function Home() {
                   >
                     <LineChart className="h-4 w-4 mr-2" />
                     Suivi des dépenses
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Paiements Card */}
+              <Card className="overflow-hidden transition-all hover:shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Paiements</CardTitle>
+                    <CreditCard className="h-8 w-8 text-teal-100" />
+                  </div>
+                  <CardDescription className="text-teal-100">
+                    Suivi des paiements aux thérapeutes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Suivez les paiements effectués aux thérapeutes et gérez leur rémunération.
+                    </p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleNavigation("/payments")}
+                    variant="default"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Voir les paiements
                   </Button>
                 </CardFooter>
               </Card>

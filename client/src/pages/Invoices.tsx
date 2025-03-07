@@ -70,9 +70,19 @@ export default function Invoices() {
         { status }
       );
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       // Invalider le cache et forcer un rechargement des factures
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      
+      // Si la facture est marquée comme payée, créer automatiquement un paiement
+      if (variables.status === "Payée") {
+        try {
+          await createPaymentFromInvoice.mutateAsync({ invoiceId: variables.invoiceId });
+        } catch (err) {
+          console.error("Erreur lors de la création du paiement:", err);
+          // On continue car la mise à jour du statut est réussie même si la création du paiement échoue
+        }
+      }
       
       // Effectuer un refetch manuel avec un indicateur visuel
       setIsRefreshing(true);
@@ -98,6 +108,34 @@ export default function Invoices() {
         title: "Erreur",
         description: "Une erreur est survenue lors de la mise à jour du statut.",
         variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation pour créer un paiement à partir d'une facture
+  const createPaymentFromInvoice = useMutation({
+    mutationFn: async ({ invoiceId }: { invoiceId: number }) => {
+      return apiRequest(
+        'POST',
+        `/api/create-payment-from-invoice/${invoiceId}`,
+        {}
+      );
+    },
+    onSuccess: () => {
+      // Invalider le cache des paiements pour les actualiser si la page des paiements est ouverte
+      queryClient.invalidateQueries({ queryKey: ["/api/therapist-payments"] });
+      
+      toast({
+        title: "Paiement créé",
+        description: "Un paiement pour le thérapeute a été automatiquement créé.",
+        variant: "default",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Attention",
+        description: "La facture a été marquée comme payée, mais la création du paiement a échoué.",
+        variant: "warning",
       });
     },
   });
@@ -272,7 +310,8 @@ export default function Invoices() {
                               <AlertDialogTitle>Confirmer le paiement</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Êtes-vous sûr de vouloir marquer la facture {invoice.invoiceNumber} comme payée ?
-                                Cette action ne peut pas être annulée.
+                                Cette action ne peut pas être annulée et créera automatiquement un paiement
+                                pour le thérapeute {invoice.therapistName}.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

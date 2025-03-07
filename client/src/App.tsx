@@ -7,6 +7,7 @@ import Invoices from "./pages/Invoices";
 import Expenses from "./pages/Expenses";
 import ExpenseForm from "./pages/ExpenseForm";
 import ExpenseDetails from "./pages/ExpenseDetails";
+import Payments from "./pages/Payments";
 import NotFound from "./pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/expenses" component={Expenses} />
       <Route path="/expenses/new" component={ExpenseForm} />
       <Route path="/expenses/:id" component={ExpenseDetails} />
+      <Route path="/payments" component={Payments} />
       <Route component={NotFound} />
     </Switch>
   );
