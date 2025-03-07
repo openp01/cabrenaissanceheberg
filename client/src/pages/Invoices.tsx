@@ -23,6 +23,7 @@ import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import DownloadInvoiceButton from "@/components/DownloadInvoiceButton";
+import GeneratePaymentButton from "@/components/GeneratePaymentButton";
 import { HomeButton } from "@/components/ui/home-button";
 
 export default function Invoices() {
@@ -254,6 +255,14 @@ export default function Invoices() {
                       >
                         Détails
                       </Button>
+                      
+                      {/* Bouton pour générer un paiement au thérapeute basé sur la facture */}
+                      <GeneratePaymentButton 
+                        invoiceId={invoice.id}
+                        invoiceNumber={invoice.invoiceNumber}
+                        isPaid={invoice.status === "Payée"}
+                        paymentExists={false} // Ici, on pourrait vérifier si un paiement existe déjà pour cette facture
+                      />
                       
                       {invoice.status === "En attente" && (
                         <AlertDialog>
