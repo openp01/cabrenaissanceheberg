@@ -333,14 +333,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Facture non trouvée" });
       }
       
-      // Générer le PDF
-      const pdfStream = await generateInvoicePDF(invoice);
-      
       // Définir les en-têtes de réponse pour le téléchargement du PDF
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="facture-${invoice.invoiceNumber}.pdf"`);
       
-      // Transmettre le PDF au client
+      // Générer le PDF et le transmettre directement au client
+      const pdfStream = await generateInvoicePDF(invoice);
       pdfStream.pipe(res);
       
     } catch (error) {

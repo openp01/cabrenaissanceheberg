@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { Readable } from 'stream';
+import { Readable, PassThrough } from 'stream';
 import { Invoice, InvoiceWithDetails } from '@shared/schema';
 import { format } from 'date-fns';
 
@@ -8,16 +8,15 @@ import { format } from 'date-fns';
  * @param invoice Facture avec les détails (patient, thérapeute, rendez-vous)
  * @returns Stream du PDF généré
  */
-export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<Readable> {
+export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<PassThrough> {
   // Créer un nouveau document PDF
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   
-  // Créer un stream de lecture pour que Express puisse l'envoyer au client
-  const stream = new Readable();
-  stream._read = () => {}; // Nécessaire pour implémenter l'interface Readable
+  // Utiliser PassThrough au lieu de Readable direct
+  const stream = new PassThrough();
   
   // Pipe le PDF dans le stream
-  doc.pipe(stream as any);
+  doc.pipe(stream);
   
   // Ajouter l'en-tête
   doc.fontSize(25).text('CABINET D\'ORTHOPHONIE', { align: 'center' });
