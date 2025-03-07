@@ -1,41 +1,36 @@
-import nodemailer from 'nodemailer';
+import { MailService } from '@sendgrid/mail';
 import { InvoiceWithDetails } from '@shared/schema';
 
-// Création d'un transporteur pour l'envoi d'emails avec Gmail SMTP
-export async function getEmailTransporter() {
-  // Vérifier que les identifiants Gmail sont disponibles
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-    throw new Error('Les variables d\'environnement GMAIL_USER et GMAIL_PASS doivent être définies');
+// Initialiser le service SendGrid avec la clé API
+const initSendGrid = (): MailService => {
+  // Vérifier que la clé API SendGrid est disponible
+  if (!process.env.SENDGRID_API_KEY) {
+    throw new Error('La variable d\'environnement SENDGRID_API_KEY doit être définie');
   }
 
-  // Créer un transporteur réutilisable utilisant le service Gmail
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-  });
-
-  return {
-    transporter,
-    // Pas de prévisualisation URL pour Gmail réel
-    previewUrl: (_messageId: string) => undefined,
-  };
-}
+  // Créer une instance du service mail
+  const mailService = new MailService();
+  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+  
+  return mailService;
+};
 
 /**
  * Envoie une notification par email lorsqu'une facture est téléchargée
  * @param invoice Détails de la facture téléchargée
  * @returns Informations sur l'email envoyé
  */
-export async function sendInvoiceDownloadNotification(invoice: InvoiceWithDetails): Promise<{ success: boolean; messageUrl?: string; error?: any }> {
+export async function sendInvoiceDownloadNotification(invoice: InvoiceWithDetails): Promise<{ success: boolean; error?: any }> {
   try {
-    // Créer le transporteur d'email
-    const { transporter } = await getEmailTransporter();
+    // Initialiser le service SendGrid
+    const mailService = initSendGrid();
 
     // L'adresse destinataire - à configurer selon vos besoins
     const recipientEmail = 'jarviswriting01@gmail.com';
+    
+    // Adresse d'expéditeur vérifiée sur SendGrid (utiliser l'adresse avec laquelle vous avez créé votre compte)
+    // Dans un environnement de production, assurez-vous que cette adresse est vérifiée dans SendGrid
+    const senderEmail = 'notifications@orthophonie-cabinet.fr';
 
     // Préparer le contenu de l'email
     const emailContent = `
@@ -53,16 +48,18 @@ export async function sendInvoiceDownloadNotification(invoice: InvoiceWithDetail
       <p>Ce message est automatique, merci de ne pas y répondre.</p>
     `;
 
-    // Envoyer l'email
-    const info = await transporter.sendMail({
-      from: `"Cabinet Orthophonie" <${process.env.GMAIL_USER}>`,
+    // Configuration de l'email
+    const msg = {
       to: recipientEmail,
+      from: senderEmail,
       subject: `Téléchargement de facture ${invoice.invoiceNumber}`,
       text: `Notification de téléchargement de facture: ${invoice.invoiceNumber} pour ${invoice.patientName}`,
       html: emailContent,
-    });
+    };
 
-    console.log('Message envoyé: %s', info.messageId);
+    // Envoyer l'email
+    await mailService.send(msg);
+
     console.log(`Notification d'email envoyée pour la facture ${invoice.invoiceNumber}`);
     console.log(`Email envoyé à: ${recipientEmail}`);
 

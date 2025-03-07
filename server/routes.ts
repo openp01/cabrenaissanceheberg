@@ -347,11 +347,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .then(emailResult => {
           if (emailResult.success) {
             console.log(`Notification d'email envoyée pour la facture ${invoice.invoiceNumber}`);
-            if (emailResult.messageUrl) {
-              console.log(`URL de prévisualisation: ${emailResult.messageUrl}`);
-            }
           } else {
-            console.warn(`Échec de l'envoi de la notification pour la facture ${invoice.invoiceNumber}:`, emailResult.error);
+            console.error(`Échec de l'envoi de la notification pour la facture ${invoice.invoiceNumber}:`, emailResult.error);
           }
         })
         .catch(err => {
