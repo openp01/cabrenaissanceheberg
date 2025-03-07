@@ -1533,10 +1533,13 @@ export class PgStorage implements IStorage {
     const today = new Date();
     const formattedToday = format(today, 'dd/MM/yyyy');
     
+    // Préparation des données avec conversion explicite des types
+    const invoiceAmount = invoice.amount ? parseFloat(String(invoice.amount)) : 0;
+    
     const insertPayment: InsertTherapistPayment = {
       therapistId: invoice.therapistid,
       invoiceId: invoice.id,
-      amount: String(Number(invoice.amount)), // Conversion en string pour PostgreSQL
+      amount: invoiceAmount, // Montant déjà converti en nombre
       paymentDate: formattedToday,
       paymentMethod: invoice.paymentmethod || "Virement bancaire",
       notes: `Paiement automatique pour la facture ${invoice.invoicenumber}`

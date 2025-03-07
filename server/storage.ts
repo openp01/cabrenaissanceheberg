@@ -819,10 +819,15 @@ export class MemStorage implements IStorage {
     const today = new Date();
     const formattedToday = format(today, 'dd/MM/yyyy');
     
+    // Préparation des données avec conversion explicite des types
+    const invoiceAmount = typeof invoice.amount === 'string' 
+      ? parseFloat(invoice.amount) 
+      : Number(invoice.amount);
+    
     const insertPayment: InsertTherapistPayment = {
       therapistId: invoice.therapistId,
       invoiceId: invoice.id,
-      amount: Number(invoice.amount),
+      amount: invoiceAmount, // Montant déjà converti en nombre
       paymentDate: formattedToday,
       paymentMethod: invoice.paymentMethod || "Virement bancaire",
       notes: `Paiement automatique pour la facture ${invoice.invoiceNumber}`
