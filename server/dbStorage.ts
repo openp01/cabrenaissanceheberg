@@ -1,7 +1,7 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 import { format, addDays } from "date-fns";
-import { Patient, Therapist, Appointment, AppointmentWithDetails, Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, InsertAppointment, InsertInvoice } from '@shared/schema';
+import { Patient, Therapist, Appointment, AppointmentWithDetails, Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, InsertAppointment, InsertInvoice, Expense, InsertExpense } from '@shared/schema';
 import { IStorage } from './storage';
 
 // Configuration de la connexion à la base de données
@@ -79,6 +79,21 @@ async function initializeDatabase() {
       );
     `);
 
+    // Création de la table expenses
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id SERIAL PRIMARY KEY,
+        description TEXT NOT NULL,
+        amount NUMERIC(10, 2) NOT NULL,
+        date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        paymentMethod TEXT NOT NULL,
+        notes TEXT,
+        receiptUrl TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     // Vérifier si des données existent déjà
     const result = await client.query('SELECT COUNT(*) FROM patients');
     const count = parseInt(result.rows[0].count);
@@ -124,6 +139,16 @@ async function initializeExampleData() {
     const formatDate = (date: Date) => {
       return format(date, 'dd/MM/yyyy');
     };
+    
+    // Dépenses d'exemple
+    await client.query(`
+      INSERT INTO expenses (description, amount, date, category, paymentMethod, notes)
+      VALUES 
+        ('Achat de fournitures de bureau', 125.50, $1, 'Fournitures', 'Carte Bancaire', 'Papier, stylos, classeurs pour le cabinet'),
+        ('Abonnement logiciel de gestion', 49.99, $1, 'Logiciels', 'Prélèvement', 'Abonnement mensuel au logiciel de gestion de patients'),
+        ('Formation continue', 350.00, $2, 'Formation', 'Virement', 'Séminaire sur les nouvelles techniques d''orthophonie pédiatrique'),
+        ('Loyer du cabinet', 800.00, $1, 'Loyer', 'Virement', 'Loyer mensuel pour le local professionnel');
+    `, [formatDate(today), formatDate(tomorrow)]);
 
     await client.query(`
       INSERT INTO appointments (patientId, therapistId, date, time, duration, type, notes, status)
@@ -1011,6 +1036,206 @@ export class PgStorage implements IStorage {
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
       notes: row.notes
+    };
+  }
+
+  // Méthodes pour gérer les dépenses
+  async getExpenses(): Promise<Expense[]> {
+    const result = await pool.query('SELECT * FROM expenses ORDER BY date DESC');
+    return result.rows.map(row => ({
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
+    }));
+  }
+
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const result = await pool.query('SELECT * FROM expenses WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
+    };
+  }
+
+  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const result = await pool.query(
+      `INSERT INTO expenses 
+      (description, amount, date, category, paymentMethod, notes, receiptUrl)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *`,
+      [
+        insertExpense.description,
+        insertExpense.amount,
+        insertExpense.date,
+        insertExpense.category,
+        insertExpense.paymentMethod,
+        insertExpense.notes,
+        insertExpense.receiptUrl
+      ]
+    );
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
+    };
+  }
+
+  async updateExpense(id: number, expenseUpdate: Partial<InsertExpense>): Promise<Expense | undefined> {
+    // Récupérer la dépense existante
+    const existingExpense = await this.getExpense(id);
+    if (!existingExpense) {
+      return undefined;
+    }
+    
+    // Construire la requête de mise à jour
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+    
+    if ('description' in expenseUpdate) {
+      updates.push(`description = $${paramCount++}`);
+      values.push(expenseUpdate.description);
+    }
+    
+    if ('amount' in expenseUpdate) {
+      updates.push(`amount = $${paramCount++}`);
+      values.push(expenseUpdate.amount);
+    }
+    
+    if ('date' in expenseUpdate) {
+      updates.push(`date = $${paramCount++}`);
+      values.push(expenseUpdate.date);
+    }
+    
+    if ('category' in expenseUpdate) {
+      updates.push(`category = $${paramCount++}`);
+      values.push(expenseUpdate.category);
+    }
+    
+    if ('paymentMethod' in expenseUpdate) {
+      updates.push(`paymentMethod = $${paramCount++}`);
+      values.push(expenseUpdate.paymentMethod);
+    }
+    
+    if ('notes' in expenseUpdate) {
+      updates.push(`notes = $${paramCount++}`);
+      values.push(expenseUpdate.notes);
+    }
+    
+    if ('receiptUrl' in expenseUpdate) {
+      updates.push(`receiptUrl = $${paramCount++}`);
+      values.push(expenseUpdate.receiptUrl);
+    }
+    
+    // Si aucune mise à jour à effectuer, retourner la dépense existante
+    if (updates.length === 0) {
+      return existingExpense;
+    }
+    
+    // Effectuer la mise à jour
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE expenses SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+      values
+    );
+    
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
+    };
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await pool.query('DELETE FROM expenses WHERE id = $1 RETURNING id', [id]);
+    return result.rows.length > 0;
+  }
+
+  async getExpensesByCategory(category: string): Promise<Expense[]> {
+    const result = await pool.query('SELECT * FROM expenses WHERE category = $1 ORDER BY date DESC', [category]);
+    return result.rows.map(row => ({
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
+    }));
+  }
+
+  async getExpensesByDateRange(startDate: string, endDate: string): Promise<Expense[]> {
+    const result = await pool.query(
+      'SELECT * FROM expenses WHERE date >= $1 AND date <= $2 ORDER BY date DESC',
+      [startDate, endDate]
+    );
+    
+    return result.rows.map(row => ({
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
+    }));
+  }
+
+  async saveExpenseReceipt(id: number, fileUrl: string): Promise<Expense | undefined> {
+    const result = await pool.query(
+      'UPDATE expenses SET receiptUrl = $1 WHERE id = $2 RETURNING *',
+      [fileUrl, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      description: row.description,
+      amount: parseFloat(row.amount),
+      date: row.date,
+      category: row.category,
+      paymentMethod: row.paymentmethod,
+      notes: row.notes,
+      receiptUrl: row.receipturl
     };
   }
 }

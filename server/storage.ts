@@ -675,4 +675,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Importer le stockage PostgreSQL depuis dbStorage.ts
+import { pgStorage } from './dbStorage';
+
+// Utiliser le stockage PostgreSQL au lieu du stockage en mémoire
+export const storage = pgStorage;
