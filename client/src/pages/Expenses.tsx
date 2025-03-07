@@ -38,7 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Expenses() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState({
     startDate: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd"),
     endDate: format(new Date(), "yyyy-MM-dd"),
@@ -69,7 +69,7 @@ export default function Expenses() {
           expense.description.toLowerCase().includes(searchQuery.toLowerCase());
         
         // Filtrage par catégorie
-        const matchesCategory = categoryFilter === "" || 
+        const matchesCategory = categoryFilter === "all" || 
           expense.category === categoryFilter;
         
         // Filtrage par date
@@ -155,7 +155,7 @@ export default function Expenses() {
                   <SelectValue placeholder="Toutes les catégories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes les catégories</SelectItem>
+                  <SelectItem value="all">Toutes les catégories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
