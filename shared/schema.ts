@@ -117,8 +117,6 @@ export interface BookingFormData {
 export interface AppointmentWithDetails extends Appointment {
   patientName: string;
   therapistName: string;
-  patientEmail?: string;
-  therapistEmail?: string;
 }
 
 // Invoice table

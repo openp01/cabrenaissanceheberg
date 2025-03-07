@@ -3,7 +3,6 @@ const { Pool } = pkg;
 import { format, addDays } from "date-fns";
 import { Patient, Therapist, Appointment, AppointmentWithDetails, Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, InsertAppointment, InsertInvoice } from '@shared/schema';
 import { IStorage } from './storage';
-import { sendAppointmentConfirmationEmail, sendAppointmentCancellationEmail } from './emailService';
 
 // Configuration de la connexion à la base de données
 const pool = new Pool({
@@ -315,11 +314,7 @@ export class PgStorage implements IStorage {
   // Méthodes pour les rendez-vous
   async getAppointments(): Promise<AppointmentWithDetails[]> {
     const query = `
-      SELECT a.*, 
-             p.firstName || ' ' || p.lastName as patientName, 
-             t.name as therapistName,
-             p.email as patientEmail,
-             t.email as therapistEmail
+      SELECT a.*, p.firstName || ' ' || p.lastName as patientName, t.name as therapistName
       FROM appointments a
       JOIN patients p ON a.patientId = p.id
       JOIN therapists t ON a.therapistId = t.id
@@ -341,9 +336,7 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid,
       patientName: row.patientname,
-      therapistName: row.therapistname,
-      patientEmail: row.patientemail,
-      therapistEmail: row.therapistemail
+      therapistName: row.therapistname
     }));
   }
 
@@ -372,11 +365,7 @@ export class PgStorage implements IStorage {
 
   async getAppointmentsForPatient(patientId: number): Promise<AppointmentWithDetails[]> {
     const query = `
-      SELECT a.*, 
-             p.firstName || ' ' || p.lastName as patientName, 
-             t.name as therapistName,
-             p.email as patientEmail,
-             t.email as therapistEmail
+      SELECT a.*, p.firstName || ' ' || p.lastName as patientName, t.name as therapistName
       FROM appointments a
       JOIN patients p ON a.patientId = p.id
       JOIN therapists t ON a.therapistId = t.id
@@ -399,9 +388,7 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid,
       patientName: row.patientname,
-      therapistName: row.therapistname,
-      patientEmail: row.patientemail,
-      therapistEmail: row.therapistemail
+      therapistName: row.therapistname
     }));
   }
 
@@ -668,109 +655,6 @@ export class PgStorage implements IStorage {
         // Si le statut passe à Confirmé et qu'il n'y a pas de facture, en créer une
         console.log(`Création d'une facture pour le rendez-vous ${id} qui vient d'être confirmé`);
         await this.generateInvoiceForAppointment(updatedAppointment);
-      }
-      
-      // Envoyer des emails en fonction du changement de statut
-      try {
-        // Récupérer les détails complets du rendez-vous pour les emails
-        const query = `
-          SELECT 
-            a.*,
-            p.firstName || ' ' || p.lastName as patientName,
-            t.name as therapistName,
-            p.email as patientEmail,
-            t.email as therapistEmail,
-            p.firstName as patientFirstName,
-            p.lastName as patientLastName
-          FROM appointments a
-          JOIN patients p ON a.patientId = p.id
-          JOIN therapists t ON a.therapistId = t.id
-          WHERE a.id = $1
-        `;
-        
-        const appointmentDetailsResult = await pool.query(query, [id]);
-        
-        if (appointmentDetailsResult.rows.length > 0) {
-          const appointmentWithDetails = {
-            id: appointmentDetailsResult.rows[0].id,
-            patientId: appointmentDetailsResult.rows[0].patientid,
-            therapistId: appointmentDetailsResult.rows[0].therapistid,
-            date: appointmentDetailsResult.rows[0].date,
-            time: appointmentDetailsResult.rows[0].time,
-            duration: appointmentDetailsResult.rows[0].duration,
-            type: appointmentDetailsResult.rows[0].type,
-            notes: appointmentDetailsResult.rows[0].notes,
-            status: appointmentDetailsResult.rows[0].status,
-            isRecurring: appointmentDetailsResult.rows[0].isrecurring,
-            recurringFrequency: appointmentDetailsResult.rows[0].recurringfrequency,
-            recurringCount: appointmentDetailsResult.rows[0].recurringcount,
-            parentAppointmentId: appointmentDetailsResult.rows[0].parentappointmentid,
-            patientName: appointmentDetailsResult.rows[0].patientname,
-            therapistName: appointmentDetailsResult.rows[0].therapistname,
-            patientEmail: appointmentDetailsResult.rows[0].patientemail,
-            therapistEmail: appointmentDetailsResult.rows[0].therapistemail
-          };
-          
-          // Récupérer les informations détaillées du patient pour l'email de confirmation
-          const patientData = {
-            id: appointmentDetailsResult.rows[0].patientid,
-            firstName: appointmentDetailsResult.rows[0].patientfirstname,
-            lastName: appointmentDetailsResult.rows[0].patientlastname,
-            email: appointmentDetailsResult.rows[0].patientemail,
-            phone: '',  // Ces champs ne sont pas nécessaires pour l'email
-            birthDate: '',
-            address: '',
-            notes: ''
-          };
-          
-          // Récupérer les informations détaillées du thérapeute pour l'email de confirmation
-          const therapistData = {
-            id: appointmentDetailsResult.rows[0].therapistid,
-            name: appointmentDetailsResult.rows[0].therapistname,
-            email: appointmentDetailsResult.rows[0].therapistemail,
-            specialty: '',  // Ces champs ne sont pas nécessaires pour l'email
-            phone: ''
-          };
-          
-          // Envoyer des emails en fonction du statut
-          if (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') {
-            console.log(`Envoi d'un email de confirmation pour le rendez-vous ${id}`);
-            
-            // Créer un objet patient complet pour l'envoi d'email
-            const completePatientData: Patient = {
-              id: appointmentDetailsResult.rows[0].patientid,
-              firstName: appointmentDetailsResult.rows[0].patientfirstname,
-              lastName: appointmentDetailsResult.rows[0].patientlastname,
-              email: appointmentDetailsResult.rows[0].patientemail,
-              phone: '',  // Valeur par défaut
-              birthDate: '', // Valeur par défaut
-              address: '',  // Valeur par défaut
-              notes: ''     // Valeur par défaut
-            };
-            
-            // Créer un objet thérapeute complet pour l'envoi d'email
-            const completeTherapistData: Therapist = {
-              id: appointmentDetailsResult.rows[0].therapistid,
-              name: appointmentDetailsResult.rows[0].therapistname,
-              email: appointmentDetailsResult.rows[0].therapistemail,
-              specialty: '',  // Valeur par défaut
-              phone: '',      // Valeur par défaut
-              color: '',      // Valeur par défaut
-              availableDays: null,  // Valeur par défaut
-              workHours: null       // Valeur par défaut
-            };
-            
-            sendAppointmentConfirmationEmail(updatedAppointment, completePatientData, completeTherapistData);
-          } else if (appointmentUpdate.status === 'Annulé' || appointmentUpdate.status === 'canceled') {
-            console.log(`Envoi d'un email d'annulation pour le rendez-vous ${id}`);
-            sendAppointmentCancellationEmail(appointmentWithDetails);
-          }
-        } else {
-          console.error(`Informations détaillées non trouvées pour le rendez-vous ${id}`);
-        }
-      } catch (emailError) {
-        // Capturer les erreurs d'envoi d'email sans affecter la mise à jour du rendez-vous
-        console.error(`Erreur lors de l'envoi d'email pour le rendez-vous ${id}:`, emailError);
       }
     }
     
