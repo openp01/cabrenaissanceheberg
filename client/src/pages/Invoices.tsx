@@ -22,6 +22,7 @@ import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import DownloadInvoiceButton from "@/components/DownloadInvoiceButton";
 
 export default function Invoices() {
   const [selectedTherapist, setSelectedTherapist] = useState<string>('all');
@@ -242,6 +243,11 @@ export default function Invoices() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right flex items-center justify-end gap-2">
+                      <DownloadInvoiceButton 
+                        invoiceId={invoice.id} 
+                        invoiceNumber={invoice.invoiceNumber} 
+                      />
+                      
                       <Button 
                         variant="outline" 
                         size="sm"

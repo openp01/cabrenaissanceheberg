@@ -5,6 +5,7 @@ import { insertPatientSchema, patientFormSchema, appointmentFormSchema, insertIn
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { generateInvoicePDF } from "./pdfGenerator";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes with prefix /api
@@ -313,6 +314,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la récupération de la facture" });
+    }
+  });
+  
+  // Endpoint pour télécharger la facture au format PDF
+  app.get("/api/invoices/:id/pdf", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de facture invalide" });
+      }
+      
+      // Récupérer la facture avec tous les détails nécessaires pour le PDF
+      const invoicesWithDetails = await storage.getInvoices();
+      const invoice = invoicesWithDetails.find(inv => inv.id === id);
+      
+      if (!invoice) {
+        return res.status(404).json({ error: "Facture non trouvée" });
+      }
+      
+      // Générer le PDF
+      const pdfStream = await generateInvoicePDF(invoice);
+      
+      // Définir les en-têtes de réponse pour le téléchargement du PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="facture-${invoice.invoiceNumber}.pdf"`);
+      
+      // Transmettre le PDF au client
+      pdfStream.pipe(res);
+      
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF de la facture:", error);
+      res.status(500).json({ error: "Erreur lors de la génération du PDF de la facture" });
     }
   });
 
