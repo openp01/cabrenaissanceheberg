@@ -13,7 +13,11 @@ import {
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { generateInvoicePDF } from "./pdfGenerator";
+import { 
+  generateInvoicePDF,
+  generateTherapistPaymentsPDF,
+  generateExpensesPDF
+} from "./pdfGenerator";
 import { sendInvoiceDownloadNotification } from "./emailService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -660,6 +664,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la suppression de la dépense" });
+    }
+  });
+
+  // Endpoints pour l'exportation PDF pour la comptabilité
+  
+  // Exportation des paiements aux thérapeutes en PDF
+  app.get("/api/therapist-payments/export/pdf", async (req, res) => {
+    try {
+      // Récupérer tous les paiements
+      const payments = await storage.getTherapistPayments();
+      
+      // Extraire les dates de début et fin pour filtrer si elles sont spécifiées
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      // Filtrer par date si les dates sont spécifiées
+      let filteredPayments = payments;
+      if (startDate && endDate) {
+        filteredPayments = await storage.getTherapistPaymentsByDateRange(startDate, endDate);
+      }
+      
+      // Définir le titre personnalisé si spécifié
+      const customTitle = req.query.title as string || 'RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES';
+      
+      // Définir les en-têtes de réponse pour le téléchargement du PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="paiements-therapeutes-${new Date().toISOString().slice(0, 10)}.pdf"`);
+      
+      // Générer le PDF et le transmettre directement au client
+      const pdfStream = await generateTherapistPaymentsPDF(
+        filteredPayments,
+        customTitle,
+        'Document pour la comptabilité',
+        startDate,
+        endDate
+      );
+      
+      pdfStream.pipe(res);
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF des paiements:", error);
+      res.status(500).json({ error: "Erreur lors de la génération du PDF des paiements" });
+    }
+  });
+  
+  // Exportation des dépenses en PDF
+  app.get("/api/expenses/export/pdf", async (req, res) => {
+    try {
+      // Récupérer toutes les dépenses
+      let expenses = await storage.getExpenses();
+      
+      // Extraire les dates de début et fin pour filtrer si elles sont spécifiées
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      // Filtrer par date si les dates sont spécifiées
+      if (startDate && endDate) {
+        expenses = await storage.getExpensesByDateRange(startDate, endDate);
+      }
+      
+      // Filtrer par catégorie si spécifié
+      const category = req.query.category as string;
+      if (category) {
+        expenses = await storage.getExpensesByCategory(category);
+      }
+      
+      // Définir le titre personnalisé si spécifié
+      const customTitle = req.query.title as string || 'REGISTRE DES DÉPENSES';
+      
+      // Définir les en-têtes de réponse pour le téléchargement du PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="depenses-${new Date().toISOString().slice(0, 10)}.pdf"`);
+      
+      // Générer le PDF et le transmettre directement au client
+      const pdfStream = await generateExpensesPDF(
+        expenses,
+        customTitle,
+        'Document pour la comptabilité',
+        startDate,
+        endDate
+      );
+      
+      pdfStream.pipe(res);
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF des dépenses:", error);
+      res.status(500).json({ error: "Erreur lors de la génération du PDF des dépenses" });
     }
   });
 
