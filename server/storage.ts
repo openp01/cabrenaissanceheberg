@@ -754,16 +754,19 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    // Assurez-vous que le montant est un nombre
-    const processedUpdate = {...paymentUpdate};
-    if (paymentUpdate.amount !== undefined) {
-      processedUpdate.amount = Number(paymentUpdate.amount);
-    }
-    
+    // Créer une version actualisée du paiement
     const updatedPayment: TherapistPayment = {
-      ...existingPayment,
-      ...processedUpdate as Partial<TherapistPayment>
+      ...existingPayment
     };
+    
+    // Mettre à jour les champs un par un pour assurer la cohérence des types
+    if (paymentUpdate.therapistId !== undefined) updatedPayment.therapistId = paymentUpdate.therapistId;
+    if (paymentUpdate.invoiceId !== undefined) updatedPayment.invoiceId = paymentUpdate.invoiceId;
+    if (paymentUpdate.amount !== undefined) updatedPayment.amount = Number(paymentUpdate.amount);
+    if (paymentUpdate.paymentDate !== undefined) updatedPayment.paymentDate = paymentUpdate.paymentDate;
+    if (paymentUpdate.paymentMethod !== undefined) updatedPayment.paymentMethod = paymentUpdate.paymentMethod;
+    if (paymentUpdate.paymentReference !== undefined) updatedPayment.paymentReference = paymentUpdate.paymentReference;
+    if (paymentUpdate.notes !== undefined) updatedPayment.notes = paymentUpdate.notes;
     
     this.therapistPaymentsData.set(id, updatedPayment);
     return updatedPayment;

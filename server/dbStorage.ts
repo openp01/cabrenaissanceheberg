@@ -1536,7 +1536,7 @@ export class PgStorage implements IStorage {
     const insertPayment: InsertTherapistPayment = {
       therapistId: invoice.therapistid,
       invoiceId: invoice.id,
-      amount: Number(invoice.amount),
+      amount: String(Number(invoice.amount)), // Conversion en string pour PostgreSQL
       paymentDate: formattedToday,
       paymentMethod: invoice.paymentmethod || "Virement bancaire",
       notes: `Paiement automatique pour la facture ${invoice.invoicenumber}`
