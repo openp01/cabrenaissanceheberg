@@ -990,6 +990,9 @@ export class PgStorage implements IStorage {
   }
 
   async updateInvoice(id: number, invoiceUpdate: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    // Vérifier si nous mettons à jour le statut en "Payée"
+    const isBeingPaidUpdate = invoiceUpdate.status === "Payée";
+    
     // Construire la requête de mise à jour de manière dynamique
     let query = 'UPDATE invoices SET ';
     const values: any[] = [];
@@ -1016,7 +1019,7 @@ export class PgStorage implements IStorage {
     }
     
     const row = result.rows[0];
-    return {
+    const updatedInvoice = {
       id: row.id,
       invoiceNumber: row.invoicenumber,
       patientId: row.patientid,
@@ -1031,6 +1034,14 @@ export class PgStorage implements IStorage {
       paymentMethod: row.paymentmethod,
       notes: row.notes
     };
+    
+    // Si la facture vient d'être marquée comme payée, créer automatiquement un paiement au thérapeute
+    if (isBeingPaidUpdate && row.status === "Payée") {
+      console.log(`La facture #${row.invoicenumber} a été marquée comme payée. Création d'un paiement au thérapeute...`);
+      await this.createPaymentFromInvoice(row.id);
+    }
+    
+    return updatedInvoice;
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
@@ -1284,7 +1295,7 @@ export class PgStorage implements IStorage {
       id: row.id,
       therapistId: row.therapistid,
       invoiceId: row.invoiceid,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       paymentDate: row.paymentdate,
       paymentMethod: row.paymentmethod,
       paymentReference: row.paymentreference,
