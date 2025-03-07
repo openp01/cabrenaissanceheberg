@@ -175,6 +175,19 @@ export const expenses = pgTable("expenses", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Modèle pour les paiements aux thérapeutes
+export const therapistPayments = pgTable("therapist_payments", {
+  id: serial("id").primaryKey(),
+  therapistId: integer("therapist_id").notNull().references(() => therapists.id),
+  invoiceId: integer("invoice_id").notNull().references(() => invoices.id),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentDate: text("payment_date").notNull(), // Format YYYY-MM-DD
+  paymentMethod: text("payment_method").notNull(),
+  paymentReference: text("payment_reference"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertExpenseSchema = createInsertSchema(expenses).pick({
   description: true,
   amount: true,
@@ -185,8 +198,21 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
   receiptUrl: true,
 });
 
+export const insertTherapistPaymentSchema = createInsertSchema(therapistPayments).pick({
+  therapistId: true,
+  invoiceId: true,
+  amount: true,
+  paymentDate: true,
+  paymentMethod: true,
+  paymentReference: true,
+  notes: true,
+});
+
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type Expense = typeof expenses.$inferSelect;
+
+export type InsertTherapistPayment = z.infer<typeof insertTherapistPaymentSchema>;
+export type TherapistPayment = typeof therapistPayments.$inferSelect;
 
 export const expenseFormSchema = insertExpenseSchema.extend({
   description: z.string().min(3, "La description doit contenir au moins 3 caractères"),
@@ -204,4 +230,26 @@ export interface ExpenseFormData {
   paymentMethod?: string;
   notes?: string;
   receiptFile?: File | null;
+}
+
+export const therapistPaymentFormSchema = insertTherapistPaymentSchema.extend({
+  amount: z.coerce.number().positive("Le montant doit être positif"),
+  paymentDate: z.string().min(1, "La date de paiement est requise"),
+  paymentMethod: z.string().min(1, "Le mode de paiement est requis"),
+});
+
+export interface TherapistPaymentFormData {
+  therapistId?: number;
+  invoiceId?: number;
+  amount?: number;
+  paymentDate?: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  notes?: string;
+}
+
+export interface TherapistPaymentWithDetails extends TherapistPayment {
+  therapistName: string;
+  invoiceNumber: string;
+  patientName: string;
 }
