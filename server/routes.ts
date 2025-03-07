@@ -482,6 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/expenses", async (req, res) => {
     try {
+      console.log("Requête reçue pour créer une dépense:", req.body);
       const validatedData = expenseFormSchema.parse(req.body);
       
       // Convertir le montant en string pour satisfaire le schema
@@ -490,11 +491,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: validatedData.amount.toString()
       };
       
+      console.log("Données validées:", adaptedData);
       const expense = await storage.createExpense(adaptedData);
+      console.log("Dépense créée:", expense);
       res.status(201).json(expense);
     } catch (error) {
+      console.error("Erreur lors de la création de la dépense:", error);
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
+        console.error("Erreur de validation:", validationError);
         res.status(400).json({ error: validationError.message });
       } else {
         res.status(500).json({ error: "Erreur lors de la création de la dépense" });
