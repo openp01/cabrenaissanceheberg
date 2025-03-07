@@ -1520,7 +1520,7 @@ export class PgStorage implements IStorage {
         id: row.id,
         therapistId: row.therapistid,
         invoiceId: row.invoiceid,
-        amount: row.amount.toString(),
+        amount: Number(row.amount),
         paymentDate: row.paymentdate,
         paymentMethod: row.paymentmethod,
         paymentReference: row.paymentreference,
@@ -1536,7 +1536,7 @@ export class PgStorage implements IStorage {
     const insertPayment: InsertTherapistPayment = {
       therapistId: invoice.therapistid,
       invoiceId: invoice.id,
-      amount: invoice.amount.toString(),
+      amount: Number(invoice.amount),
       paymentDate: formattedToday,
       paymentMethod: invoice.paymentmethod || "Virement bancaire",
       notes: `Paiement automatique pour la facture ${invoice.invoicenumber}`

@@ -735,7 +735,7 @@ export class MemStorage implements IStorage {
       id,
       therapistId: insertPayment.therapistId,
       invoiceId: insertPayment.invoiceId,
-      amount: insertPayment.amount,
+      amount: Number(insertPayment.amount),
       paymentDate: insertPayment.paymentDate,
       paymentMethod: insertPayment.paymentMethod,
       paymentReference: insertPayment.paymentReference ?? null,
@@ -754,9 +754,15 @@ export class MemStorage implements IStorage {
       return undefined;
     }
     
-    const updatedPayment = {
+    // Assurez-vous que le montant est un nombre
+    const processedUpdate = {...paymentUpdate};
+    if (paymentUpdate.amount !== undefined) {
+      processedUpdate.amount = Number(paymentUpdate.amount);
+    }
+    
+    const updatedPayment: TherapistPayment = {
       ...existingPayment,
-      ...paymentUpdate
+      ...processedUpdate as Partial<TherapistPayment>
     };
     
     this.therapistPaymentsData.set(id, updatedPayment);
@@ -813,7 +819,7 @@ export class MemStorage implements IStorage {
     const insertPayment: InsertTherapistPayment = {
       therapistId: invoice.therapistId,
       invoiceId: invoice.id,
-      amount: invoice.amount,
+      amount: Number(invoice.amount),
       paymentDate: formattedToday,
       paymentMethod: invoice.paymentMethod || "Virement bancaire",
       notes: `Paiement automatique pour la facture ${invoice.invoiceNumber}`
