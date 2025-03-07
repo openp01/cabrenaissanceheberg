@@ -583,6 +583,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Routes pour les paiements des thérapeutes
+  app.get("/api/therapist-payments", async (req, res) => {
+    try {
+      const payments = await storage.getTherapistPayments();
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des paiements aux thérapeutes" });
+    }
+  });
+
+  app.get("/api/therapist-payments/therapist/:therapistId", async (req, res) => {
+    try {
+      const therapistId = parseInt(req.params.therapistId);
+      if (isNaN(therapistId)) {
+        return res.status(400).json({ error: "ID de thérapeute invalide" });
+      }
+      
+      const payments = await storage.getTherapistPaymentsForTherapist(therapistId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des paiements du thérapeute" });
+    }
+  });
+
+  app.get("/api/therapist-payments/date-range", async (req, res) => {
+    try {
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Les dates de début et de fin sont requises" });
+      }
+      
+      const payments = await storage.getTherapistPaymentsByDateRange(startDate, endDate);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des paiements par plage de dates" });
+    }
+  });
+
+  app.get("/api/therapist-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de paiement invalide" });
+      }
+      
+      const payment = await storage.getTherapistPayment(id);
+      if (!payment) {
+        return res.status(404).json({ error: "Paiement non trouvé" });
+      }
+      
+      res.json(payment);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération du paiement" });
+    }
+  });
+
+  app.post("/api/therapist-payments", async (req, res) => {
+    try {
+      const validatedData = therapistPaymentFormSchema.parse(req.body);
+      const payment = await storage.createTherapistPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la création du paiement" });
+      }
+    }
+  });
+
+  app.put("/api/therapist-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de paiement invalide" });
+      }
+      
+      const validatedData = insertTherapistPaymentSchema.partial().parse(req.body);
+      const updatedPayment = await storage.updateTherapistPayment(id, validatedData);
+      
+      if (!updatedPayment) {
+        return res.status(404).json({ error: "Paiement non trouvé" });
+      }
+      
+      res.json(updatedPayment);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la mise à jour du paiement" });
+      }
+    }
+  });
+
+  app.delete("/api/therapist-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de paiement invalide" });
+      }
+      
+      const success = await storage.deleteTherapistPayment(id);
+      if (!success) {
+        return res.status(404).json({ error: "Paiement non trouvé" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la suppression du paiement" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
