@@ -1,32 +1,26 @@
 import nodemailer from 'nodemailer';
 import { InvoiceWithDetails } from '@shared/schema';
 
-// Création d'un transporteur pour l'envoi d'emails
-// Note: En environnement de production, vous utiliserez un service SMTP réel
-// Pour le développement, nous utilisons le service Ethereal qui capture les emails
-// sans les envoyer réellement (sandbox)
+// Création d'un transporteur pour l'envoi d'emails avec Gmail SMTP
 export async function getEmailTransporter() {
-  // Créer un compte de test Ethereal
-  const testAccount = await nodemailer.createTestAccount();
+  // Vérifier que les identifiants Gmail sont disponibles
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+    throw new Error('Les variables d\'environnement GMAIL_USER et GMAIL_PASS doivent être définies');
+  }
 
-  // Créer un transporteur réutilisable utilisant le service par défaut SMTP
+  // Créer un transporteur réutilisable utilisant le service Gmail
   const transporter = nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false, // true pour 465, false pour les autres ports
+    service: 'gmail',
     auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
     },
   });
 
   return {
     transporter,
-    previewUrl: (messageId: string) => {
-      const url = nodemailer.getTestMessageUrl({ id: messageId } as any);
-      return typeof url === 'string' ? url : undefined;
-    },
-    testAccount
+    // Pas de prévisualisation URL pour Gmail réel
+    previewUrl: (_messageId: string) => undefined,
   };
 }
 
@@ -38,7 +32,10 @@ export async function getEmailTransporter() {
 export async function sendInvoiceDownloadNotification(invoice: InvoiceWithDetails): Promise<{ success: boolean; messageUrl?: string; error?: any }> {
   try {
     // Créer le transporteur d'email
-    const { transporter, previewUrl } = await getEmailTransporter();
+    const { transporter } = await getEmailTransporter();
+
+    // L'adresse destinataire - à configurer selon vos besoins
+    const recipientEmail = 'jarviswriting01@gmail.com';
 
     // Préparer le contenu de l'email
     const emailContent = `
@@ -58,24 +55,19 @@ export async function sendInvoiceDownloadNotification(invoice: InvoiceWithDetail
 
     // Envoyer l'email
     const info = await transporter.sendMail({
-      from: '"Cabinet Orthophonie" <notifications@orthophonie-cabinet.fr>',
-      to: 'jarviswriting01@gmail.com',
+      from: `"Cabinet Orthophonie" <${process.env.GMAIL_USER}>`,
+      to: recipientEmail,
       subject: `Téléchargement de facture ${invoice.invoiceNumber}`,
       text: `Notification de téléchargement de facture: ${invoice.invoiceNumber} pour ${invoice.patientName}`,
       html: emailContent,
     });
 
     console.log('Message envoyé: %s', info.messageId);
-    
-    // En environnement de développement, obtenir l'URL de prévisualisation
-    const messageUrl = previewUrl(info.messageId);
-    if (messageUrl) {
-      console.log('URL de prévisualisation: %s', messageUrl);
-    }
+    console.log(`Notification d'email envoyée pour la facture ${invoice.invoiceNumber}`);
+    console.log(`Email envoyé à: ${recipientEmail}`);
 
     return {
-      success: true,
-      messageUrl: messageUrl || undefined
+      success: true
     };
   } catch (error) {
     console.error('Erreur lors de l\'envoi de l\'email de notification:', error);
