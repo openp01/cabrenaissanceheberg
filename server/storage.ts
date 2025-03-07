@@ -5,7 +5,9 @@ import {
   AppointmentWithDetails,
   Invoice, InsertInvoice, invoices,
   InvoiceWithDetails,
-  Expense, InsertExpense, expenses
+  Expense, InsertExpense, expenses,
+  TherapistPayment, InsertTherapistPayment, therapistPayments,
+  TherapistPaymentWithDetails
 } from "@shared/schema";
 import { addDays, addWeeks, addMonths, format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -684,6 +686,140 @@ export class MemStorage implements IStorage {
     
     this.expensesData.set(id, updatedExpense);
     return updatedExpense;
+  }
+
+  // Therapist Payment methods
+  async getTherapistPayments(): Promise<TherapistPaymentWithDetails[]> {
+    const payments = Array.from(this.therapistPaymentsData.values());
+    return Promise.all(payments.map(async payment => {
+      const therapist = await this.getTherapist(payment.therapistId);
+      const invoice = await this.getInvoice(payment.invoiceId);
+      const patient = invoice ? await this.getPatient(invoice.patientId) : undefined;
+      
+      return {
+        ...payment,
+        therapistName: therapist ? therapist.name : 'Unknown',
+        invoiceNumber: invoice ? invoice.invoiceNumber : 'Unknown',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown'
+      };
+    }));
+  }
+
+  async getTherapistPayment(id: number): Promise<TherapistPayment | undefined> {
+    return this.therapistPaymentsData.get(id);
+  }
+
+  async getTherapistPaymentsForTherapist(therapistId: number): Promise<TherapistPaymentWithDetails[]> {
+    const payments = Array.from(this.therapistPaymentsData.values())
+      .filter(payment => payment.therapistId === therapistId);
+    
+    return Promise.all(payments.map(async payment => {
+      const therapist = await this.getTherapist(payment.therapistId);
+      const invoice = await this.getInvoice(payment.invoiceId);
+      const patient = invoice ? await this.getPatient(invoice.patientId) : undefined;
+      
+      return {
+        ...payment,
+        therapistName: therapist ? therapist.name : 'Unknown',
+        invoiceNumber: invoice ? invoice.invoiceNumber : 'Unknown',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown'
+      };
+    }));
+  }
+
+  async createTherapistPayment(insertPayment: InsertTherapistPayment): Promise<TherapistPayment> {
+    const id = this.therapistPaymentCurrentId++;
+    const today = new Date();
+    
+    const payment: TherapistPayment = {
+      id,
+      therapistId: insertPayment.therapistId,
+      invoiceId: insertPayment.invoiceId,
+      amount: insertPayment.amount,
+      paymentDate: insertPayment.paymentDate,
+      paymentMethod: insertPayment.paymentMethod,
+      paymentReference: insertPayment.paymentReference ?? null,
+      notes: insertPayment.notes ?? null,
+      createdAt: today
+    };
+    
+    this.therapistPaymentsData.set(id, payment);
+    return payment;
+  }
+
+  async updateTherapistPayment(id: number, paymentUpdate: Partial<InsertTherapistPayment>): Promise<TherapistPayment | undefined> {
+    const existingPayment = this.therapistPaymentsData.get(id);
+    
+    if (!existingPayment) {
+      return undefined;
+    }
+    
+    const updatedPayment = {
+      ...existingPayment,
+      ...paymentUpdate
+    };
+    
+    this.therapistPaymentsData.set(id, updatedPayment);
+    return updatedPayment;
+  }
+
+  async deleteTherapistPayment(id: number): Promise<boolean> {
+    return this.therapistPaymentsData.delete(id);
+  }
+
+  async getTherapistPaymentsByDateRange(startDate: string, endDate: string): Promise<TherapistPaymentWithDetails[]> {
+    const start = parse(startDate, 'dd/MM/yyyy', new Date());
+    const end = parse(endDate, 'dd/MM/yyyy', new Date());
+    
+    const payments = Array.from(this.therapistPaymentsData.values())
+      .filter(payment => {
+        const paymentDate = parse(payment.paymentDate, 'dd/MM/yyyy', new Date());
+        return paymentDate >= start && paymentDate <= end;
+      });
+    
+    return Promise.all(payments.map(async payment => {
+      const therapist = await this.getTherapist(payment.therapistId);
+      const invoice = await this.getInvoice(payment.invoiceId);
+      const patient = invoice ? await this.getPatient(invoice.patientId) : undefined;
+      
+      return {
+        ...payment,
+        therapistName: therapist ? therapist.name : 'Unknown',
+        invoiceNumber: invoice ? invoice.invoiceNumber : 'Unknown',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown'
+      };
+    }));
+  }
+
+  async createPaymentFromInvoice(invoiceId: number): Promise<TherapistPayment | undefined> {
+    const invoice = await this.getInvoice(invoiceId);
+    
+    if (!invoice || invoice.status !== "Payée") {
+      return undefined;
+    }
+    
+    // Vérifier si un paiement existe déjà pour cette facture
+    const existingPayment = Array.from(this.therapistPaymentsData.values())
+      .find(payment => payment.invoiceId === invoiceId);
+    
+    if (existingPayment) {
+      return existingPayment;
+    }
+    
+    // Créer un nouveau paiement
+    const today = new Date();
+    const formattedToday = format(today, 'dd/MM/yyyy');
+    
+    const insertPayment: InsertTherapistPayment = {
+      therapistId: invoice.therapistId,
+      invoiceId: invoice.id,
+      amount: invoice.amount,
+      paymentDate: formattedToday,
+      paymentMethod: invoice.paymentMethod || "Virement bancaire",
+      notes: `Paiement automatique pour la facture ${invoice.invoiceNumber}`
+    };
+    
+    return this.createTherapistPayment(insertPayment);
   }
 }
 
