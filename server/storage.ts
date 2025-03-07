@@ -89,7 +89,7 @@ export class MemStorage implements IStorage {
     const exampleExpenses: InsertExpense[] = [
       {
         description: "Achat de fournitures de bureau",
-        amount: 85.50,
+        amount: "85.50",
         date: formattedToday,
         category: "Fournitures",
         paymentMethod: "Carte bancaire",
@@ -97,7 +97,7 @@ export class MemStorage implements IStorage {
       },
       {
         description: "Logiciel de gestion",
-        amount: 120.00,
+        amount: "120.00",
         date: formattedLastMonth,
         category: "Logiciels",
         paymentMethod: "Virement",
@@ -105,7 +105,7 @@ export class MemStorage implements IStorage {
       },
       {
         description: "Entretien du local",
-        amount: 150.00,
+        amount: "150.00",
         date: formattedLastMonth,
         category: "Maintenance",
         paymentMethod: "Chèque",
@@ -615,7 +615,7 @@ export class MemStorage implements IStorage {
       paymentMethod: insertExpense.paymentMethod,
       notes: insertExpense.notes ?? null,
       receiptUrl: insertExpense.receiptUrl ?? null,
-      createdAt: format(today, 'dd/MM/yyyy HH:mm:ss')
+      createdAt: new Date()
     };
     
     this.expensesData.set(id, expense);
