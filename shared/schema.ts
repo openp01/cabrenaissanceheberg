@@ -198,7 +198,8 @@ export const insertExpenseSchema = createInsertSchema(expenses).pick({
   receiptUrl: true,
 });
 
-export const insertTherapistPaymentSchema = createInsertSchema(therapistPayments).pick({
+// Schéma de base généré par Drizzle-Zod
+const baseTherapistPaymentSchema = createInsertSchema(therapistPayments).pick({
   therapistId: true,
   invoiceId: true,
   amount: true,
@@ -208,10 +209,17 @@ export const insertTherapistPaymentSchema = createInsertSchema(therapistPayments
   notes: true,
 });
 
+// Schéma d'insertion étendu pour forcer le type number pour amount
+export const insertTherapistPaymentSchema = baseTherapistPaymentSchema.extend({
+  amount: z.coerce.number(),
+});
+
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type Expense = typeof expenses.$inferSelect;
 
 export type InsertTherapistPayment = z.infer<typeof insertTherapistPaymentSchema>;
+// Pour débogage: Logger le type
+// console.log("Type of InsertTherapistPayment amount:", typeof insertTherapistPaymentSchema.shape.amount);
 // Définition d'une interface personnalisée pour TherapistPayment pour corriger le type de 'amount'
 export interface TherapistPayment {
   id: number;

@@ -1362,7 +1362,7 @@ export class PgStorage implements IStorage {
       [
         payment.therapistId,
         payment.invoiceId,
-        payment.amount,
+        String(payment.amount), // Conversion explicite en string pour PostgreSQL
         payment.paymentDate,
         payment.paymentMethod,
         payment.paymentReference,
@@ -1402,7 +1402,7 @@ export class PgStorage implements IStorage {
     
     if (paymentUpdate.amount !== undefined) {
       updates.push(`amount = $${paramIndex++}`);
-      values.push(paymentUpdate.amount);
+      values.push(String(paymentUpdate.amount)); // Conversion explicite en string pour PostgreSQL
     }
     
     if (paymentUpdate.paymentDate !== undefined) {
