@@ -20,7 +20,7 @@ export default function AppointmentList() {
   // Delete appointment mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/appointments/${id}`);
+      await apiRequest(`/api/appointments/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
