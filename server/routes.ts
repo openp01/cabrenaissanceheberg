@@ -7,7 +7,8 @@ import {
   appointmentFormSchema, 
   insertInvoiceSchema,
   insertExpenseSchema,
-  expenseFormSchema 
+  expenseFormSchema,
+  insertTherapistPaymentSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
@@ -423,6 +424,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la suppression de la facture" });
+    }
+  });
+
+  // Therapist Payment routes
+  app.get("/api/therapist-payments", async (req, res) => {
+    try {
+      const payments = await storage.getTherapistPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des paiements aux thérapeutes:", error);
+      res.status(500).json({ error: "Erreur lors de la récupération des paiements aux thérapeutes" });
+    }
+  });
+
+  app.get("/api/therapist-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de paiement invalide" });
+      }
+      
+      const payment = await storage.getTherapistPayment(id);
+      if (!payment) {
+        return res.status(404).json({ error: "Paiement non trouvé" });
+      }
+      
+      res.json(payment);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération du paiement" });
+    }
+  });
+
+  app.get("/api/therapist-payments/therapist/:therapistId", async (req, res) => {
+    try {
+      const therapistId = parseInt(req.params.therapistId);
+      if (isNaN(therapistId)) {
+        return res.status(400).json({ error: "ID de thérapeute invalide" });
+      }
+      
+      const payments = await storage.getTherapistPaymentsForTherapist(therapistId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur lors de la récupération des paiements du thérapeute" });
+    }
+  });
+
+  app.post("/api/therapist-payments", async (req, res) => {
+    try {
+      // Validation des données
+      const validatedData = insertTherapistPaymentSchema.parse(req.body);
+      const payment = await storage.createTherapistPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        console.error("Erreur lors de la création du paiement:", error);
+        res.status(500).json({ error: "Erreur lors de la création du paiement" });
+      }
+    }
+  });
+
+  app.post("/api/create-payment-from-invoice/:invoiceId", async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.invoiceId);
+      if (isNaN(invoiceId)) {
+        return res.status(400).json({ error: "ID de facture invalide" });
+      }
+      
+      const payment = await storage.createPaymentFromInvoice(invoiceId);
+      if (!payment) {
+        return res.status(404).json({ 
+          error: "Impossible de créer un paiement. La facture n'existe pas ou n'est pas marquée comme payée." 
+        });
+      }
+      
+      res.status(201).json(payment);
+    } catch (error) {
+      console.error("Erreur lors de la création du paiement depuis la facture:", error);
+      res.status(500).json({ error: "Erreur lors de la création du paiement depuis la facture" });
     }
   });
 
