@@ -483,7 +483,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expenses", async (req, res) => {
     try {
       const validatedData = expenseFormSchema.parse(req.body);
-      const expense = await storage.createExpense(validatedData);
+      
+      // Convertir le montant en string pour satisfaire le schema
+      const adaptedData = {
+        ...validatedData,
+        amount: validatedData.amount.toString()
+      };
+      
+      const expense = await storage.createExpense(adaptedData);
       res.status(201).json(expense);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -503,7 +510,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = expenseFormSchema.partial().parse(req.body);
-      const updatedExpense = await storage.updateExpense(id, validatedData);
+      
+      // Convertir le montant en string pour satisfaire le schema si présent
+      const adaptedData = {
+        ...validatedData,
+        amount: validatedData.amount !== undefined ? validatedData.amount.toString() : undefined
+      };
+      
+      const updatedExpense = await storage.updateExpense(id, adaptedData);
       
       if (!updatedExpense) {
         return res.status(404).json({ error: "Dépense non trouvée" });

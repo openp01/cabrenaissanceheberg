@@ -49,7 +49,7 @@ export default function Expenses() {
     queryKey: ["/api/expenses"],
     queryFn: async () => {
       try {
-        return await apiRequest<Expense[]>("/api/expenses");
+        return await apiRequest("/api/expenses") as Expense[];
       } catch (error) {
         toast({
           title: "Erreur",

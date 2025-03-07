@@ -66,9 +66,8 @@ export default function ExpenseForm() {
       const fileUrl = `https://example.com/receipts/${receiptFile.name}`;
       
       // Mettre à jour l'URL du justificatif pour cette dépense
-      await apiRequest(`/api/expenses/${expenseId}/receipt`, {
-        method: "POST",
-        body: { fileUrl },
+      await apiRequest(`/api/expenses/${expenseId}/receipt`, "POST", { 
+        fileUrl 
       });
       
       return fileUrl;
@@ -83,10 +82,7 @@ export default function ExpenseForm() {
   // Create expense mutation
   const createExpenseMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
-      const response = await apiRequest("/api/expenses", {
-        method: "POST",
-        body: data,
-      });
+      const response = await apiRequest("/api/expenses", "POST", data) as any;
       
       if (receiptFile && response && response.id) {
         await uploadReceipt(response.id);

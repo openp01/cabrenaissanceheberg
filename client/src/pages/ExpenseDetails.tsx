@@ -35,7 +35,7 @@ export default function ExpenseDetails() {
     queryKey: ["/api/expenses", parseInt(id)],
     queryFn: async () => {
       try {
-        return await apiRequest<Expense>(`/api/expenses/${id}`);
+        return await apiRequest(`/api/expenses/${id}`) as Expense;
       } catch (error) {
         toast({
           title: "Erreur",
@@ -51,9 +51,7 @@ export default function ExpenseDetails() {
   // Suppression d'une dépense
   const deleteExpenseMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/expenses/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest(`/api/expenses/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
