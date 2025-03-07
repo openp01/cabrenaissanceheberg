@@ -6,6 +6,7 @@ import { AppointmentWithDetails } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HomeButton } from "@/components/ui/home-button";
 
 export default function AppointmentList() {
   const [location, setLocation] = useLocation();
@@ -83,7 +84,10 @@ export default function AppointmentList() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+            <div className="flex items-center space-x-4">
+              <HomeButton />
+              <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+            </div>
             <div className="flex space-x-2">
               <button 
                 onClick={handleViewSchedule}
