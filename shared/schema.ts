@@ -212,7 +212,18 @@ export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type Expense = typeof expenses.$inferSelect;
 
 export type InsertTherapistPayment = z.infer<typeof insertTherapistPaymentSchema>;
-export type TherapistPayment = typeof therapistPayments.$inferSelect;
+// Définition d'une interface personnalisée pour TherapistPayment pour corriger le type de 'amount'
+export interface TherapistPayment {
+  id: number;
+  therapistId: number;
+  invoiceId: number;
+  amount: number; // Assurez-vous que c'est un nombre, pas une chaîne
+  paymentDate: string;
+  paymentMethod: string;
+  paymentReference: string | null;
+  notes: string | null;
+  createdAt: Date;
+}
 
 export const expenseFormSchema = insertExpenseSchema.extend({
   description: z.string().min(3, "La description doit contenir au moins 3 caractères"),
@@ -248,8 +259,10 @@ export interface TherapistPaymentFormData {
   notes?: string;
 }
 
-export interface TherapistPaymentWithDetails extends TherapistPayment {
+// Correction : spécifier que amount est un nombre dans l'interface
+export interface TherapistPaymentWithDetails extends Omit<TherapistPayment, 'amount'> {
   therapistName: string;
   invoiceNumber: string;
   patientName: string;
+  amount: number;
 }
