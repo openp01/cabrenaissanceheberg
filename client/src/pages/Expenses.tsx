@@ -31,10 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { type Expense } from "@shared/schema";
-import { PlusIcon, FileTextIcon, SearchIcon, FilterIcon } from "lucide-react";
+import { PlusIcon, FileTextIcon, SearchIcon, FilterIcon, FileDown, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { HomeButton } from "@/components/ui/home-button";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
 
 export default function Expenses() {
   const { toast } = useToast();
@@ -106,12 +115,92 @@ export default function Expenses() {
             </p>
           </div>
         </div>
-        <Link href="/expenses/new">
-          <Button className="flex items-center">
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Nouvelle Dépense
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          {/* Dialogue d'exportation PDF */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <FileDown className="h-4 w-4" />
+                Exporter pour comptable
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Exporter les dépenses en PDF</DialogTitle>
+                <DialogDescription>
+                  Générez un document PDF des dépenses filtrées pour votre comptable
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right">Titre:</label>
+                  <Input 
+                    className="col-span-3" 
+                    value={categoryFilter !== "all" 
+                      ? `REGISTRE DES DÉPENSES - ${categoryFilter.toUpperCase()}`
+                      : "REGISTRE DES DÉPENSES"
+                    }
+                    onChange={(e) => e.target.value}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right">Période:</label>
+                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                    <Input 
+                      type="date"
+                      value={dateRange.startDate}
+                      onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                    />
+                    <Input 
+                      type="date"
+                      value={dateRange.endDate}
+                      onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  onClick={() => {
+                    // Construire l'URL avec les paramètres
+                    let url = "/api/expenses/export/pdf";
+                    const params = new URLSearchParams();
+                    
+                    // Ajouter les dates
+                    params.append("startDate", dateRange.startDate);
+                    params.append("endDate", dateRange.endDate);
+                    
+                    // Ajouter la catégorie si elle est filtrée
+                    if (categoryFilter !== "all") {
+                      params.append("category", categoryFilter);
+                      params.append("title", `REGISTRE DES DÉPENSES - ${categoryFilter.toUpperCase()}`);
+                    }
+                    
+                    // Ajouter les paramètres à l'URL
+                    if (params.toString()) {
+                      url += `?${params.toString()}`;
+                    }
+                    
+                    // Ouvrir une nouvelle fenêtre pour télécharger le PDF
+                    window.open(url, "_blank");
+                  }}
+                >
+                  Exporter
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Link href="/expenses/new">
+            <Button className="flex items-center">
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Nouvelle Dépense
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

@@ -28,6 +28,23 @@ import {
 import { HomeButton } from "@/components/ui/home-button";
 import { TherapistPaymentWithDetails, Therapist } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { FileDown, Printer, Calendar } from "lucide-react";
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function Payments() {
   // Récupération de tous les paiements
@@ -69,6 +86,39 @@ export default function Payments() {
     return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
   };
 
+  // États pour le filtre de date
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [customTitle, setCustomTitle] = useState("RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES");
+  
+  // Fonction pour exporter les paiements en PDF
+  const exportPaymentsToPDF = () => {
+    // Construire l'URL avec les paramètres
+    let url = "/api/therapist-payments/export/pdf";
+    const params = new URLSearchParams();
+    
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    if (selectedTherapistId && selectedTherapistId !== "all") {
+      // Si nous avons un nom de thérapeute disponible, l'ajouter au titre
+      const therapist = therapists?.find(t => t.id.toString() === selectedTherapistId);
+      if (therapist) {
+        params.append("title", `RELEVÉ DES PAIEMENTS - ${therapist.name}`);
+      }
+    } else if (customTitle !== "RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES") {
+      params.append("title", customTitle);
+    }
+    
+    // Ajouter les paramètres à l'URL
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+    
+    // Ouvrir une nouvelle fenêtre pour télécharger le PDF
+    window.open(url, "_blank");
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -78,7 +128,67 @@ export default function Payments() {
             Suivi des paiements effectués aux thérapeutes
           </p>
         </div>
-        <HomeButton />
+        <div className="flex gap-2">
+          <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <FileDown className="h-4 w-4" />
+                Exporter PDF
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Exporter les paiements en PDF</DialogTitle>
+                <DialogDescription>
+                  Personnalisez votre export pour le comptable
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right">Titre:</label>
+                  <Input 
+                    className="col-span-3" 
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right">Date début:</label>
+                  <Input 
+                    className="col-span-3" 
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right">Date fin:</label>
+                  <Input 
+                    className="col-span-3" 
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  onClick={() => {
+                    exportPaymentsToPDF();
+                    setIsExportDialogOpen(false);
+                  }}
+                >
+                  Exporter
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <HomeButton />
+        </div>
       </div>
 
       <div className="grid gap-6 mb-8">
