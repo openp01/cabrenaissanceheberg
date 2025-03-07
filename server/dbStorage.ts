@@ -1,7 +1,12 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import { format, addDays } from "date-fns";
-import { Patient, Therapist, Appointment, AppointmentWithDetails, Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, InsertAppointment, InsertInvoice, Expense, InsertExpense } from '@shared/schema';
+import { format, addDays, parse } from "date-fns";
+import { 
+  Patient, Therapist, Appointment, AppointmentWithDetails, 
+  Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, 
+  InsertAppointment, InsertInvoice, Expense, InsertExpense,
+  TherapistPayment, TherapistPaymentWithDetails, InsertTherapistPayment 
+} from '@shared/schema';
 import { IStorage } from './storage';
 
 // Configuration de la connexion à la base de données
@@ -91,6 +96,23 @@ async function initializeDatabase() {
         notes TEXT,
         receiptUrl TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // Création de la table therapist_payments
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS therapist_payments (
+        id SERIAL PRIMARY KEY,
+        therapistId INTEGER NOT NULL,
+        invoiceId INTEGER NOT NULL,
+        amount NUMERIC(10, 2) NOT NULL,
+        paymentDate TEXT NOT NULL,
+        paymentMethod TEXT NOT NULL,
+        paymentReference TEXT,
+        notes TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        FOREIGN KEY (therapistId) REFERENCES therapists (id),
+        FOREIGN KEY (invoiceId) REFERENCES invoices (id)
       );
     `);
 
@@ -1244,6 +1266,272 @@ export class PgStorage implements IStorage {
       receiptUrl: row.receipturl,
       createdAt: row.created_at
     };
+  }
+
+  // Méthodes pour les paiements des thérapeutes
+  async getTherapistPayments(): Promise<TherapistPaymentWithDetails[]> {
+    const query = `
+      SELECT tp.*, t.name as therapistName, i.invoiceNumber, 
+             p.firstName || ' ' || p.lastName as patientName
+      FROM therapist_payments tp
+      JOIN therapists t ON tp.therapistId = t.id
+      JOIN invoices i ON tp.invoiceId = i.id
+      JOIN patients p ON i.patientId = p.id
+      ORDER BY tp.paymentDate DESC
+    `;
+    const result = await pool.query(query);
+    return result.rows.map(row => ({
+      id: row.id,
+      therapistId: row.therapistid,
+      invoiceId: row.invoiceid,
+      amount: parseFloat(row.amount),
+      paymentDate: row.paymentdate,
+      paymentMethod: row.paymentmethod,
+      paymentReference: row.paymentreference,
+      notes: row.notes,
+      createdAt: row.created_at,
+      therapistName: row.therapistname,
+      invoiceNumber: row.invoicenumber,
+      patientName: row.patientname
+    }));
+  }
+
+  async getTherapistPayment(id: number): Promise<TherapistPayment | undefined> {
+    const result = await pool.query('SELECT * FROM therapist_payments WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapistid,
+      invoiceId: row.invoiceid,
+      amount: parseFloat(row.amount),
+      paymentDate: row.paymentdate,
+      paymentMethod: row.paymentmethod,
+      paymentReference: row.paymentreference,
+      notes: row.notes,
+      createdAt: row.created_at
+    };
+  }
+
+  async getTherapistPaymentsForTherapist(therapistId: number): Promise<TherapistPaymentWithDetails[]> {
+    const query = `
+      SELECT tp.*, t.name as therapistName, i.invoiceNumber, 
+             p.firstName || ' ' || p.lastName as patientName
+      FROM therapist_payments tp
+      JOIN therapists t ON tp.therapistId = t.id
+      JOIN invoices i ON tp.invoiceId = i.id
+      JOIN patients p ON i.patientId = p.id
+      WHERE tp.therapistId = $1
+      ORDER BY tp.paymentDate DESC
+    `;
+    const result = await pool.query(query, [therapistId]);
+    return result.rows.map(row => ({
+      id: row.id,
+      therapistId: row.therapistid,
+      invoiceId: row.invoiceid,
+      amount: parseFloat(row.amount),
+      paymentDate: row.paymentdate,
+      paymentMethod: row.paymentmethod,
+      paymentReference: row.paymentreference,
+      notes: row.notes,
+      createdAt: row.created_at,
+      therapistName: row.therapistname,
+      invoiceNumber: row.invoicenumber,
+      patientName: row.patientname
+    }));
+  }
+
+  async createTherapistPayment(payment: InsertTherapistPayment): Promise<TherapistPayment> {
+    const result = await pool.query(
+      `INSERT INTO therapist_payments (
+        therapistId, invoiceId, amount, paymentDate, paymentMethod, paymentReference, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        payment.therapistId,
+        payment.invoiceId,
+        payment.amount,
+        payment.paymentDate,
+        payment.paymentMethod,
+        payment.paymentReference,
+        payment.notes
+      ]
+    );
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapistid,
+      invoiceId: row.invoiceid,
+      amount: parseFloat(row.amount),
+      paymentDate: row.paymentdate,
+      paymentMethod: row.paymentmethod,
+      paymentReference: row.paymentreference,
+      notes: row.notes,
+      createdAt: row.created_at
+    };
+  }
+
+  async updateTherapistPayment(id: number, paymentUpdate: Partial<InsertTherapistPayment>): Promise<TherapistPayment | undefined> {
+    // Construire la requête dynamiquement en fonction des champs à mettre à jour
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    if (paymentUpdate.therapistId !== undefined) {
+      updates.push(`therapistId = $${paramIndex++}`);
+      values.push(paymentUpdate.therapistId);
+    }
+    
+    if (paymentUpdate.invoiceId !== undefined) {
+      updates.push(`invoiceId = $${paramIndex++}`);
+      values.push(paymentUpdate.invoiceId);
+    }
+    
+    if (paymentUpdate.amount !== undefined) {
+      updates.push(`amount = $${paramIndex++}`);
+      values.push(paymentUpdate.amount);
+    }
+    
+    if (paymentUpdate.paymentDate !== undefined) {
+      updates.push(`paymentDate = $${paramIndex++}`);
+      values.push(paymentUpdate.paymentDate);
+    }
+    
+    if (paymentUpdate.paymentMethod !== undefined) {
+      updates.push(`paymentMethod = $${paramIndex++}`);
+      values.push(paymentUpdate.paymentMethod);
+    }
+    
+    if (paymentUpdate.paymentReference !== undefined) {
+      updates.push(`paymentReference = $${paramIndex++}`);
+      values.push(paymentUpdate.paymentReference);
+    }
+    
+    if (paymentUpdate.notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      values.push(paymentUpdate.notes);
+    }
+    
+    if (updates.length === 0) {
+      // Aucun champ à mettre à jour
+      return this.getTherapistPayment(id);
+    }
+    
+    // Compléter la requête avec l'ID du paiement
+    values.push(id);
+    
+    const updateQuery = `
+      UPDATE therapist_payments 
+      SET ${updates.join(', ')} 
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    
+    const result = await pool.query(updateQuery, values);
+    
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapistid,
+      invoiceId: row.invoiceid,
+      amount: parseFloat(row.amount),
+      paymentDate: row.paymentdate,
+      paymentMethod: row.paymentmethod,
+      paymentReference: row.paymentreference,
+      notes: row.notes,
+      createdAt: row.created_at
+    };
+  }
+
+  async deleteTherapistPayment(id: number): Promise<boolean> {
+    const result = await pool.query('DELETE FROM therapist_payments WHERE id = $1 RETURNING id', [id]);
+    return result.rows.length > 0;
+  }
+
+  async getTherapistPaymentsByDateRange(startDate: string, endDate: string): Promise<TherapistPaymentWithDetails[]> {
+    const query = `
+      SELECT tp.*, t.name as therapistName, i.invoiceNumber, 
+             p.firstName || ' ' || p.lastName as patientName
+      FROM therapist_payments tp
+      JOIN therapists t ON tp.therapistId = t.id
+      JOIN invoices i ON tp.invoiceId = i.id
+      JOIN patients p ON i.patientId = p.id
+      WHERE tp.paymentDate >= $1 AND tp.paymentDate <= $2
+      ORDER BY tp.paymentDate
+    `;
+    const result = await pool.query(query, [startDate, endDate]);
+    return result.rows.map(row => ({
+      id: row.id,
+      therapistId: row.therapistid,
+      invoiceId: row.invoiceid,
+      amount: parseFloat(row.amount),
+      paymentDate: row.paymentdate,
+      paymentMethod: row.paymentmethod,
+      paymentReference: row.paymentreference,
+      notes: row.notes,
+      createdAt: row.created_at,
+      therapistName: row.therapistname,
+      invoiceNumber: row.invoicenumber,
+      patientName: row.patientname
+    }));
+  }
+
+  async createPaymentFromInvoice(invoiceId: number): Promise<TherapistPayment | undefined> {
+    // Vérifier si l'invoice existe et est payée
+    const invoiceResult = await pool.query('SELECT * FROM invoices WHERE id = $1', [invoiceId]);
+    
+    if (invoiceResult.rows.length === 0) {
+      return undefined;
+    }
+    
+    const invoice = invoiceResult.rows[0];
+    
+    if (invoice.status !== "Payée") {
+      return undefined;
+    }
+    
+    // Vérifier si un paiement existe déjà pour cette facture
+    const existingPaymentResult = await pool.query(
+      'SELECT * FROM therapist_payments WHERE invoiceId = $1',
+      [invoiceId]
+    );
+    
+    if (existingPaymentResult.rows.length > 0) {
+      // Un paiement existe déjà, le retourner
+      const row = existingPaymentResult.rows[0];
+      return {
+        id: row.id,
+        therapistId: row.therapistid,
+        invoiceId: row.invoiceid,
+        amount: parseFloat(row.amount),
+        paymentDate: row.paymentdate,
+        paymentMethod: row.paymentmethod,
+        paymentReference: row.paymentreference,
+        notes: row.notes,
+        createdAt: row.created_at
+      };
+    }
+    
+    // Créer un nouveau paiement
+    const today = new Date();
+    const formattedToday = format(today, 'dd/MM/yyyy');
+    
+    const insertPayment: InsertTherapistPayment = {
+      therapistId: invoice.therapistid,
+      invoiceId: invoice.id,
+      amount: parseFloat(invoice.amount),
+      paymentDate: formattedToday,
+      paymentMethod: invoice.paymentmethod || "Virement bancaire",
+      notes: `Paiement automatique pour la facture ${invoice.invoicenumber}`
+    };
+    
+    return this.createTherapistPayment(insertPayment);
   }
 }
 
