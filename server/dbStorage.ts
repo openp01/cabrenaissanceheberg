@@ -1045,12 +1045,13 @@ export class PgStorage implements IStorage {
     return result.rows.map(row => ({
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     }));
   }
 
@@ -1064,12 +1065,13 @@ export class PgStorage implements IStorage {
     return {
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     };
   }
 
@@ -1094,12 +1096,13 @@ export class PgStorage implements IStorage {
     return {
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     };
   }
 
@@ -1170,12 +1173,13 @@ export class PgStorage implements IStorage {
     return {
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     };
   }
 
@@ -1189,12 +1193,13 @@ export class PgStorage implements IStorage {
     return result.rows.map(row => ({
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     }));
   }
 
@@ -1207,12 +1212,13 @@ export class PgStorage implements IStorage {
     return result.rows.map(row => ({
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     }));
   }
 
@@ -1230,12 +1236,13 @@ export class PgStorage implements IStorage {
     return {
       id: row.id,
       description: row.description,
-      amount: parseFloat(row.amount),
+      amount: row.amount.toString(),
       date: row.date,
       category: row.category,
       paymentMethod: row.paymentmethod,
       notes: row.notes,
-      receiptUrl: row.receipturl
+      receiptUrl: row.receipturl,
+      createdAt: row.created_at
     };
   }
 }

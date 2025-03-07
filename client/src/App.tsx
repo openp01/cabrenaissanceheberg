@@ -1,13 +1,13 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
-import Home from "@/pages/Home";
-import AppointmentList from "@/pages/AppointmentList";
-import TherapistSchedule from "@/pages/TherapistSchedule";
-import Invoices from "@/pages/Invoices";
-import Expenses from "@/pages/Expenses";
-import ExpenseForm from "@/pages/ExpenseForm";
-import ExpenseDetails from "@/pages/ExpenseDetails";
-import NotFound from "@/pages/not-found";
+import Home from "./pages/Home";
+import AppointmentList from "./pages/AppointmentList";
+import TherapistSchedule from "./pages/TherapistSchedule";
+import Invoices from "./pages/Invoices";
+import Expenses from "./pages/Expenses";
+import ExpenseForm from "./pages/ExpenseForm";
+import ExpenseDetails from "./pages/ExpenseDetails";
+import NotFound from "./pages/not-found";
 
 function Router() {
   return (

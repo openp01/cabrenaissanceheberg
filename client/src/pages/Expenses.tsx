@@ -91,7 +91,7 @@ export default function Expenses() {
 
   // Liste des catégories uniques pour le filtre
   const categories = expenses
-    ? [...new Set(expenses.map((expense) => expense.category))]
+    ? Array.from(new Set(expenses.map((expense) => expense.category)))
     : [];
 
   return (
