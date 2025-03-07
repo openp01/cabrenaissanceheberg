@@ -135,7 +135,8 @@ export default function Invoices() {
       toast({
         title: "Attention",
         description: "La facture a été marquée comme payée, mais la création du paiement a échoué.",
-        variant: "warning",
+        // Utiliser destructive comme fallback pour les erreurs
+        variant: "destructive",
       });
     },
   });
