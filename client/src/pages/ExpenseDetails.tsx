@@ -22,6 +22,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftIcon, PencilIcon, TrashIcon, FileIcon, ExternalLinkIcon } from "lucide-react";
 import type { Expense } from "@shared/schema";
+import { HomeButton } from "@/components/ui/home-button";
 
 export default function ExpenseDetails() {
   const { id } = useParams<{ id: string }>();
@@ -98,14 +99,16 @@ export default function ExpenseDetails() {
   return (
     <div className="container py-8">
       <div className="mb-6">
-        <Button
-          variant="outline"
-          className="mb-4"
-          onClick={() => navigate("/expenses")}
-        >
-          <ArrowLeftIcon className="mr-2 h-4 w-4" />
-          Retour à la liste
-        </Button>
+        <div className="flex space-x-2 mb-4">
+          <HomeButton variant="outline" />
+          <Button
+            variant="outline"
+            onClick={() => navigate("/expenses")}
+          >
+            <ArrowLeftIcon className="mr-2 h-4 w-4" />
+            Retour à la liste
+          </Button>
+        </div>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold">Détails de la Dépense</h1>

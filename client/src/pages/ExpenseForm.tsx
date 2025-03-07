@@ -22,6 +22,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftIcon, FileIcon, UploadIcon } from "lucide-react";
+import { HomeButton } from "@/components/ui/home-button";
 
 export default function ExpenseForm() {
   const [, navigate] = useLocation();
@@ -128,14 +129,16 @@ export default function ExpenseForm() {
   return (
     <div className="container py-8">
       <div className="mb-6">
-        <Button
-          variant="outline"
-          className="mb-4"
-          onClick={() => navigate("/expenses")}
-        >
-          <ArrowLeftIcon className="mr-2 h-4 w-4" />
-          Retour à la liste
-        </Button>
+        <div className="flex space-x-2 mb-4">
+          <HomeButton variant="outline" />
+          <Button
+            variant="outline"
+            onClick={() => navigate("/expenses")}
+          >
+            <ArrowLeftIcon className="mr-2 h-4 w-4" />
+            Retour à la liste
+          </Button>
+        </div>
         <h1 className="text-3xl font-bold">Nouvelle Dépense</h1>
         <p className="text-muted-foreground">
           Ajoutez une nouvelle dépense au système

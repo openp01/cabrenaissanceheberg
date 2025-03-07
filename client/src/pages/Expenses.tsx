@@ -34,6 +34,7 @@ import { type Expense } from "@shared/schema";
 import { PlusIcon, FileTextIcon, SearchIcon, FilterIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { HomeButton } from "@/components/ui/home-button";
 
 export default function Expenses() {
   const { toast } = useToast();
@@ -96,11 +97,14 @@ export default function Expenses() {
   return (
     <div className="container py-8">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Gestion des Dépenses</h1>
-          <p className="text-muted-foreground">
-            Suivez et gérez toutes les dépenses du cabinet
-          </p>
+        <div className="flex items-center space-x-4">
+          <HomeButton variant="outline" />
+          <div>
+            <h1 className="text-3xl font-bold">Gestion des Dépenses</h1>
+            <p className="text-muted-foreground">
+              Suivez et gérez toutes les dépenses du cabinet
+            </p>
+          </div>
         </div>
         <Link href="/expenses/new">
           <Button className="flex items-center">
