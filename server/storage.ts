@@ -12,6 +12,9 @@ import {
 import { addDays, addWeeks, addMonths, format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 
+// Importer le stockage PostgreSQL depuis dbStorage.ts
+import { pgStorage } from './dbStorage';
+
 // Storage interface
 export interface IStorage {
   // Patient methods
@@ -595,6 +598,12 @@ export class MemStorage implements IStorage {
     };
     
     this.invoicesData.set(id, updatedInvoice);
+    
+    // Si la facture passe au statut "Payée", créer automatiquement un paiement au thérapeute
+    if (invoiceUpdate.status === "Payée" && existingInvoice.status !== "Payée") {
+      await this.generateTherapistPaymentFromInvoice(updatedInvoice);
+    }
+    
     return updatedInvoice;
   }
   
@@ -687,10 +696,143 @@ export class MemStorage implements IStorage {
     this.expensesData.set(id, updatedExpense);
     return updatedExpense;
   }
-}
 
-// Importer le stockage PostgreSQL depuis dbStorage.ts
-import { pgStorage } from './dbStorage';
+  // Therapist Payment methods
+  async getTherapistPayments(): Promise<TherapistPaymentWithDetails[]> {
+    const payments = Array.from(this.therapistPaymentsData.values());
+    return Promise.all(payments.map(async payment => {
+      const therapist = await this.getTherapist(payment.therapistId);
+      const invoice = await this.getInvoice(payment.invoiceId);
+      const patientId = invoice ? invoice.patientId : 0;
+      const patient = patientId ? await this.getPatient(patientId) : null;
+      
+      return {
+        ...payment,
+        therapistName: therapist ? therapist.name : 'Inconnu',
+        invoiceNumber: invoice ? invoice.invoiceNumber : 'Inconnu',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Inconnu'
+      };
+    }));
+  }
+
+  async getTherapistPayment(id: number): Promise<TherapistPayment | undefined> {
+    return this.therapistPaymentsData.get(id);
+  }
+
+  async getTherapistPaymentsForTherapist(therapistId: number): Promise<TherapistPaymentWithDetails[]> {
+    const payments = Array.from(this.therapistPaymentsData.values())
+      .filter(payment => payment.therapistId === therapistId);
+    
+    return Promise.all(payments.map(async payment => {
+      const therapist = await this.getTherapist(payment.therapistId);
+      const invoice = await this.getInvoice(payment.invoiceId);
+      const patientId = invoice ? invoice.patientId : 0;
+      const patient = patientId ? await this.getPatient(patientId) : null;
+      
+      return {
+        ...payment,
+        therapistName: therapist ? therapist.name : 'Inconnu',
+        invoiceNumber: invoice ? invoice.invoiceNumber : 'Inconnu',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Inconnu'
+      };
+    }));
+  }
+
+  async createTherapistPayment(insertPayment: InsertTherapistPayment): Promise<TherapistPayment> {
+    const id = this.therapistPaymentCurrentId++;
+    
+    const payment: TherapistPayment = {
+      id,
+      therapistId: insertPayment.therapistId,
+      invoiceId: insertPayment.invoiceId,
+      amount: insertPayment.amount,
+      date: insertPayment.date,
+      paymentMethod: insertPayment.paymentMethod,
+      status: insertPayment.status,
+      notes: insertPayment.notes ?? null,
+      createdAt: new Date()
+    };
+    
+    this.therapistPaymentsData.set(id, payment);
+    return payment;
+  }
+
+  async updateTherapistPayment(id: number, paymentUpdate: Partial<InsertTherapistPayment>): Promise<TherapistPayment | undefined> {
+    const existingPayment = this.therapistPaymentsData.get(id);
+    
+    if (!existingPayment) {
+      return undefined;
+    }
+    
+    const updatedPayment = {
+      ...existingPayment,
+      ...paymentUpdate
+    };
+    
+    this.therapistPaymentsData.set(id, updatedPayment);
+    return updatedPayment;
+  }
+
+  async deleteTherapistPayment(id: number): Promise<boolean> {
+    return this.therapistPaymentsData.delete(id);
+  }
+
+  async getTherapistPaymentsByDateRange(startDate: string, endDate: string): Promise<TherapistPaymentWithDetails[]> {
+    const start = parse(startDate, 'dd/MM/yyyy', new Date());
+    const end = parse(endDate, 'dd/MM/yyyy', new Date());
+    
+    const payments = Array.from(this.therapistPaymentsData.values())
+      .filter(payment => {
+        const paymentDate = parse(payment.date, 'dd/MM/yyyy', new Date());
+        return paymentDate >= start && paymentDate <= end;
+      });
+    
+    return Promise.all(payments.map(async payment => {
+      const therapist = await this.getTherapist(payment.therapistId);
+      const invoice = await this.getInvoice(payment.invoiceId);
+      const patientId = invoice ? invoice.patientId : 0;
+      const patient = patientId ? await this.getPatient(patientId) : null;
+      
+      return {
+        ...payment,
+        therapistName: therapist ? therapist.name : 'Inconnu',
+        invoiceNumber: invoice ? invoice.invoiceNumber : 'Inconnu',
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Inconnu'
+      };
+    }));
+  }
+
+  async generateTherapistPaymentFromInvoice(invoice: Invoice): Promise<TherapistPayment | undefined> {
+    // Vérifier si la facture existe et a un montant
+    if (!invoice || !invoice.amount) {
+      return undefined;
+    }
+    
+    // Vérifier si le thérapeute existe
+    const therapist = await this.getTherapist(invoice.therapistId);
+    if (!therapist) {
+      return undefined;
+    }
+    
+    // Date du jour pour le paiement
+    const today = new Date();
+    const formattedDate = format(today, 'dd/MM/yyyy');
+    
+    // Créer un nouveau paiement pour le thérapeute
+    const paymentData: InsertTherapistPayment = {
+      therapistId: invoice.therapistId,
+      invoiceId: invoice.id,
+      amount: invoice.amount,
+      date: formattedDate,
+      paymentMethod: invoice.paymentMethod || "Virement",
+      status: "À traiter",
+      notes: `Paiement automatique généré depuis la facture ${invoice.invoiceNumber}`
+    };
+    
+    // Enregistrer le paiement
+    return this.createTherapistPayment(paymentData);
+  }
+}
 
 // Utiliser le stockage PostgreSQL au lieu du stockage en mémoire
 export const storage = pgStorage;

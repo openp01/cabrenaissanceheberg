@@ -7,7 +7,9 @@ import {
   appointmentFormSchema, 
   insertInvoiceSchema,
   insertExpenseSchema,
-  expenseFormSchema 
+  expenseFormSchema,
+  insertTherapistPaymentSchema,
+  therapistPaymentFormSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
