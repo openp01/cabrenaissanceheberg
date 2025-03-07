@@ -30,7 +30,7 @@ export async function sendInvoiceDownloadNotification(invoice: InvoiceWithDetail
     
     // Adresse d'expéditeur vérifiée sur SendGrid (utiliser l'adresse avec laquelle vous avez créé votre compte)
     // Dans un environnement de production, assurez-vous que cette adresse est vérifiée dans SendGrid
-    const senderEmail = 'notifications@orthophonie-cabinet.fr';
+    const senderEmail = 'jarviswriting01@gmail.com';
 
     // Préparer le contenu de l'email
     const emailContent = `
