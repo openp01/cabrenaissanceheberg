@@ -4,7 +4,8 @@ import {
   Appointment, InsertAppointment, appointments,
   AppointmentWithDetails,
   Invoice, InsertInvoice, invoices,
-  InvoiceWithDetails
+  InvoiceWithDetails,
+  Expense, InsertExpense, expenses
 } from "@shared/schema";
 import { addDays, addWeeks, addMonths, format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -41,6 +42,16 @@ export interface IStorage {
   updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined>;
   deleteInvoice(id: number): Promise<boolean>;
   getInvoiceForAppointment(appointmentId: number): Promise<Invoice | undefined>;
+  
+  // Expense methods
+  getExpenses(): Promise<Expense[]>;
+  getExpense(id: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+  getExpensesByCategory(category: string): Promise<Expense[]>;
+  getExpensesByDateRange(startDate: string, endDate: string): Promise<Expense[]>;
+  saveExpenseReceipt(id: number, fileUrl: string): Promise<Expense | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -48,10 +59,12 @@ export class MemStorage implements IStorage {
   private therapistsData: Map<number, Therapist>;
   private appointmentsData: Map<number, Appointment>;
   private invoicesData: Map<number, Invoice>;
+  private expensesData: Map<number, Expense>;
   private patientCurrentId: number;
   private therapistCurrentId: number;
   private appointmentCurrentId: number;
   private invoiceCurrentId: number;
+  private expenseCurrentId: number;
 
   constructor() {
     this.patientsData = new Map();

@@ -161,3 +161,47 @@ export interface InvoiceWithDetails extends Invoice {
   appointmentDate: string;
   appointmentTime: string;
 }
+
+// Modèle pour les dépenses du cabinet
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  date: text("date").notNull(), // Format YYYY-MM-DD
+  category: text("category").notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  notes: text("notes"),
+  receiptUrl: text("receipt_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).pick({
+  description: true,
+  amount: true,
+  date: true,
+  category: true,
+  paymentMethod: true,
+  notes: true,
+  receiptUrl: true,
+});
+
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type Expense = typeof expenses.$inferSelect;
+
+export const expenseFormSchema = insertExpenseSchema.extend({
+  description: z.string().min(3, "La description doit contenir au moins 3 caractères"),
+  amount: z.coerce.number().positive("Le montant doit être positif"),
+  date: z.string().min(1, "La date est requise"),
+  category: z.string().min(1, "La catégorie est requise"),
+  paymentMethod: z.string().min(1, "Le mode de paiement est requis"),
+});
+
+export interface ExpenseFormData {
+  description?: string;
+  amount?: number;
+  date?: string;
+  category?: string;
+  paymentMethod?: string;
+  notes?: string;
+  receiptFile?: File | null;
+}
