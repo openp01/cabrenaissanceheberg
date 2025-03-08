@@ -24,7 +24,7 @@ export interface AuthenticatedRequest extends Request {
 /**
  * Middleware pour vérifier si l'utilisateur est authentifié
  */
-export function isAuthenticated(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
     return res.status(401).json({ error: 'Non autorisé - Veuillez vous connecter' });
   }
@@ -71,8 +71,7 @@ export function isTherapistOwner(paramName: string = 'therapistId') {
     }
     
     // Les administrateurs et le secrétariat ont accès à tout
-    const adminRoles = [UserRole.ADMIN, UserRole.SECRETARIAT];
-    if (adminRoles.includes(req.user.role)) {
+    if (req.user.role === UserRole.ADMIN || req.user.role === UserRole.SECRETARIAT) {
       return next();
     }
     

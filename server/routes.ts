@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -25,7 +25,8 @@ import {
   isAuthenticated, 
   isAdmin, 
   isAdminStaff,
-  isTherapistOwner
+  isTherapistOwner,
+  AuthenticatedRequest
 } from "./authMiddleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -35,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes with prefix /api
   
   // Patient routes
-  app.get("/api/patients", isAuthenticated, async (req, res) => {
+  app.get("/api/patients", isAuthenticated, async (req: Request, res) => {
     try {
       const patients = await storage.getPatients();
       res.json(patients);

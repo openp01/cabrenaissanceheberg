@@ -4,7 +4,7 @@ import { Express } from "express";
 import session from "express-session";
 import { authService } from "./authService";
 import { SessionUser } from "./authMiddleware";
-import { UserRole, User } from "@shared/schema";
+import { UserRole, UserRoleType, User } from "@shared/schema";
 import { createId } from "@paralleldrive/cuid2";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
