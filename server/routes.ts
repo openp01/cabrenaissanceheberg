@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage"; // Utilisation du stockage en mémoire
+import { storage } from "./storage";
 import { 
   insertPatientSchema, 
   patientFormSchema, 
@@ -8,7 +8,8 @@ import {
   insertInvoiceSchema,
   insertExpenseSchema,
   expenseFormSchema,
-  insertTherapistPaymentSchema
+  insertTherapistPaymentSchema,
+  UserRole
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
@@ -19,12 +20,22 @@ import {
   generateExpensesPDF
 } from "./pdfGenerator";
 import { sendInvoiceDownloadNotification } from "./emailService";
+import { setupAuth } from "./auth";
+import { 
+  isAuthenticated, 
+  isAdmin, 
+  isAdminStaff,
+  isTherapistOwner
+} from "./authMiddleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configurer l'authentification
+  setupAuth(app);
+  
   // API routes with prefix /api
   
   // Patient routes
-  app.get("/api/patients", async (req, res) => {
+  app.get("/api/patients", isAuthenticated, async (req, res) => {
     try {
       const patients = await storage.getPatients();
       res.json(patients);
@@ -33,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/patients/search", async (req, res) => {
+  app.get("/api/patients/search", isAuthenticated, async (req, res) => {
     try {
       const query = req.query.q as string || "";
       const patients = await storage.searchPatients(query);
