@@ -35,7 +35,7 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Désactivé pour assurer la compatibilité avec l'environnement de déploiement
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 jour
       sameSite: 'lax', // Permettre les requêtes cross-site pour faciliter le développement
