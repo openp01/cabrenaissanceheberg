@@ -8,7 +8,7 @@ export interface SessionUser {
   id: number;
   username: string;
   email: string;
-  role: string;
+  role: UserRoleType;
   therapistId?: number;
   isActive: boolean;
 }
@@ -35,7 +35,7 @@ export function isAuthenticated(req: AuthenticatedRequest, res: Response, next: 
  * Middleware pour vérifier si l'utilisateur a un rôle spécifique
  * @param roles Tableau des rôles autorisés
  */
-export function hasRole(roles: string[]) {
+export function hasRole(roles: UserRoleType[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Non autorisé - Veuillez vous connecter' });
@@ -72,7 +72,7 @@ export function isTherapistOwner(paramName: string = 'therapistId') {
     
     // Les administrateurs et le secrétariat ont accès à tout
     const adminRoles = [UserRole.ADMIN, UserRole.SECRETARIAT];
-    if (adminRoles.includes(req.user.role as UserRoleType)) {
+    if (adminRoles.includes(req.user.role)) {
       return next();
     }
     

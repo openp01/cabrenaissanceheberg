@@ -6,6 +6,8 @@ import { authService } from "./authService";
 import { SessionUser } from "./authMiddleware";
 import { UserRole, User } from "@shared/schema";
 import { createId } from "@paralleldrive/cuid2";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 
 // Étendre les types Express
 declare global {
@@ -19,8 +21,16 @@ declare global {
  * @param app L'application Express
  */
 export function setupAuth(app: Express) {
+  // Initialiser le store PostgreSQL pour les sessions
+  const PgSession = connectPgSimple(session);
+  
   // Configuration de la session
   const sessionSettings: session.SessionOptions = {
+    store: new PgSession({
+      pool: pool as any, // Conversion de type nécessaire pour la compatibilité
+      tableName: 'session', // Le nom de la table pour stocker les sessions
+      createTableIfMissing: true // Créer la table si elle n'existe pas
+    }),
     secret: process.env.SESSION_SECRET || createId(),
     resave: false,
     saveUninitialized: false,
@@ -28,6 +38,7 @@ export function setupAuth(app: Express) {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 jour
+      sameSite: 'lax', // Permettre les requêtes cross-site pour faciliter le développement
     }
   };
 
@@ -50,7 +61,7 @@ export function setupAuth(app: Express) {
           id: user.id,
           username: user.username,
           email: user.email,
-          role: user.role,
+          role: user.role as UserRoleType,
           therapistId: user.therapistId || undefined,
           isActive: user.isActive
         };
@@ -83,7 +94,7 @@ export function setupAuth(app: Express) {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
+        role: user.role as UserRoleType,
         therapistId: user.therapistId || undefined,
         isActive: user.isActive
       };
