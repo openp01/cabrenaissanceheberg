@@ -125,6 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
+      // Rediriger vers la page d'authentification après la déconnexion
+      window.location.href = "/auth";
       toast({
         title: "Déconnexion réussie",
         description: "À bientôt!",

@@ -38,6 +38,13 @@ export function Navbar() {
 
   // Déterminer si un lien est actif
   const isActive = (path: string) => location === path;
+  
+  // Afficher un bouton de déconnexion directement si l'utilisateur est connecté
+  if (user) {
+    console.log("Navbar: Utilisateur connecté", user);
+  } else {
+    console.log("Navbar: Aucun utilisateur connecté");
+  }
 
   return (
     <nav className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200">

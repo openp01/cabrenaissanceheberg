@@ -10,6 +10,7 @@ import ExpenseDetails from "./pages/ExpenseDetails";
 import Payments from "./pages/Payments";
 import NotFound from "./pages/not-found";
 import AuthPage from "./pages/auth-page";
+import LogoutPage from "./pages/logout-page";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { UserRole } from "@shared/schema";
@@ -17,8 +18,9 @@ import { UserRole } from "@shared/schema";
 function Router() {
   return (
     <Switch>
-      {/* Route d'authentification - accessible à tous */}
+      {/* Routes d'authentification - accessibles à tous */}
       <Route path="/auth" component={AuthPage} />
+      <Route path="/logout" component={LogoutPage} />
       
       {/* Routes protégées - requiert authentification */}
       <ProtectedRoute path="/" component={Home} />
