@@ -31,12 +31,15 @@ export function ProtectedRoute({
 
   // Vérifier si l'utilisateur est authentifié
   if (!user) {
+    console.log("ProtectedRoute: Utilisateur non authentifié, redirection vers /auth");
     return (
       <Route path={path}>
         {() => <Redirect to="/auth" />}
       </Route>
     );
   }
+  
+  console.log("ProtectedRoute: Utilisateur authentifié", user);
 
   // Vérifier les rôles si spécifiés
   if (roles && !roles.includes(user.role)) {

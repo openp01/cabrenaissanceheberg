@@ -33,7 +33,7 @@ type AuthContextType = {
 };
 
 // Création du contexte d'authentification
-export const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 // Provider pour le contexte d'authentification
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -55,7 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await apiRequest("/api/auth/login", "POST", credentials);
     },
     onSuccess: (user: User) => {
+      console.log("Authentification réussie avec l'utilisateur:", user);
+      // Stocker les données utilisateur dans le cache de React Query
       queryClient.setQueryData(["/api/auth/user"], user);
+      console.log("Données utilisateur stockées dans le cache");
       toast({
         title: "Connexion réussie",
         description: `Bienvenue, ${user.username}!`,
