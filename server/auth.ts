@@ -4,8 +4,15 @@ import { Express } from "express";
 import session from "express-session";
 import { authService } from "./authService";
 import { SessionUser } from "./authMiddleware";
-import { UserRole } from "@shared/schema";
+import { UserRole, User } from "@shared/schema";
 import { createId } from "@paralleldrive/cuid2";
+
+// Étendre les types Express
+declare global {
+  namespace Express {
+    interface User extends SessionUser {}
+  }
+}
 
 /**
  * Configure l'authentification avec Passport.js

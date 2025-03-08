@@ -71,7 +71,8 @@ export function isTherapistOwner(paramName: string = 'therapistId') {
     }
     
     // Les administrateurs et le secrétariat ont accès à tout
-    if ([UserRole.ADMIN, UserRole.SECRETARIAT].includes(req.user.role as UserRoleType)) {
+    const adminRoles = [UserRole.ADMIN, UserRole.SECRETARIAT];
+    if (adminRoles.includes(req.user.role as UserRoleType)) {
       return next();
     }
     
