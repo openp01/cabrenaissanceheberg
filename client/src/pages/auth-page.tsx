@@ -146,6 +146,7 @@ function LoginForm() {
 
   // Fonction de soumission du formulaire
   function onSubmit(data: LoginFormValues) {
+    console.log("Tentative de connexion avec:", data);
     loginMutation.mutate(data);
   }
 
@@ -227,6 +228,7 @@ function RegisterForm() {
   function onSubmit(data: RegisterFormValues) {
     // Enlever confirmPassword avant d'envoyer au serveur
     const { confirmPassword, ...registerData } = data;
+    console.log("Tentative d'inscription avec:", registerData);
     registerMutation.mutate(registerData);
   }
 

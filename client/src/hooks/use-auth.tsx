@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Erreur de connexion:", error);
       toast({
         title: "Échec de la connexion",
         description: error.message || "Identifiants incorrects",
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Erreur d'inscription:", error);
       toast({
         title: "Échec de l'inscription",
         description: error.message,
@@ -104,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Erreur de déconnexion:", error);
       toast({
         title: "Échec de la déconnexion",
         description: error.message,
