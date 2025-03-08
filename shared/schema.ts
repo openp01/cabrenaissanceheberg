@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -273,4 +273,53 @@ export interface TherapistPaymentWithDetails extends Omit<TherapistPayment, 'amo
   invoiceNumber: string;
   patientName: string;
   amount: number;
+}
+
+// User roles
+export const UserRole = {
+  ADMIN: "admin",
+  SECRETARIAT: "secretariat",
+  THERAPIST: "therapist"
+} as const;
+
+export type UserRoleType = typeof UserRole[keyof typeof UserRole];
+
+// Users table
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: varchar("username", { length: 50 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  email: text("email").notNull(),
+  role: text("role").notNull().default(UserRole.SECRETARIAT),
+  // Pour éviter les problèmes de type null/undefined avec therapistId
+  therapistId: integer("therapist_id"),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// Schéma d'insertion d'utilisateur
+export const insertUserSchema = z.object({
+  username: z.string().min(3, "Le nom d'utilisateur doit contenir au moins 3 caractères"),
+  email: z.string().email("Email invalide"),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  confirmPassword: z.string(),
+  role: z.enum([UserRole.ADMIN, UserRole.SECRETARIAT, UserRole.THERAPIST], {
+    errorMap: () => ({ message: "Rôle invalide" })
+  }).default(UserRole.SECRETARIAT),
+  therapistId: z.number().optional(),
+  isActive: z.boolean().default(true)
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Les mots de passe ne correspondent pas",
+  path: ["confirmPassword"]
+});
+
+export type InsertUser = Omit<z.infer<typeof insertUserSchema>, "confirmPassword">;
+export type User = typeof users.$inferSelect;
+
+// Schéma pour le formulaire utilisateur (même que insertUserSchema)
+export const userFormSchema = insertUserSchema;
+
+export interface UserWithTherapistDetails extends User {
+  therapistName?: string;
 }
