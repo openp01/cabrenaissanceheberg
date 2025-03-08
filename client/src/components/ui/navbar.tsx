@@ -110,27 +110,35 @@ export function Navbar() {
       {/* Profil utilisateur ou bouton de connexion */}
       <div className="flex items-center space-x-2">
         {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center">
-                <User className="mr-2 h-4 w-4" />
-                {user.username}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                {user.username}
-                <div className="text-xs text-muted-foreground">
-                  {getRoleDisplayName(user.role)}
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-500">
+          <>
+            <Link href="/logout">
+              <Button variant="destructive" className="flex items-center">
                 <LogOut className="mr-2 h-4 w-4" />
-                Se déconnecter
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                Déconnexion
+              </Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  {user.username}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  {user.username}
+                  <div className="text-xs text-muted-foreground">
+                    {getRoleDisplayName(user.role)}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-500">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Se déconnecter
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         ) : (
           <Link href="/auth">
             <Button variant="ghost" className="flex items-center">
