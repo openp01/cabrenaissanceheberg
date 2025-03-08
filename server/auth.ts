@@ -44,7 +44,7 @@ export function setupAuth(app: Express) {
           username: user.username,
           email: user.email,
           role: user.role,
-          therapistId: user.therapistId,
+          therapistId: user.therapistId || undefined,
           isActive: user.isActive
         };
         
@@ -77,7 +77,7 @@ export function setupAuth(app: Express) {
         username: user.username,
         email: user.email,
         role: user.role,
-        therapistId: user.therapistId,
+        therapistId: user.therapistId || undefined,
         isActive: user.isActive
       };
       

@@ -1,9 +1,11 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
-import { Redirect, Route, RouteProps } from "wouter";
+import { Redirect, Route } from "wouter";
 
-interface ProtectedRouteProps extends RouteProps {
-  component: React.ComponentType;
+// Propriétés attendues pour le composant ProtectedRoute
+interface ProtectedRouteProps {
+  path: string;
+  component: React.ComponentType<any>;
   roles?: string[]; // Rôles autorisés pour accéder à cette route
 }
 
@@ -11,42 +13,36 @@ export function ProtectedRoute({
   path,
   component: Component,
   roles,
-  ...rest
 }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
 
+  // Lors du chargement, afficher un spinner
   if (isLoading) {
     return (
-      <Route
-        path={path}
-        {...rest}
-        component={() => (
+      <Route path={path}>
+        {() => (
           <div className="flex items-center justify-center min-h-screen">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
-      />
+      </Route>
     );
   }
 
   // Vérifier si l'utilisateur est authentifié
   if (!user) {
     return (
-      <Route
-        path={path}
-        {...rest}
-        component={() => <Redirect to="/auth" />}
-      />
+      <Route path={path}>
+        {() => <Redirect to="/auth" />}
+      </Route>
     );
   }
 
   // Vérifier les rôles si spécifiés
   if (roles && !roles.includes(user.role)) {
     return (
-      <Route
-        path={path}
-        {...rest}
-        component={() => (
+      <Route path={path}>
+        {() => (
           <div className="flex flex-col items-center justify-center min-h-screen p-4">
             <h1 className="text-2xl font-bold text-red-500 mb-4">
               Accès refusé
@@ -56,10 +52,14 @@ export function ProtectedRoute({
             </p>
           </div>
         )}
-      />
+      </Route>
     );
   }
 
   // Si toutes les vérifications sont passées, rendre le composant
-  return <Route path={path} component={Component} {...rest} />;
+  return (
+    <Route path={path}>
+      {(params) => <Component {...params} />}
+    </Route>
+  );
 }

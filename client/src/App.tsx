@@ -9,18 +9,56 @@ import ExpenseForm from "./pages/ExpenseForm";
 import ExpenseDetails from "./pages/ExpenseDetails";
 import Payments from "./pages/Payments";
 import NotFound from "./pages/not-found";
+import AuthPage from "./pages/auth-page";
+import { AuthProvider } from "./hooks/use-auth";
+import { ProtectedRoute } from "./lib/protected-route";
+import { UserRole } from "@shared/schema";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/appointments" component={AppointmentList} />
-      <Route path="/schedule" component={TherapistSchedule} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/expenses" component={Expenses} />
-      <Route path="/expenses/new" component={ExpenseForm} />
-      <Route path="/expenses/:id" component={ExpenseDetails} />
-      <Route path="/payments" component={Payments} />
+      {/* Route d'authentification - accessible à tous */}
+      <Route path="/auth" component={AuthPage} />
+      
+      {/* Routes protégées - requiert authentification */}
+      <ProtectedRoute path="/" component={Home} />
+      <ProtectedRoute path="/appointments" component={AppointmentList} />
+      
+      {/* Route pour les thérapeutes et le personnel administratif */}
+      <ProtectedRoute 
+        path="/schedule" 
+        component={TherapistSchedule} 
+        roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      
+      {/* Routes pour le personnel administratif uniquement */}
+      <ProtectedRoute 
+        path="/invoices" 
+        component={Invoices} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
+        path="/expenses" 
+        component={Expenses} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
+        path="/expenses/new" 
+        component={ExpenseForm} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
+        path="/expenses/:id" 
+        component={ExpenseDetails} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
+        path="/payments" 
+        component={Payments} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      
+      {/* Route 404 - accessible à tous */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -28,10 +66,12 @@ function Router() {
 
 function App() {
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-gray-50">
-      <Router />
-      <Toaster />
-    </div>
+    <AuthProvider>
+      <div className="min-h-screen flex flex-col font-sans bg-gray-50">
+        <Router />
+        <Toaster />
+      </div>
+    </AuthProvider>
   );
 }
 

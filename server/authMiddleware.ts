@@ -18,7 +18,7 @@ export interface SessionUser {
  */
 export interface AuthenticatedRequest extends Request {
   user?: SessionUser;
-  isAuthenticated(): boolean;
+  isAuthenticated(): this is AuthenticatedRequest & { user: SessionUser };
 }
 
 /**
@@ -71,7 +71,7 @@ export function isTherapistOwner(paramName: string = 'therapistId') {
     }
     
     // Les administrateurs et le secrétariat ont accès à tout
-    if ([UserRole.ADMIN, UserRole.SECRETARIAT].includes(req.user.role)) {
+    if ([UserRole.ADMIN, UserRole.SECRETARIAT].includes(req.user.role as UserRoleType)) {
       return next();
     }
     
