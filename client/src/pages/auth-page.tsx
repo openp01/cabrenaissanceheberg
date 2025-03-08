@@ -64,11 +64,20 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, isLoading, loginMutation, registerMutation } = useAuth();
+
+  // Attendre que les données soient chargées
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // Si l'utilisateur est déjà connecté, rediriger vers la page d'accueil
   if (user) {
-    console.log("AuthPage: Utilisateur déjà connecté, redirection vers /", user);
+    console.log("AuthPage: Utilisateur connecté, redirection vers /", user);
     return <Redirect to="/" />;
   }
   

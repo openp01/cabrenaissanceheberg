@@ -56,13 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       console.log("Authentification réussie avec l'utilisateur:", user);
+      
+      // Forcer une requête pour obtenir les informations utilisateur après la connexion
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       // Stocker les données utilisateur dans le cache de React Query
       queryClient.setQueryData(["/api/auth/user"], user);
       console.log("Données utilisateur stockées dans le cache");
+      
       toast({
         title: "Connexion réussie",
         description: `Bienvenue, ${user.username}!`,
       });
+      
+      // Pause pour laisser le temps à l'interface de se mettre à jour
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     },
     onError: (error: Error) => {
       console.error("Erreur de connexion:", error);
@@ -80,11 +90,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await apiRequest("/api/auth/register", "POST", userData);
     },
     onSuccess: (user: User) => {
+      console.log("Inscription réussie avec l'utilisateur:", user);
+      
+      // Forcer une requête pour obtenir les informations utilisateur après l'inscription
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Stocker les données utilisateur dans le cache
       queryClient.setQueryData(["/api/auth/user"], user);
+      
       toast({
         title: "Inscription réussie",
         description: "Votre compte a été créé avec succès",
       });
+      
+      // Pause pour laisser le temps à l'interface de se mettre à jour
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     },
     onError: (error: Error) => {
       console.error("Erreur d'inscription:", error);
