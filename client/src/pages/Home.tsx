@@ -2,15 +2,23 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Clock, FileText, WalletIcon, Plus, List, LineChart, ArrowLeft, CreditCard } from "lucide-react";
+import { CalendarDays, Clock, FileText, WalletIcon, Plus, List, LineChart, ArrowLeft, CreditCard, LogOut } from "lucide-react";
 import BookingForm from "@/components/BookingForm";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const { logoutMutation } = useAuth();
   
   const handleNavigation = (path: string) => {
     setLocation(path);
+  };
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+    // Redirection forcée après déconnexion
+    window.location.href = "/auth";
   };
 
   return (
@@ -27,13 +35,24 @@ export default function Home() {
                 Système de gestion pour le secrétariat
               </p>
             </div>
-            <div className="text-sm text-gray-500">
-              {new Date().toLocaleDateString('fr-FR', { 
-                weekday: 'long', 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              })}
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500">
+                {new Date().toLocaleDateString('fr-FR', { 
+                  weekday: 'long', 
+                  day: 'numeric', 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </div>
+              <Button 
+                variant="destructive" 
+                className="flex items-center" 
+                onClick={handleLogout}
+                size="lg"
+              >
+                <LogOut className="mr-2 h-5 w-5" />
+                Déconnexion
+              </Button>
             </div>
           </div>
         </div>
