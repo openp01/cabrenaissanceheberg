@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes with prefix /api
   
   // Patient routes
-  app.get("/api/patients", isAuthenticated, async (req: Request, res) => {
+  app.get("/api/patients", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const patients = await storage.getPatients();
       res.json(patients);
@@ -45,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/patients/search", isAuthenticated, async (req, res) => {
+  app.get("/api/patients/search", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const query = req.query.q as string || "";
       const patients = await storage.searchPatients(query);
