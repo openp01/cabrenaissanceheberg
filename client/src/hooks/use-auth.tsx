@@ -33,7 +33,7 @@ type AuthContextType = {
 };
 
 // Création du contexte d'authentification
-const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 // Provider pour le contexte d'authentification
 export function AuthProvider({ children }: { children: ReactNode }) {

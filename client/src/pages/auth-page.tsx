@@ -68,8 +68,11 @@ export default function AuthPage() {
 
   // Si l'utilisateur est déjà connecté, rediriger vers la page d'accueil
   if (user) {
+    console.log("AuthPage: Utilisateur déjà connecté, redirection vers /", user);
     return <Redirect to="/" />;
   }
+  
+  console.log("AuthPage: Aucun utilisateur connecté, affichage de la page d'authentification");
 
   return (
     <div className="flex min-h-screen">
@@ -147,7 +150,12 @@ function LoginForm() {
   // Fonction de soumission du formulaire
   function onSubmit(data: LoginFormValues) {
     console.log("Tentative de connexion avec:", data);
-    loginMutation.mutate(data);
+    loginMutation.mutate(data, {
+      onSuccess: (user) => {
+        console.log("Utilisateur connecté avec succès dans le formulaire:", user);
+        // La redirection est gérée au niveau supérieur dans AuthPage via le hook useAuth
+      }
+    });
   }
 
   return (
