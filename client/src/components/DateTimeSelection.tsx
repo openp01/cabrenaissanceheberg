@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import RecurringOptions from "./RecurringOptions";
+import MultipleTimeSlotsOptions from "./MultipleTimeSlotsOptions";
 
 interface DateTimeSelectionProps {
   formData: BookingFormData;
@@ -232,6 +233,27 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     
     setSelectedTime(time);
     
+    // Si le mode créneaux multiples est activé, ajouter ce créneau à la liste
+    if (isMultipleTimeSlots) {
+      const formattedDate = format(selectedDate, 'dd/MM/yyyy');
+      // Vérifier si ce créneau existe déjà dans la liste
+      const slotExists = selectedTimeSlots.some(
+        slot => slot.date === formattedDate && slot.time === time
+      );
+      
+      if (!slotExists) {
+        const newTimeSlots = [...selectedTimeSlots, { date: formattedDate, time }];
+        setSelectedTimeSlots(newTimeSlots);
+        updateFormData({ selectedTimeSlots: newTimeSlots, isMultipleTimeSlots: true });
+        
+        toast({
+          title: "Créneau ajouté",
+          description: `Le créneau du ${formattedDate} à ${time} a été ajouté à votre sélection.`,
+          variant: "default"
+        });
+      }
+    }
+    
     // Generate recurring dates if needed
     if (isRecurring && selectedDate) {
       generateRecurringDates(selectedDate, time);
@@ -241,9 +263,35 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   const handleRecurringChange = (value: boolean) => {
     setIsRecurring(value);
     
+    // Si on active les rendez-vous récurrents, on désactive les créneaux multiples
+    if (value) {
+      setIsMultipleTimeSlots(false);
+      // Mettre à jour les données du formulaire
+      updateFormData({ isMultipleTimeSlots: false });
+    }
+    
     // Generate recurring dates if now enabled
     if (value && selectedDate && selectedTime) {
       generateRecurringDates(selectedDate, selectedTime);
+    }
+  };
+  
+  const handleMultipleTimeSlotsChange = (value: boolean) => {
+    setIsMultipleTimeSlots(value);
+    
+    // Si on active les créneaux multiples, on désactive les rendez-vous récurrents
+    if (value) {
+      setIsRecurring(false);
+      // Mettre à jour les données du formulaire
+      updateFormData({ 
+        isRecurring: false,
+        isMultipleTimeSlots: value,
+        selectedTimeSlots: value ? selectedTimeSlots : []
+      });
+    } else {
+      // Si on désactive, vider la liste des créneaux sélectionnés
+      setSelectedTimeSlots([]);
+      updateFormData({ selectedTimeSlots: [] });
     }
   };
   
