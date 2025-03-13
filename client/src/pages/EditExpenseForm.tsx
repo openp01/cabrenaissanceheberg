@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useParams } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -17,20 +17,41 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { expenseFormSchema, type ExpenseFormData } from "@shared/schema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { expenseFormSchema, type ExpenseFormData, type Expense } from "@shared/schema";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeftIcon, FileIcon, UploadIcon } from "lucide-react";
+import { ArrowLeftIcon, FileIcon, UploadIcon, Loader2, FileTextIcon, ImageIcon } from "lucide-react";
 import { HomeButton } from "@/components/ui/home-button";
+import { uploadFile, getFileNameFromUrl, isImageFile, isPdfFile } from "@/lib/fileUploadService";
 
-export default function ExpenseForm() {
+export default function EditExpenseForm() {
+  const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("details");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [currentReceiptUrl, setCurrentReceiptUrl] = useState<string | null>(null);
+
+  // Récupération des détails de la dépense
+  const { data: expense, isLoading } = useQuery({
+    queryKey: ["/api/expenses", parseInt(id)],
+    queryFn: async () => {
+      try {
+        return await apiRequest(`/api/expenses/${id}`) as Expense;
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les détails de la dépense",
+          variant: "destructive",
+        });
+        navigate("/expenses");
+        return null;
+      }
+    },
+  });
 
   // Initialize the form with default values
   const form = useForm<ExpenseFormData>({
@@ -45,6 +66,22 @@ export default function ExpenseForm() {
     },
   });
 
+  // Update form when expense data is loaded
+  useEffect(() => {
+    if (expense) {
+      form.reset({
+        description: expense.description,
+        amount: parseFloat(expense.amount.toString()),
+        date: expense.date,
+        category: expense.category,
+        paymentMethod: expense.paymentMethod,
+        notes: expense.notes || "",
+      });
+      
+      setCurrentReceiptUrl(expense.receiptUrl || null);
+    }
+  }, [expense, form]);
+
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -52,64 +89,65 @@ export default function ExpenseForm() {
     }
   };
 
-  // Upload receipt file (simulated for now)
-  const uploadReceipt = async (expenseId: number): Promise<string | null> => {
-    if (!receiptFile) return null;
+  // Upload receipt file
+  const uploadReceipt = async (): Promise<string | null> => {
+    if (!receiptFile) return currentReceiptUrl;
     
     setIsUploading(true);
     
     try {
-      // Simulation de l'upload - dans un cas réel, nous enverrions le fichier à un serveur
+      // Dans une implémentation réelle, nous ferions un upload vers un service de stockage
       // et récupérerions l'URL du fichier téléchargé
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // URL simulée
+      // URL simulée basée sur le nom du fichier
       const fileUrl = `https://example.com/receipts/${receiptFile.name}`;
       
       // Mettre à jour l'URL du justificatif pour cette dépense
-      await apiRequest(`/api/expenses/${expenseId}/receipt`, "POST", { 
+      await apiRequest(`/api/expenses/${id}/receipt`, "POST", { 
         fileUrl 
       });
       
       return fileUrl;
     } catch (error) {
       console.error("Erreur lors de l'upload du justificatif:", error);
-      return null;
+      return currentReceiptUrl;
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Create expense mutation
-  const createExpenseMutation = useMutation({
+  // Update expense mutation
+  const updateExpenseMutation = useMutation({
     mutationFn: async (data: ExpenseFormData) => {
-      const response = await apiRequest("/api/expenses", "POST", data) as any;
+      const response = await apiRequest(`/api/expenses/${id}`, "PUT", data) as Expense;
       
-      if (receiptFile && response && response.id) {
-        await uploadReceipt(response.id);
+      if (receiptFile) {
+        await uploadReceipt();
       }
       
       return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses", parseInt(id)] });
       toast({
-        title: "Dépense créée",
-        description: "La dépense a été ajoutée avec succès",
+        title: "Dépense mise à jour",
+        description: "La dépense a été modifiée avec succès",
       });
-      navigate("/expenses");
+      navigate(`/expenses/${id}`);
     },
     onError: () => {
       toast({
         title: "Erreur",
-        description: "Impossible de créer la dépense",
+        description: "Impossible de mettre à jour la dépense",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: ExpenseFormData) => {
-    createExpenseMutation.mutate(data);
+    updateExpenseMutation.mutate(data);
   };
 
   const handleNext = () => {
@@ -126,6 +164,30 @@ export default function ExpenseForm() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="container py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p>Chargement des données...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!expense) {
+    return (
+      <div className="container py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Dépense non trouvée</h1>
+          <Button onClick={() => navigate("/expenses")}>
+            Retour à la liste des dépenses
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-8">
       <div className="mb-6">
@@ -133,15 +195,15 @@ export default function ExpenseForm() {
           <HomeButton variant="outline" />
           <Button
             variant="outline"
-            onClick={() => navigate("/expenses")}
+            onClick={() => navigate(`/expenses/${id}`)}
           >
             <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Retour à la liste
+            Retour aux détails
           </Button>
         </div>
-        <h1 className="text-3xl font-bold">Nouvelle Dépense</h1>
+        <h1 className="text-3xl font-bold">Modifier la Dépense</h1>
         <p className="text-muted-foreground">
-          Ajoutez une nouvelle dépense au système
+          Modifiez les informations de la dépense
         </p>
       </div>
 
@@ -149,7 +211,7 @@ export default function ExpenseForm() {
         <CardHeader>
           <CardTitle>Formulaire de Dépense</CardTitle>
           <CardDescription>
-            Renseignez les informations de la dépense
+            Mettez à jour les informations de la dépense
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -294,6 +356,7 @@ export default function ExpenseForm() {
                                   Virement
                                 </SelectItem>
                                 <SelectItem value="Chèque">Chèque</SelectItem>
+                                <SelectItem value="Prélèvement">Prélèvement</SelectItem>
                               </SelectContent>
                             </Select>
                           </FormControl>
@@ -324,6 +387,23 @@ export default function ExpenseForm() {
 
               <TabsContent value="receipt">
                 <div className="space-y-6">
+                  {currentReceiptUrl && !receiptFile && (
+                    <div className="mb-4 p-4 bg-muted/30 rounded-md">
+                      <p className="text-sm font-medium mb-2">Justificatif actuel :</p>
+                      <div className="flex items-center space-x-2">
+                        <FileIcon className="h-5 w-5 text-primary" />
+                        <a 
+                          href={currentReceiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-sm truncate"
+                        >
+                          {currentReceiptUrl.split('/').pop()}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="border-2 border-dashed border-muted-foreground/20 rounded-md p-8 text-center">
                     {receiptFile ? (
                       <div className="space-y-2">
@@ -349,7 +429,9 @@ export default function ExpenseForm() {
                           <UploadIcon className="h-8 w-8 text-muted-foreground" />
                         </div>
                         <p className="text-sm font-medium">
-                          Glissez-déposez votre justificatif ici
+                          {currentReceiptUrl 
+                            ? "Remplacer le justificatif actuel" 
+                            : "Glissez-déposez votre justificatif ici"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           ou cliquez pour sélectionner un fichier
@@ -390,7 +472,7 @@ export default function ExpenseForm() {
               type="button"
               variant="outline"
               onClick={handlePrevious}
-              disabled={createExpenseMutation.isPending || isUploading}
+              disabled={updateExpenseMutation.isPending || isUploading}
             >
               Précédent
             </Button>
@@ -398,16 +480,16 @@ export default function ExpenseForm() {
           <Button
             type="button"
             onClick={handleNext}
-            disabled={createExpenseMutation.isPending || isUploading}
+            disabled={updateExpenseMutation.isPending || isUploading}
           >
             {activeTab === "receipt" ? (
-              createExpenseMutation.isPending || isUploading ? (
+              updateExpenseMutation.isPending || isUploading ? (
                 <span className="flex items-center">
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
                   Enregistrement...
                 </span>
               ) : (
-                "Enregistrer"
+                "Enregistrer les modifications"
               )
             ) : (
               "Suivant"

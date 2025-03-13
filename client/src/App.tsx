@@ -7,6 +7,7 @@ import Invoices from "./pages/Invoices";
 import Expenses from "./pages/Expenses";
 import ExpenseForm from "./pages/ExpenseForm";
 import ExpenseDetails from "./pages/ExpenseDetails";
+import EditExpenseForm from "./pages/EditExpenseForm";
 import Payments from "./pages/Payments";
 import NotFound from "./pages/not-found";
 import AuthPage from "./pages/auth-page";
@@ -47,6 +48,11 @@ function Router() {
       <ProtectedRoute 
         path="/expenses/new" 
         component={ExpenseForm} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
+        path="/expenses/edit/:id" 
+        component={EditExpenseForm} 
         roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
       />
       <ProtectedRoute 
