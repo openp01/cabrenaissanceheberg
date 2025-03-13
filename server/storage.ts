@@ -7,7 +7,8 @@ import {
   InvoiceWithDetails,
   Expense, InsertExpense, expenses,
   TherapistPayment, InsertTherapistPayment, therapistPayments,
-  TherapistPaymentWithDetails
+  TherapistPaymentWithDetails,
+  Signature, InsertSignature
 } from "@shared/schema";
 import { addDays, addWeeks, addMonths, format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -64,6 +65,14 @@ export interface IStorage {
   deleteTherapistPayment(id: number): Promise<boolean>;
   getTherapistPaymentsByDateRange(startDate: string, endDate: string): Promise<TherapistPaymentWithDetails[]>;
   createPaymentFromInvoice(invoiceId: number): Promise<TherapistPayment | undefined>;
+  
+  // Signature methods
+  getSignatures(): Promise<Signature[]>;
+  getSignature(id: number): Promise<Signature | undefined>;
+  getSignatureForTherapist(therapistId: number): Promise<Signature | undefined>;
+  createSignature(signature: InsertSignature): Promise<Signature>;
+  updateSignature(id: number, signature: InsertSignature): Promise<Signature | undefined>;
+  deleteSignature(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -73,12 +82,14 @@ export class MemStorage implements IStorage {
   private invoicesData: Map<number, Invoice> = new Map();
   private expensesData: Map<number, Expense> = new Map();
   private therapistPaymentsData: Map<number, TherapistPayment> = new Map();
+  private signaturesData: Map<number, Signature> = new Map();
   private patientCurrentId: number = 1;
   private therapistCurrentId: number = 1;
   private appointmentCurrentId: number = 1;
   private invoiceCurrentId: number = 1;
   private expenseCurrentId: number = 1;
   private therapistPaymentCurrentId: number = 1;
+  private signatureCurrentId: number = 1;
 
   constructor() {
     // Initialize with default therapists
