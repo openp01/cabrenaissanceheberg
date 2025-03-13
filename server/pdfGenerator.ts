@@ -4,10 +4,12 @@ import {
   Invoice, 
   InvoiceWithDetails, 
   TherapistPaymentWithDetails,
-  Expense
+  Expense,
+  Signature
 } from '@shared/schema';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { storage } from './storage';
 
 /**
  * Formatte une date au format français
