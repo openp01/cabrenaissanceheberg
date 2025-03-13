@@ -34,7 +34,7 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
         recurringCount: recurringCount,
       };
       
-      return await apiRequest("/api/appointments", "POST", appointmentData);
+      return await apiRequest("POST", "/api/appointments", appointmentData);
     },
     onSuccess: () => {
       toast({
