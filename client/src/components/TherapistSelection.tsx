@@ -23,7 +23,11 @@ export default function TherapistSelection({ formData, updateFormData }: Therapi
   const handleSelectTherapist = (therapist: Therapist) => {
     if (!multipleSelection) {
       // Mode sélection unique - comportement original
-      updateFormData({ therapist, selectedTherapists: [therapist] });
+      updateFormData({ 
+        therapist, 
+        selectedTherapists: [therapist],
+        isMultipleTherapists: false
+      });
     } else {
       // Mode sélection multiple
       const isAlreadySelected = selectedTherapists.some(t => t.id === therapist.id);
@@ -40,7 +44,8 @@ export default function TherapistSelection({ formData, updateFormData }: Therapi
       updateFormData({ 
         selectedTherapists: updatedSelection,
         // Définir le thérapeute principal comme le premier sélectionné
-        therapist: updatedSelection.length > 0 ? updatedSelection[0] : undefined 
+        therapist: updatedSelection.length > 0 ? updatedSelection[0] : undefined,
+        isMultipleTherapists: true
       });
     }
   };

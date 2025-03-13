@@ -24,7 +24,12 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   const [recurringCount, setRecurringCount] = useState(4);
   const [recurringDates, setRecurringDates] = useState<string[]>([]);
   
+  // État pour le thérapeute actuellement sélectionné dans l'interface
+  const [currentTherapistIndex, setCurrentTherapistIndex] = useState<number>(0);
+  
   const { toast } = useToast();
+
+  const { selectedTherapists, isMultipleTherapists, therapistSchedules = [] } = formData;
 
   // Time slots avec des tranches de 30 minutes pour les séances d'orthophonie
   const timeSlots = [
@@ -40,12 +45,45 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     queryKey: ['/api/appointments'],
   });
   
+  // Initialiser les horaires des thérapeutes sélectionnés
+  useEffect(() => {
+    if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0) {
+      // Créer ou mettre à jour les horaires pour chaque thérapeute sélectionné
+      const schedules = selectedTherapists.map(therapist => {
+        // Rechercher si un horaire existe déjà pour ce thérapeute
+        const existingSchedule = therapistSchedules.find(s => s.therapistId === therapist.id);
+        
+        if (existingSchedule) {
+          return existingSchedule;
+        } else {
+          // Créer un nouvel horaire vide
+          return {
+            therapistId: therapist.id,
+            date: undefined,
+            time: undefined
+          };
+        }
+      });
+      
+      // Mettre à jour les données du formulaire avec les horaires
+      updateFormData({ 
+        therapistSchedules: schedules,
+        currentTherapistIndex: 0 // Réinitialiser au premier thérapeute
+      });
+      
+      // Mettre à jour l'état local
+      setCurrentTherapistIndex(0);
+    }
+  }, [isMultipleTherapists, selectedTherapists]);
+  
   useEffect(() => {
     generateCalendarDays(currentDate);
   }, [currentDate]);
   
+  // Mettre à jour les données du formulaire en fonction du thérapeute actuel ou du mode standard
   useEffect(() => {
-    if (selectedDate && selectedTime) {
+    // Si nous sommes en mode thérapeute unique, mettre à jour date/heure normalement
+    if (!isMultipleTherapists && selectedDate && selectedTime) {
       const formattedDate = format(selectedDate, 'dd/MM/yyyy');
       updateFormData({ 
         date: formattedDate, 
@@ -55,8 +93,51 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
         recurringCount: isRecurring ? recurringCount : undefined,
         recurringDates: isRecurring ? recurringDates : undefined
       });
+    } 
+    // En mode multi-thérapeutes, mettre à jour l'horaire du thérapeute actuel
+    else if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0 && selectedDate && selectedTime) {
+      const formattedDate = format(selectedDate, 'dd/MM/yyyy');
+      
+      // Récupérer le thérapeute actuel
+      const currentTherapist = selectedTherapists[currentTherapistIndex];
+      
+      if (currentTherapist) {
+        // Créer une copie des horaires existants
+        const updatedSchedules = [...(therapistSchedules || [])];
+        
+        // Trouver l'index de l'horaire du thérapeute actuel
+        const scheduleIndex = updatedSchedules.findIndex(s => s.therapistId === currentTherapist.id);
+        
+        if (scheduleIndex >= 0) {
+          // Mettre à jour l'horaire existant
+          updatedSchedules[scheduleIndex] = {
+            ...updatedSchedules[scheduleIndex],
+            date: formattedDate,
+            time: selectedTime
+          };
+        } else {
+          // Ajouter un nouvel horaire
+          updatedSchedules.push({
+            therapistId: currentTherapist.id,
+            date: formattedDate,
+            time: selectedTime
+          });
+        }
+        
+        // Mettre à jour les données du formulaire
+        updateFormData({
+          therapistSchedules: updatedSchedules,
+          // Mettre à jour la date/heure globale aussi pour la compatibilité avec d'autres composants
+          date: formattedDate,
+          time: selectedTime,
+          isRecurring: isRecurring,
+          recurringFrequency: isRecurring ? recurringFrequency : undefined,
+          recurringCount: isRecurring ? recurringCount : undefined,
+          recurringDates: isRecurring ? recurringDates : undefined
+        });
+      }
     }
-  }, [selectedDate, selectedTime, isRecurring, recurringFrequency, recurringCount, recurringDates]);
+  }, [selectedDate, selectedTime, isRecurring, recurringFrequency, recurringCount, recurringDates, currentTherapistIndex]);
   
   const generateCalendarDays = (date: Date) => {
     const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -94,27 +175,35 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   
   // Vérifie si un créneau est disponible
   const isTimeSlotAvailable = (date: Date, time: string) => {
-    // Si les thérapeutes ne sont pas encore sélectionnés ou pas de rendez-vous
-    if (!formData.therapist || !appointments) return true;
+    // Si pas de rendez-vous dans la base
+    if (!appointments) return true;
     
     const formattedDate = format(date, 'dd/MM/yyyy');
     
-    // Vérification pour le thérapeute principal ou pour tous les thérapeutes en mode multiple
-    if (formData.allowMultiplePerWeek && formData.selectedTherapists && formData.selectedTherapists.length > 0) {
-      // Si on est en mode multiple thérapeutes, on vérifie la disponibilité pour le thérapeute actuellement affiché
+    // En mode multi-thérapeutes
+    if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0) {
+      // On vérifie pour le thérapeute actuellement sélectionné
+      const currentTherapist = selectedTherapists[currentTherapistIndex];
+      
+      if (!currentTherapist) return true;
+      
       return !appointments.some((app: any) => 
-        app.therapistId === formData.therapist?.id && 
+        app.therapistId === currentTherapist.id && 
         app.date === formattedDate && 
         app.time === time
       );
-    } else {
-      // Comportement standard - vérification pour un seul thérapeute
+    } 
+    // En mode thérapeute unique
+    else if (formData.therapist) {
       return !appointments.some((app: any) => 
         app.therapistId === formData.therapist?.id && 
         app.date === formattedDate && 
         app.time === time
       );
     }
+    
+    // Si aucun thérapeute n'est sélectionné
+    return true;
   };
   
   const handleTimeSelect = (time: string) => {
@@ -122,9 +211,18 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     
     // Vérifier la disponibilité
     if (!isTimeSlotAvailable(selectedDate, time)) {
+      // Déterminer le nom du thérapeute concerné par le message
+      let therapistName = "";
+      
+      if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0) {
+        therapistName = selectedTherapists[currentTherapistIndex]?.name || "";
+      } else if (formData.therapist) {
+        therapistName = formData.therapist.name;
+      }
+      
       toast({
         title: "Créneau non disponible",
-        description: "Ce créneau horaire est déjà réservé pour cet orthophoniste.",
+        description: `Ce créneau horaire est déjà réservé pour ${therapistName}.`,
         variant: "destructive"
       });
       return;
@@ -212,14 +310,71 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
       <h3 className="text-lg font-medium text-gray-900 mb-4">Sélectionner la date et l'heure</h3>
       
       {/* Affichage du mode multiple si activé */}
-      {formData.allowMultiplePerWeek && formData.selectedTherapists && formData.selectedTherapists.length > 1 && (
+      {isMultipleTherapists && selectedTherapists && selectedTherapists.length > 1 && (
         <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
-          <p className="text-amber-800 text-sm">
-            <strong>Mode multi-thérapeutes activé:</strong> Vous avez sélectionné {formData.selectedTherapists.length} thérapeutes.
-            {formData.therapist && (
-              <span> Les horaires affichés sont pour <strong>{formData.therapist.name}</strong>.</span>
-            )}
+          <p className="text-amber-800 text-sm font-medium mb-2">
+            <strong>Mode multi-thérapeutes activé:</strong> Vous avez sélectionné {selectedTherapists.length} thérapeutes.
           </p>
+          
+          {/* Sélecteur de thérapeute pour le calendrier actuel */}
+          <div className="mb-2">
+            <p className="text-sm text-gray-600 mb-1">Sélectionner le thérapeute pour définir son horaire:</p>
+            <div className="flex flex-wrap gap-2">
+              {selectedTherapists.map((therapist, index) => {
+                // Déterminer si ce thérapeute a déjà un horaire
+                const hasSchedule = therapistSchedules.some(s => 
+                  s.therapistId === therapist.id && s.date && s.time
+                );
+                
+                return (
+                  <button
+                    key={therapist.id}
+                    onClick={() => setCurrentTherapistIndex(index)}
+                    className={`px-3 py-1 text-sm rounded-full border 
+                      ${index === currentTherapistIndex 
+                        ? 'bg-primary text-white border-primary' 
+                        : 'border-gray-300 hover:border-primary'
+                      }
+                      ${hasSchedule ? 'ring-1 ring-green-500' : ''}
+                    `}
+                  >
+                    <div className="flex items-center">
+                      <span>{therapist.name}</span>
+                      {hasSchedule && (
+                        <span className="ml-1 text-xs text-white bg-green-500 rounded-full w-4 h-4 flex items-center justify-center">
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Afficher le thérapeute actuellement sélectionné */}
+          <p className="text-sm text-gray-700">
+            Horaires affichés pour: <strong>{selectedTherapists[currentTherapistIndex]?.name}</strong>
+          </p>
+          
+          {/* Afficher les horaires déjà définis */}
+          {therapistSchedules.some(s => s.date && s.time) && (
+            <div className="mt-2 text-xs space-y-1">
+              <p className="font-medium text-gray-600">Horaires définis:</p>
+              {therapistSchedules
+                .filter(s => s.date && s.time)
+                .map((schedule, idx) => {
+                  const therapist = selectedTherapists.find(t => t.id === schedule.therapistId);
+                  return (
+                    <div key={idx} className="flex items-center">
+                      <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                      <span>{therapist?.name}: {schedule.date} à {schedule.time}</span>
+                    </div>
+                  );
+                })
+              }
+            </div>
+          )}
         </div>
       )}
       
@@ -284,17 +439,28 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
               return (
                 <button 
                   key={index}
-                  className={`py-2 px-3 border rounded-md text-center text-sm relative
-                    ${selectedTime === time ? 'bg-primary text-white' : ''}
-                    ${!isAvailable ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'hover:border-primary'}
+                  className={`py-2 px-3 rounded-md text-center text-sm relative
+                    ${selectedTime === time 
+                      ? 'bg-primary text-white border-primary border-2' 
+                      : isAvailable 
+                        ? 'bg-green-50 border border-green-200 text-green-800 hover:bg-green-100 hover:border-green-300' 
+                        : 'bg-red-50 border border-red-200 text-red-600 opacity-70 cursor-not-allowed'
+                    }
                   `}
                   onClick={() => isAvailable && handleTimeSelect(time)}
                   disabled={!isAvailable}
                 >
-                  {time}
+                  <div className="flex items-center justify-center space-x-1">
+                    {isAvailable ? (
+                      <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                    ) : (
+                      <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                    )}
+                    <span>{time}</span>
+                  </div>
                   {!isAvailable && (
-                    <span className="absolute top-1 right-1 text-xs text-red-500">
-                      <span className="material-icons" style={{ fontSize: '12px' }}>block</span>
+                    <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                      ×
                     </span>
                   )}
                 </button>

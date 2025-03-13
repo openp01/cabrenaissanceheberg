@@ -101,6 +101,13 @@ export const appointmentFormSchema = insertAppointmentSchema.extend({
   time: z.string().min(1, "L'heure est requise"),
 });
 
+// Structure pour stocker les horaires par thérapeute
+export interface TherapistSchedule {
+  therapistId: number;
+  date?: string;
+  time?: string;
+}
+
 // For passing selected patient/therapist data in the booking flow
 export interface BookingFormData {
   patient?: Patient;
@@ -114,6 +121,9 @@ export interface BookingFormData {
   recurringCount?: number;
   recurringDates?: string[];
   allowMultiplePerWeek?: boolean; // Option pour autoriser plusieurs rendez-vous par semaine
+  isMultipleTherapists?: boolean; // Indique si le mode multiple thérapeutes est activé
+  therapistSchedules?: TherapistSchedule[]; // Horaires spécifiques pour chaque thérapeute
+  currentTherapistIndex?: number; // Index du thérapeute actuellement sélectionné
 }
 
 // For displaying appointments with related data
