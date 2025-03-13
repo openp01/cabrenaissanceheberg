@@ -59,8 +59,7 @@ export default function PatientForm({ formData, updateFormData, onNext }: Patien
   // Create patient mutation
   const createPatientMutation = useMutation({
     mutationFn: async (patient: Omit<Patient, "id">) => {
-      const response = await apiRequest("POST", "/api/patients", patient);
-      return response.json();
+      return await apiRequest("/api/patients", "POST", patient);
     },
     onSuccess: (newPatient) => {
       toast({
