@@ -280,7 +280,7 @@ export default function Invoices() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right flex items-center justify-end gap-2">
-                      <DownloadInvoiceButton 
+                      <InvoiceActions 
                         invoiceId={invoice.id} 
                         invoiceNumber={invoice.invoiceNumber} 
                       />
