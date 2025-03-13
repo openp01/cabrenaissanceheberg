@@ -386,8 +386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
       }
       
-      // Générer le PDF et le transmettre directement au client
-      const pdfStream = await generateInvoicePDF(invoice);
+      // Générer le PDF avec la signature administrative si c'est un téléchargement (pas une prévisualisation)
+      const pdfStream = await generateInvoicePDF(invoice, !isPreview);
       pdfStream.pipe(res);
       
     } catch (error) {

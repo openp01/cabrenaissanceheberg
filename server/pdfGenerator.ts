@@ -37,9 +37,13 @@ const formatCurrency = (amount: number | string): string => {
 /**
  * Génère un PDF pour une facture
  * @param invoice Facture avec les détails (patient, thérapeute, rendez-vous)
+ * @param includeAdminSignature Si true, inclut la signature administrative (par défaut: false)
  * @returns Stream du PDF généré
  */
-export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<PassThrough> {
+export async function generateInvoicePDF(
+  invoice: InvoiceWithDetails, 
+  includeAdminSignature: boolean = false
+): Promise<PassThrough> {
   // Créer un nouveau document PDF avec buffering pour la pagination
   const doc = new PDFDocument({ 
     size: 'A4', 
@@ -49,6 +53,13 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<P
   
   // Utiliser PassThrough au lieu de Readable direct
   const stream = new PassThrough();
+  
+  // Récupérer la signature administrative si nécessaire
+  let adminSignature: Signature | undefined = undefined;
+  if (includeAdminSignature) {
+    const signatures = await storage.getSignatures();
+    adminSignature = signatures.length > 0 ? signatures[0] : undefined;
+  }
   
   // Pipe le PDF dans le stream
   doc.pipe(stream);
@@ -154,9 +165,21 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<P
   doc.text('TOTAL', tableLeft + 10, taxLineY + 20);
   doc.text(formatCurrency(invoice.totalAmount), tableRight - 110, taxLineY + 20, { width: 100, align: 'right' });
   
-  // Espace pour signature si nécessaire
-  if (invoice.signatureUrl) {
-    const signatureY = taxLineY + 60;
+  // Espace pour signature
+  const signatureY = taxLineY + 60;
+  
+  // Si une signature administrative est fournie, l'utiliser (téléchargement)
+  if (adminSignature && adminSignature.signatureData) {
+    doc.font('Helvetica').fontSize(12).text('Signature administrative:', 50, signatureY);
+    try {
+      doc.image(adminSignature.signatureData, 230, signatureY, { width: 150 });
+    } catch (error) {
+      console.error("Erreur lors du chargement de la signature administrative:", error);
+      doc.text("(Signature non disponible)", 230, signatureY);
+    }
+  } 
+  // Sinon, utiliser la signature de la facture si disponible (prévisualisation)
+  else if (invoice.signatureUrl) {
     doc.font('Helvetica').fontSize(12).text('Signature:', 50, signatureY);
     try {
       doc.image(invoice.signatureUrl, 150, signatureY, { width: 150 });
