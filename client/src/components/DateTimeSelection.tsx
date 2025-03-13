@@ -51,7 +51,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
       // Créer ou mettre à jour les horaires pour chaque thérapeute sélectionné
       const schedules = selectedTherapists.map(therapist => {
         // Rechercher si un horaire existe déjà pour ce thérapeute
-        const existingSchedule = therapistSchedules.find(s => s.therapistId === therapist.id);
+        const existingSchedule = therapistSchedules.find((s: TherapistSchedule) => s.therapistId === therapist.id);
         
         if (existingSchedule) {
           return existingSchedule;
@@ -106,7 +106,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
         const updatedSchedules = [...(therapistSchedules || [])];
         
         // Trouver l'index de l'horaire du thérapeute actuel
-        const scheduleIndex = updatedSchedules.findIndex(s => s.therapistId === currentTherapist.id);
+        const scheduleIndex = updatedSchedules.findIndex((s: TherapistSchedule) => s.therapistId === currentTherapist.id);
         
         if (scheduleIndex >= 0) {
           // Mettre à jour l'horaire existant
@@ -322,7 +322,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
             <div className="flex flex-wrap gap-2">
               {selectedTherapists.map((therapist, index) => {
                 // Déterminer si ce thérapeute a déjà un horaire
-                const hasSchedule = therapistSchedules.some(s => 
+                const hasSchedule = therapistSchedules.some((s: TherapistSchedule) => 
                   s.therapistId === therapist.id && s.date && s.time
                 );
                 
@@ -358,13 +358,13 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
           </p>
           
           {/* Afficher les horaires déjà définis */}
-          {therapistSchedules.some(s => s.date && s.time) && (
+          {therapistSchedules.some((s: TherapistSchedule) => s.date && s.time) && (
             <div className="mt-2 text-xs space-y-1">
               <p className="font-medium text-gray-600">Horaires définis:</p>
               {therapistSchedules
-                .filter(s => s.date && s.time)
+                .filter((s: TherapistSchedule) => s.date && s.time)
                 .map((schedule, idx) => {
-                  const therapist = selectedTherapists.find(t => t.id === schedule.therapistId);
+                  const therapist = selectedTherapists.find((t: Therapist) => t.id === schedule.therapistId);
                   return (
                     <div key={idx} className="flex items-center">
                       <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
