@@ -23,7 +23,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftIcon, FileIcon, UploadIcon, Loader2, FileTextIcon, ImageIcon } from "lucide-react";
 import { HomeButton } from "@/components/ui/home-button";
-import { uploadFile, isImageFile, isPdfFile } from "@/lib/fileUploadService";
+import { uploadFile, isImageFile, isPdfFile, openPdfInNewTab, registerFileName, getFileNameFromUrl } from "@/lib/fileUploadService";
 
 export default function ExpenseForm() {
   const [, navigate] = useLocation();

@@ -23,7 +23,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftIcon, FileIcon, UploadIcon, Loader2, FileTextIcon, ImageIcon } from "lucide-react";
 import { HomeButton } from "@/components/ui/home-button";
-import { uploadFile, getFileNameFromUrl, isImageFile, isPdfFile } from "@/lib/fileUploadService";
+import { uploadFile, getFileNameFromUrl, isImageFile, isPdfFile, openPdfInNewTab } from "@/lib/fileUploadService";
 
 export default function EditExpenseForm() {
   const { id } = useParams<{ id: string }>();
@@ -400,15 +400,31 @@ export default function EditExpenseForm() {
                     <div className="mb-4 p-4 bg-muted/30 rounded-md">
                       <p className="text-sm font-medium mb-2">Justificatif actuel :</p>
                       <div className="flex items-center space-x-2">
-                        <FileIcon className="h-5 w-5 text-primary" />
-                        <a 
-                          href={currentReceiptUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline text-sm truncate"
-                        >
-                          {currentReceiptUrl.split('/').pop()}
-                        </a>
+                        {isPdfFile(getFileNameFromUrl(currentReceiptUrl)) ? (
+                          <FileTextIcon className="h-5 w-5 text-primary" />
+                        ) : isImageFile(getFileNameFromUrl(currentReceiptUrl)) ? (
+                          <ImageIcon className="h-5 w-5 text-primary" />
+                        ) : (
+                          <FileIcon className="h-5 w-5 text-primary" />
+                        )}
+                        {isPdfFile(getFileNameFromUrl(currentReceiptUrl)) ? (
+                          <Button 
+                            variant="link" 
+                            className="p-0 h-auto text-primary text-sm truncate"
+                            onClick={() => openPdfInNewTab(currentReceiptUrl)}
+                          >
+                            {getFileNameFromUrl(currentReceiptUrl)}
+                          </Button>
+                        ) : (
+                          <a 
+                            href={currentReceiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline text-sm truncate"
+                          >
+                            {getFileNameFromUrl(currentReceiptUrl)}
+                          </a>
+                        )}
                       </div>
                     </div>
                   )}
