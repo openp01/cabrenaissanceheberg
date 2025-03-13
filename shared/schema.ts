@@ -105,12 +105,15 @@ export const appointmentFormSchema = insertAppointmentSchema.extend({
 export interface BookingFormData {
   patient?: Patient;
   therapist?: Therapist;
+  therapists?: Therapist[]; // Permet de sélectionner plusieurs thérapeutes
+  selectedTherapists?: Therapist[]; // Thérapeutes sélectionnés pour plusieurs rendez-vous
   date?: string;
   time?: string;
   isRecurring?: boolean;
   recurringFrequency?: string;
   recurringCount?: number;
   recurringDates?: string[];
+  allowMultiplePerWeek?: boolean; // Option pour autoriser plusieurs rendez-vous par semaine
 }
 
 // For displaying appointments with related data
