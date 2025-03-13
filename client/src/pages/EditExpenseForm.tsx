@@ -108,14 +108,28 @@ export default function EditExpenseForm() {
       // Utiliser notre service d'upload pour télécharger le fichier
       const fileUrl = await uploadFile(receiptFile, 'receipts');
       
+      // Si nous avons déjà un fichier local (pas une URL externe), on le supprime
+      if (currentReceiptUrl && !isExternalUrl(currentReceiptUrl)) {
+        try {
+          await deleteFile(currentReceiptUrl);
+        } catch (deleteError) {
+          console.warn("Erreur lors de la suppression du justificatif précédent:", deleteError);
+          // On continue même si la suppression échoue
+        }
+      }
+      
       // Mettre à jour l'URL du justificatif pour cette dépense
       await apiRequest(`/api/expenses/${id}/receipt`, "POST", { 
         fileUrl 
       });
       
       toast({
-        title: "Justificatif ajouté",
-        description: "Le justificatif a été téléchargé avec succès",
+        title: currentReceiptUrl && isExternalUrl(currentReceiptUrl)
+          ? "Justificatif remplacé"
+          : "Justificatif ajouté",
+        description: currentReceiptUrl && isExternalUrl(currentReceiptUrl)
+          ? "La référence externe a été remplacée par un nouveau fichier"
+          : "Le justificatif a été téléchargé avec succès",
       });
       
       return fileUrl;
@@ -409,14 +423,22 @@ export default function EditExpenseForm() {
                     <div className="mb-4 p-4 bg-muted/30 rounded-md">
                       <p className="text-sm font-medium mb-2">Justificatif actuel :</p>
                       <div className="flex items-center space-x-2">
-                        {isPdfFile(getFileNameFromUrl(currentReceiptUrl)) ? (
+                        {isExternalUrl(currentReceiptUrl) ? (
+                          <ExternalLinkIcon className="h-5 w-5 text-muted-foreground" />
+                        ) : isPdfFile(getFileNameFromUrl(currentReceiptUrl)) ? (
                           <FileTextIcon className="h-5 w-5 text-primary" />
                         ) : isImageFile(getFileNameFromUrl(currentReceiptUrl)) ? (
                           <ImageIcon className="h-5 w-5 text-primary" />
                         ) : (
                           <FileIcon className="h-5 w-5 text-primary" />
                         )}
-                        {isPdfFile(getFileNameFromUrl(currentReceiptUrl)) ? (
+                        
+                        {isExternalUrl(currentReceiptUrl) ? (
+                          <div className="flex items-center">
+                            <span className="text-muted-foreground text-sm">Fichier externe (non disponible)</span>
+                            <AlertTriangleIcon className="h-4 w-4 text-amber-500 ml-2" />
+                          </div>
+                        ) : isPdfFile(getFileNameFromUrl(currentReceiptUrl)) ? (
                           <Button 
                             variant="link" 
                             className="p-0 h-auto text-primary text-sm truncate"
@@ -426,7 +448,7 @@ export default function EditExpenseForm() {
                           </Button>
                         ) : (
                           <a 
-                            href={currentReceiptUrl}
+                            href={getSafeDisplayUrl(currentReceiptUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-primary hover:underline text-sm truncate"
@@ -435,6 +457,15 @@ export default function EditExpenseForm() {
                           </a>
                         )}
                       </div>
+                      
+                      {isExternalUrl(currentReceiptUrl) && (
+                        <div className="mt-2 bg-amber-50 p-2 rounded-md border border-amber-200">
+                          <p className="text-xs text-amber-700">
+                            Le fichier d'origine n'est plus accessible. En téléchargeant un nouveau justificatif, 
+                            vous remplacerez définitivement cette référence externe.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
