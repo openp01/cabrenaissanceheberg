@@ -92,21 +92,32 @@ export default function Payments() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [customTitle, setCustomTitle] = useState("RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES");
   
+  // État pour le thérapeute sélectionné dans la fenêtre d'exportation
+  const [exportTherapistId, setExportTherapistId] = useState<string | null>(null);
+  
   // Fonction pour exporter les paiements en PDF
   const exportPaymentsToPDF = () => {
     // Construire l'URL avec les paramètres
     let url = "/api/therapist-payments/export/pdf";
     const params = new URLSearchParams();
     
+    // Paramètres de date
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
-    if (selectedTherapistId && selectedTherapistId !== "all") {
+    
+    // Paramètre du thérapeute (priorité à la sélection dans la boîte de dialogue d'exportation)
+    const therapistIdToUse = exportTherapistId || (selectedTherapistId !== "all" ? selectedTherapistId : null);
+    
+    if (therapistIdToUse) {
+      params.append("therapistId", therapistIdToUse);
+      
       // Si nous avons un nom de thérapeute disponible, l'ajouter au titre
-      const therapist = therapists?.find(t => t.id.toString() === selectedTherapistId);
+      const therapist = therapists?.find(t => t.id.toString() === therapistIdToUse);
       if (therapist) {
         params.append("title", `RELEVÉ DES PAIEMENTS - ${therapist.name}`);
       }
     } else if (customTitle !== "RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES") {
+      // Utiliser le titre personnalisé si aucun thérapeute n'est sélectionné
       params.append("title", customTitle);
     }
     
@@ -117,6 +128,9 @@ export default function Payments() {
     
     // Ouvrir une nouvelle fenêtre pour télécharger le PDF
     window.open(url, "_blank");
+    
+    // Réinitialiser la sélection pour la prochaine exportation
+    setExportTherapistId(null);
   };
 
   return (
@@ -152,6 +166,28 @@ export default function Payments() {
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
                   />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right">Thérapeute:</label>
+                  <div className="col-span-3">
+                    <Select 
+                      onValueChange={(value) => setExportTherapistId(value === "all" ? null : value)}
+                      value={exportTherapistId || "all"}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Tous les thérapeutes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous les thérapeutes</SelectItem>
+                        {therapists?.map((therapist) => (
+                          <SelectItem key={therapist.id} value={therapist.id.toString()}>
+                            {therapist.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">

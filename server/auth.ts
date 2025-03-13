@@ -51,8 +51,10 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`Tentative de connexion pour l'utilisateur: ${username}`);
         const user = await authService.validateUser(username, password);
         if (!user) {
+          console.log(`Échec d'authentification pour l'utilisateur: ${username}`);
           return done(null, false, { message: "Identifiants incorrects" });
         }
         
@@ -66,8 +68,10 @@ export function setupAuth(app: Express) {
           isActive: user.isActive
         };
         
+        console.log(`Authentification réussie pour l'utilisateur: ${username}, ID: ${user.id}, Rôle: ${user.role}`);
         return done(null, sessionUser);
       } catch (error) {
+        console.error(`Erreur lors de l'authentification:`, error);
         return done(error);
       }
     })
@@ -75,17 +79,21 @@ export function setupAuth(app: Express) {
 
   // Sérialisation de l'utilisateur pour la session
   passport.serializeUser((user: SessionUser, done) => {
+    console.log(`Sérialisation de l'utilisateur ID:${user.id} pour la session`);
     done(null, user.id);
   });
 
   // Désérialisation de l'utilisateur à partir de la session
   passport.deserializeUser(async (id: number, done) => {
     try {
+      console.log(`Tentative de désérialisation pour l'utilisateur ID:${id}`);
       const user = await authService.getUser(id);
       if (!user) {
+        console.log(`Utilisateur ID:${id} non trouvé lors de la désérialisation`);
         return done(null, false);
       }
       if (!user.isActive) {
+        console.log(`Utilisateur ID:${id} inactif lors de la désérialisation`);
         return done(null, false);
       }
       
@@ -99,8 +107,10 @@ export function setupAuth(app: Express) {
         isActive: user.isActive
       };
       
+      console.log(`Désérialisation réussie pour l'utilisateur ID:${id}, Rôle:${user.role}`);
       done(null, sessionUser);
     } catch (error) {
+      console.error(`Erreur lors de la désérialisation de l'utilisateur ID:${id}:`, error);
       done(error);
     }
   });
@@ -109,6 +119,8 @@ export function setupAuth(app: Express) {
   app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
     // Cette fonction ne sera exécutée que si l'authentification réussit
     const user = req.user as SessionUser;
+    console.log(`Login réussi - réponse à la requête pour l'utilisateur ID:${user.id}, Cookie de session présent:`, !!req.cookies['connect.sid']);
+    
     res.json({
       id: user.id,
       username: user.username,
