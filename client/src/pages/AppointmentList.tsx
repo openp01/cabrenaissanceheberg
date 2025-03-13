@@ -171,17 +171,36 @@ export default function AppointmentList() {
                               <tr key={appointment.id}>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex items-center">
-                                    <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
+                                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                      {appointment.patientName.split(" ").map(n => n[0]).join("").toUpperCase()}
+                                    </div>
+                                    <div className="ml-3">
+                                      <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
+                                      {/* Future feature: Show additional patient info */}
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{appointment.therapistName}</div>
+                                  <div className="flex items-center">
+                                    <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
+                                    <div className="text-sm font-medium text-gray-900">{appointment.therapistName}</div>
+                                    {/* Future feature: Show related appointments indicator */}
+                                  </div>
+                                  {appointment.notes && (
+                                    <div className="text-xs text-gray-500 mt-1 italic">{appointment.notes}</div>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{appointment.date}</div>
+                                  <div className="flex items-center">
+                                    <span className="material-icons text-blue-500 mr-1 text-sm">event</span>
+                                    <div className="text-sm text-gray-900">{appointment.date}</div>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{appointment.time}</div>
+                                  <div className="flex items-center">
+                                    <span className="material-icons text-green-500 mr-1 text-sm">schedule</span>
+                                    <div className="text-sm text-gray-900">{appointment.time}</div>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>

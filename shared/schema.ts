@@ -127,9 +127,17 @@ export interface BookingFormData {
 }
 
 // For displaying appointments with related data
-export interface AppointmentWithDetails extends Appointment {
+export interface AppointmentWithDetails extends Omit<Appointment, 'notes'> {
   patientName: string;
   therapistName: string;
+  patientInfo?: string;
+  notes: string | null;
+  relatedAppointments?: Array<{
+    id: number;
+    therapistName: string;
+    date: string;
+    time: string;
+  }>;
 }
 
 // Invoice table

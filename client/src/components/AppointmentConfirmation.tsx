@@ -226,25 +226,51 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 {isMultipleTherapists && selectedTherapists && therapistSchedules && therapistSchedules.some((s: TherapistSchedule) => s.date && s.time) ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-amber-600 font-medium mb-2">Horaires spécifiques par thérapeute :</p>
-                    <ul className="space-y-1">
-                      {selectedTherapists.map(therapist => {
-                        const schedule = therapistSchedules.find(s => s.therapistId === therapist.id);
-                        const scheduleDate = schedule?.date || date;
-                        const scheduleTime = schedule?.time || time;
-                        
-                        return (
-                          <li key={therapist.id} className="flex items-center">
-                            <span className="w-2 h-2 rounded-full mr-2 bg-primary"></span>
-                            <span className="font-medium">{therapist.name} :</span>
-                            <span className="ml-2">{scheduleDate} à {scheduleTime}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <p className="text-sm text-amber-600 font-semibold mb-3">Horaires spécifiques par thérapeute :</p>
+                    <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                      <table className="min-w-full">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thérapeute</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heure</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {selectedTherapists.map((therapist, index) => {
+                            const schedule = therapistSchedules.find((s: TherapistSchedule) => s.therapistId === therapist.id);
+                            const scheduleDate = schedule?.date || date;
+                            const scheduleTime = schedule?.time || time;
+                            
+                            return (
+                              <tr key={therapist.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className={`w-3 h-3 rounded-full mr-2 ${
+                                      therapist.color ? `bg-[${therapist.color}]` : 'bg-primary'
+                                    }`}></div>
+                                    <span className="font-medium text-gray-900">{therapist.name}</span>
+                                    {index === 0 && <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Principal</span>}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                  {scheduleDate}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                  {scheduleTime}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 ) : (
-                  <>{date} à {time}</>
+                  <div className="flex items-center bg-blue-50 px-3 py-2 rounded-md">
+                    <span className="material-icons text-blue-500 mr-2">event</span>
+                    <span className="font-medium">{date} à {time}</span>
+                  </div>
                 )}
               </dd>
             </div>
@@ -262,16 +288,38 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Séances planifiées</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
-                    {recurringDates.map((date, index) => (
-                      <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                        <div className="w-0 flex-1 flex items-center">
-                          <span className="material-icons text-xs flex-shrink-0 text-gray-400">event</span>
-                          <span className="ml-2 flex-1 w-0 truncate">{date}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Séance</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date et heure</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {recurringDates.map((dateTime, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 mr-2">
+                                  <span className="text-xs font-semibold">{index + 1}</span>
+                                </div>
+                                <span className="text-sm text-gray-900">
+                                  {index === 0 ? 'Première séance' : `Séance ${index + 1}`}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              <div className="flex items-center">
+                                <span className="material-icons text-xs text-blue-500 mr-2">event</span>
+                                <span>{dateTime}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </dd>
               </div>
             )}
