@@ -26,7 +26,9 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
     recurringDates,
     allowMultiplePerWeek,
     therapistSchedules,
-    isMultipleTherapists: formMultipleTherapists
+    isMultipleTherapists: formMultipleTherapists,
+    isMultipleTimeSlots,
+    selectedTimeSlots
   } = formData;
   
   // Déterminer si nous sommes en mode multiple ou simple
@@ -35,12 +37,37 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
     mutationFn: async () => {
-      if (!patient || !date || !time) {
-        throw new Error("Informations manquantes pour créer le rendez-vous");
+      if (!patient) {
+        throw new Error("Informations du patient manquantes pour créer le rendez-vous");
       }
       
-      // En mode multiple, on crée un rendez-vous pour chaque thérapeute sélectionné
-      if (isMultipleTherapists && selectedTherapists) {
+      // Mode créneaux multiples - un thérapeute, plusieurs créneaux horaires
+      if (isMultipleTimeSlots && selectedTimeSlots && selectedTimeSlots.length > 0) {
+        if (!therapist) {
+          throw new Error("Thérapeute manquant pour créer le rendez-vous");
+        }
+        
+        // Créer un rendez-vous pour chaque créneau sélectionné
+        const promises = selectedTimeSlots.map(slot => {
+          const appointmentData = {
+            patientId: patient.id,
+            therapistId: therapist.id,
+            date: slot.date,
+            time: slot.time,
+            status: "confirmed",
+            isRecurring: false,
+            recurringFrequency: null,
+            recurringCount: null,
+          };
+          
+          return apiRequest("/api/appointments", "POST", appointmentData);
+        });
+        
+        // Attendre que tous les rendez-vous soient créés
+        return Promise.all(promises);
+      }
+      // Mode multi-thérapeutes - plusieurs thérapeutes, chacun avec son propre horaire
+      else if (isMultipleTherapists && selectedTherapists) {
         // Créer tous les rendez-vous avec leurs horaires spécifiques
         const promises = selectedTherapists.map(therapist => {
           // Trouver l'horaire spécifique pour ce thérapeute
@@ -72,10 +99,11 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
         
         // Attendre que tous les rendez-vous soient créés
         return Promise.all(promises);
-      } else {
-        // Comportement standard - un seul thérapeute
-        if (!therapist) {
-          throw new Error("Thérapeute manquant pour créer le rendez-vous");
+      } 
+      // Mode standard - un seul thérapeute, un seul créneau
+      else {
+        if (!therapist || !date || !time) {
+          throw new Error("Informations manquantes pour créer le rendez-vous");
         }
         
         const appointmentData = {
@@ -93,13 +121,27 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
       }
     },
     onSuccess: () => {
-      const isMultipleAppointments = isMultipleTherapists && selectedTherapists && selectedTherapists.length > 1;
+      let title, description;
+      
+      // Mode créneaux multiples
+      if (isMultipleTimeSlots && selectedTimeSlots && selectedTimeSlots.length > 0) {
+        title = "Rendez-vous confirmés";
+        description = `${selectedTimeSlots.length} créneaux horaires ont été réservés avec succès`;
+      } 
+      // Mode multi-thérapeutes
+      else if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 1) {
+        title = "Rendez-vous confirmés";
+        description = `${selectedTherapists.length} rendez-vous ont été créés avec succès`;
+      }
+      // Mode standard
+      else {
+        title = "Rendez-vous confirmé";
+        description = "Votre rendez-vous a été créé avec succès";
+      }
       
       toast({
-        title: isMultipleAppointments ? "Rendez-vous confirmés" : "Rendez-vous confirmé",
-        description: isMultipleAppointments 
-          ? `${selectedTherapists?.length} rendez-vous ont été créés avec succès` 
-          : "Votre rendez-vous a été créé avec succès",
+        title,
+        description,
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
@@ -151,9 +193,11 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
           </div>
           <div className="ml-3">
             <p className="text-sm text-green-700">
-              {isMultipleTherapists && selectedTherapists ? 
-                `Vous êtes sur le point de créer ${selectedTherapists.length} rendez-vous simultanés.` :
-                "Vous êtes sur le point de confirmer votre rendez-vous."
+              {isMultipleTimeSlots && selectedTimeSlots && selectedTimeSlots.length > 0 ?
+                `Vous êtes sur le point de réserver ${selectedTimeSlots.length} créneaux horaires.` :
+                isMultipleTherapists && selectedTherapists ? 
+                  `Vous êtes sur le point de créer ${selectedTherapists.length} rendez-vous simultanés.` :
+                  "Vous êtes sur le point de confirmer votre rendez-vous."
               }
             </p>
           </div>
@@ -277,12 +321,56 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
             <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Type</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {isRecurring 
-                  ? `Rendez-vous récurrent (${recurringCount} séances)`
-                  : "Rendez-vous unique"
+                {isMultipleTimeSlots && selectedTimeSlots && selectedTimeSlots.length > 0
+                  ? `Créneaux multiples (${selectedTimeSlots.length} créneaux)`
+                  : isRecurring 
+                    ? `Rendez-vous récurrent (${recurringCount} séances)`
+                    : "Rendez-vous unique"
                 }
               </dd>
             </div>
+            
+            {/* Affichage des créneaux multiples sélectionnés */}
+            {isMultipleTimeSlots && selectedTimeSlots && selectedTimeSlots.length > 0 && (
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Créneaux sélectionnés</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numéro</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heure</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedTimeSlots.map((slot, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 mr-2">
+                                  <span className="text-xs font-semibold">{index + 1}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {slot.date}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {slot.time}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-2 text-xs text-green-600 font-medium">
+                    Mode multi-créneaux activé. {selectedTimeSlots.length} rendez-vous seront créés pour le même thérapeute.
+                  </p>
+                </dd>
+              </div>
+            )}
             
             {isRecurring && recurringDates && recurringDates.length > 0 && (
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -340,8 +428,10 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
               <span className="animate-spin inline-block h-4 w-4 border-t-2 border-white rounded-full mr-2"></span>
               Création en cours...
             </>
-          ) : isMultipleTherapists ? (
-            <>Confirmer {selectedTherapists?.length} rendez-vous</>
+          ) : isMultipleTimeSlots && selectedTimeSlots && selectedTimeSlots.length > 0 ? (
+            <>Confirmer {selectedTimeSlots.length} créneaux</>
+          ) : isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0 ? (
+            <>Confirmer {selectedTherapists.length} rendez-vous</>
           ) : (
             <>Confirmer le rendez-vous</>
           )}

@@ -534,6 +534,13 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
             onFrequencyChange={handleFrequencyChange}
             onCountChange={handleCountChange}
           />
+          
+          {/* Multiple Time Slots Options */}
+          <MultipleTimeSlotsOptions
+            isMultipleTimeSlots={isMultipleTimeSlots}
+            selectedTimeSlots={selectedTimeSlots}
+            onMultipleTimeSlotsChange={handleMultipleTimeSlotsChange}
+          />
         </div>
       )}
     </div>
