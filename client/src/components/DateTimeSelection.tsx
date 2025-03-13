@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, parse, addDays, startOfWeek, isSameDay, isSameMonth } from "date-fns";
 import { fr } from "date-fns/locale";
-import { BookingFormData } from "@shared/schema";
+import { BookingFormData, TherapistSchedule, Therapist } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -439,28 +439,34 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
               return (
                 <button 
                   key={index}
-                  className={`py-2 px-3 rounded-md text-center text-sm relative
+                  className={`py-3 px-4 rounded-md text-center text-sm relative transition-all
                     ${selectedTime === time 
-                      ? 'bg-primary text-white border-primary border-2' 
+                      ? 'bg-primary text-white border-primary border-2 shadow-md transform scale-105' 
                       : isAvailable 
-                        ? 'bg-green-50 border border-green-200 text-green-800 hover:bg-green-100 hover:border-green-300' 
+                        ? 'bg-green-50 border-2 border-green-300 text-green-800 hover:bg-green-100 hover:border-green-500 hover:shadow-sm hover:transform hover:scale-102' 
                         : 'bg-red-50 border border-red-200 text-red-600 opacity-70 cursor-not-allowed'
                     }
                   `}
                   onClick={() => isAvailable && handleTimeSelect(time)}
                   disabled={!isAvailable}
                 >
-                  <div className="flex items-center justify-center space-x-1">
+                  <div className="flex items-center justify-center">
                     {isAvailable ? (
-                      <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                      <>
+                        <span className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        <span className="font-medium">{time}</span>
+                        <span className="absolute top-1 right-1 text-xs text-green-700 font-bold">LIBRE</span>
+                      </>
                     ) : (
-                      <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                      <>
+                        <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                        <span className="line-through">{time}</span>
+                      </>
                     )}
-                    <span>{time}</span>
                   </div>
                   {!isAvailable && (
-                    <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
-                      ×
+                    <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
+                      ✕
                     </span>
                   )}
                 </button>
