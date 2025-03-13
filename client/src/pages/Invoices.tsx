@@ -22,7 +22,7 @@ import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import DownloadInvoiceButton from "@/components/DownloadInvoiceButton";
+import InvoiceActions from "@/components/InvoiceActions";
 import { HomeButton } from "@/components/ui/home-button";
 
 export default function Invoices() {

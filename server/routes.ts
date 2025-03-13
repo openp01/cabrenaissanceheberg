@@ -342,13 +342,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Endpoint pour télécharger la facture au format PDF
+  // Endpoint pour télécharger ou prévisualiser la facture au format PDF
   app.get("/api/invoices/:id/pdf", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "ID de facture invalide" });
       }
+      
+      // Vérifier si c'est une prévisualisation ou un téléchargement
+      const isPreview = req.query.preview === 'true';
       
       // Récupérer la facture avec tous les détails nécessaires pour le PDF
       const invoicesWithDetails = await storage.getInvoices();
@@ -358,26 +361,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Facture non trouvée" });
       }
       
-      // Définir les en-têtes de réponse pour le téléchargement du PDF
+      // Définir les en-têtes de réponse en fonction du mode (prévisualisation ou téléchargement)
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="facture-${invoice.invoiceNumber}.pdf"`);
+      
+      if (isPreview) {
+        // Pour la prévisualisation, afficher dans le navigateur
+        res.setHeader('Content-Disposition', `inline; filename="facture-${invoice.invoiceNumber}.pdf"`);
+      } else {
+        // Pour le téléchargement, forcer le téléchargement
+        res.setHeader('Content-Disposition', `attachment; filename="facture-${invoice.invoiceNumber}.pdf"`);
+        
+        // Envoyer une notification par email seulement pour les téléchargements (pas les prévisualisations)
+        sendInvoiceDownloadNotification(invoice)
+          .then(emailResult => {
+            if (emailResult.success) {
+              console.log(`Notification d'email envoyée pour la facture ${invoice.invoiceNumber}`);
+            } else {
+              console.error(`Échec de l'envoi de la notification pour la facture ${invoice.invoiceNumber}:`, emailResult.error);
+            }
+          })
+          .catch(err => {
+            console.error(`Erreur lors de l'envoi de la notification par email:`, err);
+          });
+      }
       
       // Générer le PDF et le transmettre directement au client
       const pdfStream = await generateInvoicePDF(invoice);
       pdfStream.pipe(res);
-      
-      // Envoyer une notification par email (asynchrone, ne bloque pas la réponse)
-      sendInvoiceDownloadNotification(invoice)
-        .then(emailResult => {
-          if (emailResult.success) {
-            console.log(`Notification d'email envoyée pour la facture ${invoice.invoiceNumber}`);
-          } else {
-            console.error(`Échec de l'envoi de la notification pour la facture ${invoice.invoiceNumber}:`, emailResult.error);
-          }
-        })
-        .catch(err => {
-          console.error(`Erreur lors de l'envoi de la notification par email:`, err);
-        });
       
     } catch (error) {
       console.error("Erreur lors de la génération du PDF de la facture:", error);
@@ -440,6 +450,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Erreur lors de la suppression de la facture" });
+    }
+  });
+  
+  // Endpoint pour envoyer une facture par email
+  app.get("/api/invoices/:id/send-email", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de facture invalide" });
+      }
+      
+      // Récupérer la facture avec tous les détails nécessaires
+      const invoicesWithDetails = await storage.getInvoices();
+      const invoice = invoicesWithDetails.find(inv => inv.id === id);
+      
+      if (!invoice) {
+        return res.status(404).json({ error: "Facture non trouvée" });
+      }
+      
+      // Envoyer la facture par email
+      const emailResult = await sendInvoiceDownloadNotification(invoice);
+      
+      if (emailResult.success) {
+        res.status(200).json({ message: "Facture envoyée par email avec succès" });
+      } else {
+        throw new Error(emailResult.error || "Erreur lors de l'envoi de l'email");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de la facture par email:", error);
+      res.status(500).json({ error: "Erreur lors de l'envoi de la facture par email" });
     }
   });
 
