@@ -363,6 +363,9 @@ export default function EditExpenseForm() {
                                 </SelectItem>
                                 <SelectItem value="Chèque">Chèque</SelectItem>
                                 <SelectItem value="Prélèvement">Prélèvement</SelectItem>
+                                <SelectItem value="Paiement mobile">
+                                  Paiement mobile
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </FormControl>

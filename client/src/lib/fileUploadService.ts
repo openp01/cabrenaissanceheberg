@@ -67,6 +67,7 @@ export function getFileNameFromUrl(fileUrl: string): string {
  * @returns true si le fichier est une image
  */
 export function isImageFile(fileName: string): boolean {
+  if (!fileName) return false;
   const extension = fileName.split('.').pop()?.toLowerCase();
   return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
 }
@@ -77,6 +78,7 @@ export function isImageFile(fileName: string): boolean {
  * @returns true si le fichier est un PDF
  */
 export function isPdfFile(fileName: string): boolean {
+  if (!fileName) return false;
   const extension = fileName.split('.').pop()?.toLowerCase();
   return extension === 'pdf';
 }

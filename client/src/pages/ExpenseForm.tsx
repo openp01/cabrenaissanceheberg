@@ -301,6 +301,9 @@ export default function ExpenseForm() {
                                   Virement
                                 </SelectItem>
                                 <SelectItem value="Chèque">Chèque</SelectItem>
+                                <SelectItem value="Paiement mobile">
+                                  Paiement mobile
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </FormControl>

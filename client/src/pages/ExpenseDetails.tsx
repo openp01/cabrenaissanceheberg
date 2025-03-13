@@ -229,26 +229,26 @@ export default function ExpenseDetails() {
               {expense.receiptUrl ? (
                 <div className="text-center">
                   <div className="border rounded-md p-4 mb-4">
-                    {isImageFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                    {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) ? (
                       <ImageIcon className="h-16 w-16 mx-auto text-primary" />
-                    ) : isPdfFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                    ) : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) ? (
                       <FileTextIcon className="h-16 w-16 mx-auto text-primary" />
                     ) : (
                       <FileIcon className="h-16 w-16 mx-auto text-primary" />
                     )}
                     <p className="text-sm mt-2 font-medium">
-                      {getFileNameFromUrl(expense.receiptUrl)}
+                      {expense.receiptUrl ? getFileNameFromUrl(expense.receiptUrl) : "Justificatif"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {isImageFile(getFileNameFromUrl(expense.receiptUrl)) 
+                      {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) 
                         ? "Image" 
-                        : isPdfFile(getFileNameFromUrl(expense.receiptUrl))
+                        : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl))
                         ? "Document PDF"
                         : "Document"}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {isImageFile(getFileNameFromUrl(expense.receiptUrl)) && (
+                    {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) && (
                       <div className="border rounded-md p-2 overflow-hidden">
                         <img 
                           src={expense.receiptUrl} 
@@ -260,6 +260,15 @@ export default function ExpenseDetails() {
                         />
                       </div>
                     )}
+                    {expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) && (
+                      <div className="border rounded-md p-2 text-center">
+                        <p className="text-sm text-muted-foreground mb-2">Les PDF ne peuvent pas être prévisualisés ici</p>
+                        <FileTextIcon className="h-10 w-10 mx-auto text-primary mb-2" />
+                        <p className="text-xs text-muted-foreground">
+                          Cliquez sur le bouton ci-dessous pour ouvrir le PDF dans un nouvel onglet
+                        </p>
+                      </div>
+                    )}
                     <a
                       href={expense.receiptUrl}
                       target="_blank"
@@ -268,9 +277,9 @@ export default function ExpenseDetails() {
                     >
                       <Button variant="outline" className="w-full">
                         <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                        {isImageFile(getFileNameFromUrl(expense.receiptUrl))
+                        {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl))
                           ? "Voir l'image en taille réelle"
-                          : isPdfFile(getFileNameFromUrl(expense.receiptUrl))
+                          : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl))
                           ? "Ouvrir le PDF"
                           : "Voir le justificatif"}
                       </Button>
