@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, varchar, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -134,6 +134,8 @@ export const invoices = pgTable("invoices", {
   dueDate: text("due_date").notNull(),
   paymentMethod: text("payment_method"),
   notes: text("notes"),
+  templateId: integer("template_id"),
+  signatureUrl: text("signature_url"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).pick({
@@ -323,3 +325,45 @@ export const userFormSchema = insertUserSchema;
 export interface UserWithTherapistDetails extends User {
   therapistName?: string;
 }
+
+// Templates de factures
+export const invoiceTemplates = pgTable("invoice_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  headerText: text("header_text"),
+  footerText: text("footer_text"),
+  logoUrl: text("logo_url"),
+  colorPrimary: text("color_primary"),
+  colorSecondary: text("color_secondary"),
+  fontFamily: text("font_family"),
+  showSignature: boolean("show_signature").default(false),
+  signatureImageUrl: text("signature_image_url"),
+  additionalFields: jsonb("additional_fields"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).pick({
+  name: true,
+  description: true,
+  headerText: true,
+  footerText: true,
+  logoUrl: true,
+  colorPrimary: true,
+  colorSecondary: true,
+  fontFamily: true,
+  showSignature: true,
+  signatureImageUrl: true,
+  additionalFields: true,
+  isDefault: true
+});
+
+export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
+export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
+
+// Mise à jour du schéma des factures pour inclure le template
+export const invoiceTemplateFormSchema = insertInvoiceTemplateSchema.extend({
+  name: z.string().min(2, "Le nom du modèle doit contenir au moins 2 caractères"),
+});

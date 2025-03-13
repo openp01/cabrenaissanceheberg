@@ -38,8 +38,12 @@ const formatCurrency = (amount: number | string): string => {
  * @returns Stream du PDF généré
  */
 export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<PassThrough> {
-  // Créer un nouveau document PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  // Créer un nouveau document PDF avec buffering pour la pagination
+  const doc = new PDFDocument({ 
+    size: 'A4', 
+    margin: 50,
+    bufferPages: true 
+  });
   
   // Utiliser PassThrough au lieu de Readable direct
   const stream = new PassThrough();
@@ -47,92 +51,150 @@ export async function generateInvoicePDF(invoice: InvoiceWithDetails): Promise<P
   // Pipe le PDF dans le stream
   doc.pipe(stream);
   
+  // Définir des positions et dimensions constantes
+  const pageWidth = doc.page.width - 100; // Marge de 50 de chaque côté
+  
   // Ajouter l'en-tête
   doc.fontSize(25).text('CABINET D\'ORTHOPHONIE', { align: 'center' });
-  doc.moveDown();
+  doc.moveDown(0.5);
   doc.fontSize(18).text('FACTURE', { align: 'center' });
-  doc.moveDown();
+  doc.moveDown(1);
   
-  // Informations de la facture
-  doc.fontSize(12).text(`Numéro de facture: ${invoice.invoiceNumber}`);
-  doc.text(`Date d'émission: ${invoice.issueDate}`);
-  doc.text(`Date d'échéance: ${invoice.dueDate}`);
-  doc.text(`Statut: ${invoice.status}`);
-  doc.moveDown();
+  // Ajout d'un encadré pour les informations de facture
+  const infoBoxTop = doc.y;
+  doc.rect(50, infoBoxTop, pageWidth, 90).fillAndStroke('#f9fafb', '#e5e7eb');
+  doc.fillColor('#000');
   
-  // Information du patient
-  doc.fontSize(14).text('Patient:');
-  doc.fontSize(12).text(`Nom: ${invoice.patientName}`);
-  doc.moveDown();
+  // Informations de la facture - colonne gauche
+  doc.fontSize(12).text(`Numéro de facture: ${invoice.invoiceNumber}`, 60, infoBoxTop + 10);
+  doc.text(`Date d'émission: ${formatDate(invoice.issueDate)}`, 60, infoBoxTop + 30);
+  doc.text(`Date d'échéance: ${formatDate(invoice.dueDate)}`, 60, infoBoxTop + 50);
+  doc.text(`Statut: ${formatInvoiceStatus(invoice.status)}`, 60, infoBoxTop + 70);
   
-  // Information du thérapeute
-  doc.fontSize(14).text('Orthophoniste:');
-  doc.fontSize(12).text(`Nom: ${invoice.therapistName}`);
-  doc.moveDown();
+  // Avancer après la zone d'informations
+  doc.y = infoBoxTop + 110;
+  
+  // Création de sections pour patient et thérapeute côte à côte
+  const sectionY = doc.y;
+  const sectionWidth = pageWidth / 2 - 10;
+  
+  // Information du patient (section gauche)
+  doc.fontSize(14).font('Helvetica-Bold').text('Patient:', 50, sectionY);
+  doc.fontSize(12).font('Helvetica').text(`Nom: ${invoice.patientName}`, 50, sectionY + 25);
+  
+  // Information du thérapeute (section droite)
+  doc.fontSize(14).font('Helvetica-Bold').text('Orthophoniste:', 50 + sectionWidth + 20, sectionY);
+  doc.fontSize(12).font('Helvetica').text(`Nom: ${invoice.therapistName}`, 50 + sectionWidth + 20, sectionY + 25);
+  
+  // Positionner à la fin des sections
+  doc.y = sectionY + 50;
   
   // Détails du rendez-vous
-  doc.fontSize(14).text('Détails de la prestation:');
+  doc.fontSize(14).font('Helvetica-Bold').text('Détails de la prestation:');
+  doc.fontSize(12).font('Helvetica');
   
+  let detailsY = doc.y;
   if (invoice.appointmentDate !== 'N/A') {
-    doc.fontSize(12).text(`Date du rendez-vous: ${invoice.appointmentDate}`);
-    doc.text(`Heure du rendez-vous: ${invoice.appointmentTime}`);
+    doc.text(`Date du rendez-vous: ${formatDate(invoice.appointmentDate)}`, 50, detailsY);
+    doc.text(`Heure du rendez-vous: ${invoice.appointmentTime}`, 50, detailsY + 20);
+    detailsY += 40;
+  } else {
+    detailsY += 20;
   }
   
-  // Si des notes sont présentes, les afficher (notamment pour les factures groupées)
+  // Si des notes sont présentes, les afficher
   if (invoice.notes) {
-    doc.text(`Notes: ${invoice.notes}`);
+    doc.text(`Notes: ${invoice.notes}`, 50, detailsY);
+    detailsY += 20;
   }
   
-  doc.moveDown();
-  
-  // Tableau des prestations
-  const tableTop = 350;
+  // Tableau des prestations avec positionnement dynamique
+  const tableTop = detailsY + 30; // Espace après les détails
   const tableLeft = 50;
   const tableRight = 550;
   const rowHeight = 30;
   
-  // En-têtes du tableau
-  doc.font('Helvetica-Bold');
-  doc.text('Description', tableLeft, tableTop);
-  doc.text('Montant', tableRight - 100, tableTop, { width: 100, align: 'right' });
-  doc.moveTo(tableLeft, tableTop + 20).lineTo(tableRight, tableTop + 20).stroke();
+  // En-têtes du tableau avec style amélioré
+  doc.rect(tableLeft, tableTop, tableRight - tableLeft, 25).fill('#f3f4f6');
+  doc.fillColor('#000');
+  doc.font('Helvetica-Bold').fontSize(12);
+  doc.text('Description', tableLeft + 10, tableTop + 7);
+  doc.text('Montant', tableRight - 110, tableTop + 7, { width: 100, align: 'right' });
+  
+  // Ligne de séparation après entête
+  doc.moveTo(tableLeft, tableTop + 25).lineTo(tableRight, tableTop + 25).stroke();
   
   // Ligne avec la prestation
   const descriptionText = invoice.notes && invoice.notes.includes('Facture groupée') 
     ? 'Séances d\'orthophonie (facturation groupée)' 
     : 'Séance d\'orthophonie';
   
-  doc.font('Helvetica');
-  doc.text(descriptionText, tableLeft, tableTop + 30);
-  doc.text(`${invoice.amount} €`, tableRight - 100, tableTop + 30, { width: 100, align: 'right' });
+  doc.font('Helvetica').fontSize(12);
+  doc.text(descriptionText, tableLeft + 10, tableTop + 35);
+  doc.text(formatCurrency(invoice.amount), tableRight - 110, tableTop + 35, { width: 100, align: 'right' });
   
   // TVA si applicable (généralement pas de TVA pour les actes médicaux)
+  let taxLineY = tableTop + 65;
   if (parseFloat(invoice.taxRate) > 0) {
-    doc.text(`TVA (${invoice.taxRate}%)`, tableLeft, tableTop + 60);
+    doc.text(`TVA (${invoice.taxRate}%)`, tableLeft + 10, taxLineY);
     const taxAmount = (parseFloat(invoice.amount) * parseFloat(invoice.taxRate) / 100).toFixed(2);
-    doc.text(`${taxAmount} €`, tableRight - 100, tableTop + 60, { width: 100, align: 'right' });
+    doc.text(formatCurrency(taxAmount), tableRight - 110, taxLineY, { width: 100, align: 'right' });
+    taxLineY += 30;
   }
   
   // Ligne de séparation avant le total
-  doc.moveTo(tableLeft, tableTop + 90).lineTo(tableRight, tableTop + 90).stroke();
+  doc.moveTo(tableLeft, taxLineY).lineTo(tableRight, taxLineY).stroke();
   
-  // Total
-  doc.font('Helvetica-Bold');
-  doc.text('TOTAL', tableLeft, tableTop + 100);
-  doc.text(`${invoice.totalAmount} €`, tableRight - 100, tableTop + 100, { width: 100, align: 'right' });
+  // Total avec mise en évidence
+  doc.rect(tableLeft, taxLineY + 10, tableRight - tableLeft, 30).fillAndStroke('#f9fafb', '#e5e7eb');
+  doc.fillColor('#000');
+  doc.font('Helvetica-Bold').fontSize(14);
+  doc.text('TOTAL', tableLeft + 10, taxLineY + 20);
+  doc.text(formatCurrency(invoice.totalAmount), tableRight - 110, taxLineY + 20, { width: 100, align: 'right' });
   
-  // Pied de page
-  const footerY = 700;
-  doc.font('Helvetica');
-  doc.fontSize(10).text('Merci pour votre confiance.', { align: 'center' });
-  doc.moveDown();
-  doc.text('Cette facture est générée par le système de gestion du cabinet d\'orthophonie.', { align: 'center' });
-  doc.text('Pour toute question, veuillez contacter le secrétariat.', { align: 'center' });
+  // Espace pour signature si nécessaire
+  if (invoice.signatureUrl) {
+    const signatureY = taxLineY + 60;
+    doc.font('Helvetica').fontSize(12).text('Signature:', 50, signatureY);
+    try {
+      doc.image(invoice.signatureUrl, 150, signatureY, { width: 150 });
+    } catch (error) {
+      console.error("Erreur lors du chargement de la signature:", error);
+      doc.text("(Signature non disponible)", 150, signatureY);
+    }
+  }
+  
+  // Pied de page en bas de la page
+  const footerTop = doc.page.height - 100;
+  doc.font('Helvetica').fontSize(10);
+  doc.text('Merci pour votre confiance.', 50, footerTop, { align: 'center', width: pageWidth });
+  doc.moveDown(0.5);
+  doc.text('Cette facture est générée par le système de gestion du cabinet d\'orthophonie.', 
+    50, doc.y, { align: 'center', width: pageWidth });
+  doc.moveDown(0.5);
+  doc.text('Pour toute question, veuillez contacter le secrétariat.', 
+    50, doc.y, { align: 'center', width: pageWidth });
   
   // Finaliser le document
   doc.end();
   
   return stream;
+}
+
+/**
+ * Formate le statut d'une facture en français
+ * @param status Statut de la facture
+ * @returns Statut formaté
+ */
+function formatInvoiceStatus(status: string): string {
+  const statusMap: {[key: string]: string} = {
+    'pending': 'En attente',
+    'paid': 'Payée',
+    'cancelled': 'Annulée',
+    'overdue': 'En retard'
+  };
+  
+  return statusMap[status] || status;
 }
 
 /**
