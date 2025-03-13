@@ -33,13 +33,15 @@ export default function ElectronicSignatures() {
   } = useQuery({
     queryKey: ['/api/admin-signature'],
     queryFn: async () => {
-      const response = await fetch('/api/admin-signature');
-      if (response.status === 404) {
-        // Aucune signature trouvée, c'est normal
-        return null;
+      try {
+        return await apiRequest('/api/admin-signature');
+      } catch (error: any) {
+        if (error.status === 404) {
+          // Aucune signature trouvée, c'est normal
+          return null;
+        }
+        throw error;
       }
-      if (!response.ok) throw new Error("Erreur lors du chargement de la signature");
-      return response.json() as Promise<Signature>;
     }
   });
   
@@ -47,8 +49,8 @@ export default function ElectronicSignatures() {
   const saveSignatureMutation = useMutation({
     mutationFn: async (data: { signatureData: string }) => {
       return apiRequest(
-        'POST',
         '/api/admin-signature',
+        'POST',
         data
       );
     },
