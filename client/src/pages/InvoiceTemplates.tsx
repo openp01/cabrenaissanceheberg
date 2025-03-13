@@ -46,8 +46,8 @@ export default function InvoiceTemplates() {
   const setAsDefaultMutation = useMutation({
     mutationFn: async (templateId: number) => {
       return apiRequest<any>(
-        `/api/invoice-templates/${templateId}/set-default`,
-        "PUT"
+        "PUT",
+        `/api/invoice-templates/${templateId}/set-default`
       );
     },
     onSuccess: () => {
@@ -71,8 +71,8 @@ export default function InvoiceTemplates() {
   const deleteTemplateMutation = useMutation({
     mutationFn: async (templateId: number) => {
       return apiRequest<any>(
-        `/api/invoice-templates/${templateId}`,
-        "DELETE"
+        "DELETE",
+        `/api/invoice-templates/${templateId}`
       );
     },
     onSuccess: () => {
