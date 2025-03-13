@@ -55,7 +55,7 @@ export default function StepNavigation({
         recurringCount: formData.recurringCount,
       };
       
-      return await apiRequest("POST", "/api/appointments", appointmentData);
+      return await apiRequest("/api/appointments", "POST", appointmentData);
     },
     onSuccess: () => {
       toast({
