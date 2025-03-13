@@ -5,7 +5,8 @@ import {
   Patient, Therapist, Appointment, AppointmentWithDetails, 
   Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, 
   InsertAppointment, InsertInvoice, Expense, InsertExpense,
-  TherapistPayment, TherapistPaymentWithDetails, InsertTherapistPayment 
+  TherapistPayment, TherapistPaymentWithDetails, InsertTherapistPayment,
+  Signature, InsertSignature
 } from '@shared/schema';
 import { IStorage } from './storage';
 
@@ -1547,7 +1548,106 @@ export class PgStorage implements IStorage {
     
     return this.createTherapistPayment(insertPayment);
   }
+  
+  // Méthodes pour les signatures électroniques
+  async getSignatures(): Promise<Signature[]> {
+    const query = `
+      SELECT s.*, t.name as therapistName
+      FROM signatures s
+      JOIN therapists t ON s.therapist_id = t.id
+      ORDER BY t.name
+    `;
+    const result = await pool.query(query);
+    return result.rows.map(row => ({
+      id: row.id,
+      therapistId: row.therapist_id,
+      signatureData: row.signature_data,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+  }
+
+  async getSignature(id: number): Promise<Signature | undefined> {
+    const result = await pool.query('SELECT * FROM signatures WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapist_id,
+      signatureData: row.signature_data,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  async getSignatureForTherapist(therapistId: number): Promise<Signature | undefined> {
+    const result = await pool.query('SELECT * FROM signatures WHERE therapist_id = $1', [therapistId]);
+    if (result.rows.length === 0) {
+      return undefined;
+    }
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapist_id,
+      signatureData: row.signature_data,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  async createSignature(signature: InsertSignature): Promise<Signature> {
+    // On vérifie d'abord si une signature existe déjà pour ce thérapeute
+    const existingSignature = await this.getSignatureForTherapist(signature.therapistId);
+    
+    if (existingSignature) {
+      // Si elle existe, on la met à jour
+      return this.updateSignature(existingSignature.id, signature);
+    }
+    
+    // Sinon on en crée une nouvelle
+    const now = new Date();
+    const result = await pool.query(
+      'INSERT INTO signatures (therapist_id, signature_data, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
+      [signature.therapistId, signature.signatureData, now, now]
+    );
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapist_id,
+      signatureData: row.signature_data,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  async updateSignature(id: number, signature: InsertSignature): Promise<Signature> {
+    const now = new Date();
+    const result = await pool.query(
+      'UPDATE signatures SET therapist_id = $1, signature_data = $2, updated_at = $3 WHERE id = $4 RETURNING *',
+      [signature.therapistId, signature.signatureData, now, id]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error('Signature non trouvée');
+    }
+    
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      therapistId: row.therapist_id,
+      signatureData: row.signature_data,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  async deleteSignature(id: number): Promise<boolean> {
+    const result = await pool.query('DELETE FROM signatures WHERE id = $1 RETURNING id', [id]);
+    return result.rows.length > 0;
+  }
 }
 
-// Exporter une instance de la classe PgStorage
 export const pgStorage = new PgStorage();
