@@ -14,27 +14,68 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   
-  const { patient, therapist, date, time, isRecurring, recurringFrequency, recurringCount, recurringDates } = formData;
+  const { 
+    patient, 
+    therapist, 
+    selectedTherapists, 
+    date, 
+    time, 
+    isRecurring, 
+    recurringFrequency, 
+    recurringCount, 
+    recurringDates,
+    allowMultiplePerWeek
+  } = formData;
+  
+  // Déterminer si nous sommes en mode multiple ou simple
+  const isMultipleTherapists = allowMultiplePerWeek && selectedTherapists && selectedTherapists.length > 1;
   
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
     mutationFn: async () => {
-      if (!patient || !therapist || !date || !time) {
+      if (!patient || !date || !time) {
         throw new Error("Informations manquantes pour créer le rendez-vous");
       }
       
-      const appointmentData = {
-        patientId: patient.id,
-        therapistId: therapist.id,
-        date,
-        time,
-        status: "confirmed",
-        isRecurring: isRecurring || false,
-        recurringFrequency: recurringFrequency,
-        recurringCount: recurringCount,
-      };
-      
-      return await apiRequest("/api/appointments", "POST", appointmentData);
+      // En mode multiple, on crée un rendez-vous pour chaque thérapeute sélectionné
+      if (isMultipleTherapists && selectedTherapists) {
+        // Créer tous les rendez-vous
+        const promises = selectedTherapists.map(therapist => {
+          const appointmentData = {
+            patientId: patient.id,
+            therapistId: therapist.id,
+            date,
+            time,
+            status: "confirmed",
+            isRecurring: isRecurring || false,
+            recurringFrequency: recurringFrequency,
+            recurringCount: recurringCount,
+          };
+          
+          return apiRequest("/api/appointments", "POST", appointmentData);
+        });
+        
+        // Attendre que tous les rendez-vous soient créés
+        return Promise.all(promises);
+      } else {
+        // Comportement standard - un seul thérapeute
+        if (!therapist) {
+          throw new Error("Thérapeute manquant pour créer le rendez-vous");
+        }
+        
+        const appointmentData = {
+          patientId: patient.id,
+          therapistId: therapist.id,
+          date,
+          time,
+          status: "confirmed",
+          isRecurring: isRecurring || false,
+          recurringFrequency: recurringFrequency,
+          recurringCount: recurringCount,
+        };
+        
+        return await apiRequest("/api/appointments", "POST", appointmentData);
+      }
     },
     onSuccess: () => {
       toast({

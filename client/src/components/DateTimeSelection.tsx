@@ -94,15 +94,27 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   
   // Vérifie si un créneau est disponible
   const isTimeSlotAvailable = (date: Date, time: string) => {
+    // Si les thérapeutes ne sont pas encore sélectionnés ou pas de rendez-vous
     if (!formData.therapist || !appointments) return true;
     
     const formattedDate = format(date, 'dd/MM/yyyy');
     
-    return !appointments.some((app: any) => 
-      app.therapistId === formData.therapist?.id && 
-      app.date === formattedDate && 
-      app.time === time
-    );
+    // Vérification pour le thérapeute principal ou pour tous les thérapeutes en mode multiple
+    if (formData.allowMultiplePerWeek && formData.selectedTherapists && formData.selectedTherapists.length > 0) {
+      // Si on est en mode multiple thérapeutes, on vérifie la disponibilité pour le thérapeute actuellement affiché
+      return !appointments.some((app: any) => 
+        app.therapistId === formData.therapist?.id && 
+        app.date === formattedDate && 
+        app.time === time
+      );
+    } else {
+      // Comportement standard - vérification pour un seul thérapeute
+      return !appointments.some((app: any) => 
+        app.therapistId === formData.therapist?.id && 
+        app.date === formattedDate && 
+        app.time === time
+      );
+    }
   };
   
   const handleTimeSelect = (time: string) => {
@@ -198,6 +210,18 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   return (
     <div className="max-w-4xl mx-auto">
       <h3 className="text-lg font-medium text-gray-900 mb-4">Sélectionner la date et l'heure</h3>
+      
+      {/* Affichage du mode multiple si activé */}
+      {formData.allowMultiplePerWeek && formData.selectedTherapists && formData.selectedTherapists.length > 1 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+          <p className="text-amber-800 text-sm">
+            <strong>Mode multi-thérapeutes activé:</strong> Vous avez sélectionné {formData.selectedTherapists.length} thérapeutes.
+            {formData.therapist && (
+              <span> Les horaires affichés sont pour <strong>{formData.therapist.name}</strong>.</span>
+            )}
+          </p>
+        </div>
+      )}
       
       {/* Calendar Navigation */}
       <div className="flex items-center justify-between mb-6">
