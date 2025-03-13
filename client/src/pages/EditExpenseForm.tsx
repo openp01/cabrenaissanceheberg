@@ -21,9 +21,18 @@ import { expenseFormSchema, type ExpenseFormData, type Expense } from "@shared/s
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeftIcon, FileIcon, UploadIcon, Loader2, FileTextIcon, ImageIcon } from "lucide-react";
+import { ArrowLeftIcon, FileIcon, UploadIcon, Loader2, FileTextIcon, ImageIcon, ExternalLinkIcon, AlertTriangleIcon } from "lucide-react";
 import { HomeButton } from "@/components/ui/home-button";
-import { uploadFile, getFileNameFromUrl, isImageFile, isPdfFile, openPdfInNewTab } from "@/lib/fileUploadService";
+import { 
+  uploadFile, 
+  getFileNameFromUrl, 
+  isImageFile, 
+  isPdfFile, 
+  openPdfInNewTab, 
+  isExternalUrl, 
+  getSafeDisplayUrl,
+  deleteFile
+} from "@/lib/fileUploadService";
 
 export default function EditExpenseForm() {
   const { id } = useParams<{ id: string }>();

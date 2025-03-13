@@ -23,7 +23,14 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftIcon, PencilIcon, TrashIcon, FileIcon, ExternalLinkIcon, ImageIcon, FileTextIcon } from "lucide-react";
 import type { Expense } from "@shared/schema";
 import { HomeButton } from "@/components/ui/home-button";
-import { getFileNameFromUrl, isImageFile, isPdfFile, openPdfInNewTab } from "@/lib/fileUploadService";
+import { 
+  getFileNameFromUrl, 
+  isImageFile, 
+  isPdfFile, 
+  openPdfInNewTab, 
+  getSafeDisplayUrl,
+  isExternalUrl 
+} from "@/lib/fileUploadService";
 
 export default function ExpenseDetails() {
   const { id } = useParams<{ id: string }>();
@@ -229,7 +236,9 @@ export default function ExpenseDetails() {
               {expense.receiptUrl ? (
                 <div className="text-center">
                   <div className="border rounded-md p-4 mb-4">
-                    {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                    {expense.receiptUrl && isExternalUrl(expense.receiptUrl) ? (
+                      <ExternalLinkIcon className="h-16 w-16 mx-auto text-muted-foreground" />
+                    ) : expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) ? (
                       <ImageIcon className="h-16 w-16 mx-auto text-primary" />
                     ) : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) ? (
                       <FileTextIcon className="h-16 w-16 mx-auto text-primary" />
@@ -237,21 +246,29 @@ export default function ExpenseDetails() {
                       <FileIcon className="h-16 w-16 mx-auto text-primary" />
                     )}
                     <p className="text-sm mt-2 font-medium">
-                      {expense.receiptUrl ? getFileNameFromUrl(expense.receiptUrl) : "Justificatif"}
+                      {expense.receiptUrl && !isExternalUrl(expense.receiptUrl) 
+                        ? getFileNameFromUrl(expense.receiptUrl) 
+                        : expense.receiptUrl && isExternalUrl(expense.receiptUrl)
+                        ? "Fichier externe (non disponible)"
+                        : "Justificatif"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) 
+                      {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) && !isExternalUrl(expense.receiptUrl)
                         ? "Image" 
-                        : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl))
+                        : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) && !isExternalUrl(expense.receiptUrl)
                         ? "Document PDF"
+                        : expense.receiptUrl && isExternalUrl(expense.receiptUrl)
+                        ? "URL externe"
                         : "Document"}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl)) && (
+                    {expense.receiptUrl && 
+                      isImageFile(getFileNameFromUrl(expense.receiptUrl)) && 
+                      !isExternalUrl(expense.receiptUrl) && (
                       <div className="border rounded-md p-2 overflow-hidden">
                         <img 
-                          src={expense.receiptUrl} 
+                          src={getSafeDisplayUrl(expense.receiptUrl)} 
                           alt="Aperçu du justificatif" 
                           className="max-h-[200px] object-contain w-full"
                           onError={(e) => {
@@ -269,7 +286,7 @@ export default function ExpenseDetails() {
                         </p>
                       </div>
                     )}
-                    {expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                    {expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) && !isExternalUrl(expense.receiptUrl) ? (
                       <Button 
                         variant="outline" 
                         className="w-full"
@@ -278,9 +295,9 @@ export default function ExpenseDetails() {
                         <ExternalLinkIcon className="mr-2 h-4 w-4" />
                         Ouvrir le PDF
                       </Button>
-                    ) : (
+                    ) : expense.receiptUrl && !isExternalUrl(expense.receiptUrl) ? (
                       <a
-                        href={expense.receiptUrl}
+                        href={getSafeDisplayUrl(expense.receiptUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center w-full"
@@ -292,7 +309,14 @@ export default function ExpenseDetails() {
                             : "Voir le justificatif"}
                         </Button>
                       </a>
-                    )}
+                    ) : expense.receiptUrl && isExternalUrl(expense.receiptUrl) ? (
+                      <div className="text-center p-2 border rounded-md bg-muted/20">
+                        <p className="text-sm text-muted-foreground mb-2">Le fichier original n'est plus disponible</p>
+                        <p className="text-xs text-muted-foreground">
+                          Vous pouvez ajouter un nouveau justificatif en modifiant cette dépense
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ) : (
