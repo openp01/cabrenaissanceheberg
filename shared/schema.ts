@@ -277,6 +277,25 @@ export interface TherapistPaymentWithDetails extends Omit<TherapistPayment, 'amo
   amount: number;
 }
 
+
+
+// Signatures électroniques
+export const signatures = pgTable("signatures", {
+  id: serial("id").primaryKey(),
+  therapistId: integer("therapist_id").references(() => therapists.id, { onDelete: "cascade" }).notNull(),
+  signatureData: text("signature_data").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSignatureSchema = createInsertSchema(signatures).pick({
+  therapistId: true,
+  signatureData: true,
+});
+
+export type InsertSignature = z.infer<typeof insertSignatureSchema>;
+export type Signature = typeof signatures.$inferSelect;
+
 // User roles
 export const UserRole = {
   ADMIN: "admin",
@@ -326,44 +345,41 @@ export interface UserWithTherapistDetails extends User {
   therapistName?: string;
 }
 
-// Templates de factures
+// Modèles de facture
 export const invoiceTemplates = pgTable("invoice_templates", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  headerText: text("header_text"),
-  footerText: text("footer_text"),
+  headerContent: text("header_content").notNull(),
+  footerContent: text("footer_content").notNull(),
   logoUrl: text("logo_url"),
-  colorPrimary: text("color_primary"),
-  colorSecondary: text("color_secondary"),
-  fontFamily: text("font_family"),
-  showSignature: boolean("show_signature").default(false),
-  signatureImageUrl: text("signature_image_url"),
-  additionalFields: jsonb("additional_fields"),
-  isDefault: boolean("is_default").default(false),
+  primaryColor: text("primary_color").notNull().default('#4f46e5'),
+  secondaryColor: text("secondary_color").notNull().default('#6366f1'),
+  fontFamily: text("font_family").notNull().default('Arial, sans-serif'),
+  showTherapistSignature: boolean("show_therapist_signature").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow()
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).pick({
   name: true,
   description: true,
-  headerText: true,
-  footerText: true,
+  headerContent: true,
+  footerContent: true,
   logoUrl: true,
-  colorPrimary: true,
-  colorSecondary: true,
+  primaryColor: true,
+  secondaryColor: true,
   fontFamily: true,
-  showSignature: true,
-  signatureImageUrl: true,
-  additionalFields: true,
-  isDefault: true
+  showTherapistSignature: true,
+  isDefault: true,
 });
 
 export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
 export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
 
-// Mise à jour du schéma des factures pour inclure le template
 export const invoiceTemplateFormSchema = insertInvoiceTemplateSchema.extend({
-  name: z.string().min(2, "Le nom du modèle doit contenir au moins 2 caractères"),
+  name: z.string().min(3, { message: "Le nom doit contenir au moins 3 caractères" }),
+  headerContent: z.string().min(1, { message: "Le contenu de l'en-tête est requis" }),
+  footerContent: z.string().min(1, { message: "Le contenu du pied de page est requis" }),
 });
