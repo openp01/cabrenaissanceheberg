@@ -846,6 +846,56 @@ export class MemStorage implements IStorage {
     
     return this.createTherapistPayment(insertPayment);
   }
+
+  // Signature methods
+  async getSignatures(): Promise<Signature[]> {
+    return Array.from(this.signaturesData.values());
+  }
+
+  async getSignature(id: number): Promise<Signature | undefined> {
+    return this.signaturesData.get(id);
+  }
+
+  async getSignatureForTherapist(therapistId: number): Promise<Signature | undefined> {
+    return Array.from(this.signaturesData.values()).find(
+      signature => signature.therapistId === therapistId
+    );
+  }
+
+  async createSignature(insertSignature: InsertSignature): Promise<Signature> {
+    const id = this.signatureCurrentId++;
+    const signature: Signature = {
+      id,
+      therapistId: insertSignature.therapistId,
+      signatureData: insertSignature.signatureData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.signaturesData.set(id, signature);
+    return signature;
+  }
+
+  async updateSignature(id: number, signatureUpdate: InsertSignature): Promise<Signature | undefined> {
+    const existingSignature = this.signaturesData.get(id);
+    
+    if (!existingSignature) {
+      return undefined;
+    }
+    
+    const updatedSignature: Signature = {
+      ...existingSignature,
+      signatureData: signatureUpdate.signatureData,
+      therapistId: signatureUpdate.therapistId,
+      updatedAt: new Date()
+    };
+    
+    this.signaturesData.set(id, updatedSignature);
+    return updatedSignature;
+  }
+
+  async deleteSignature(id: number): Promise<boolean> {
+    return this.signaturesData.delete(id);
+  }
 }
 
 // Importer le stockage PostgreSQL depuis dbStorage.ts

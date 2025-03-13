@@ -1083,63 +1083,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Routes pour les signatures électroniques
   
+  // Récupération de toutes les signatures (admin uniquement)
+  app.get("/api/signatures", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const signatures = await storage.getSignatures();
+      res.json(signatures);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des signatures:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération des signatures' });
+    }
+  });
+  
+  // Récupération d'une signature spécifique
+  app.get("/api/signatures/:id", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const signature = await storage.getSignature(id);
+      
+      if (!signature) {
+        return res.status(404).json({ error: 'Signature non trouvée' });
+      }
+      
+      res.json(signature);
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la signature:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération de la signature' });
+    }
+  });
+  
+  // Récupération de la signature d'un thérapeute
+  app.get("/api/signatures/therapist/:therapistId", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const therapistId = parseInt(req.params.therapistId);
+      const signature = await storage.getSignatureForTherapist(therapistId);
+      
+      if (!signature) {
+        return res.status(404).json({ error: 'Signature non trouvée' });
+      }
+      
+      res.json(signature);
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la signature:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération de la signature' });
+    }
+  });
+  
   // Enregistrement d'une signature
-  app.post("/api/signatures", async (req, res) => {
+  app.post("/api/signatures", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { therapistId, signatureData } = req.body;
       
-      // Vérifier si une signature existe déjà pour ce thérapeute
-      const existingSignature = await db.execute(
-        'SELECT * FROM signatures WHERE therapist_id = $1',
-        [therapistId]
-      );
-      
-      let result;
-      
-      if (existingSignature.rows.length > 0) {
-        // Mettre à jour la signature existante
-        result = await db.execute(
-          `UPDATE signatures SET 
-            signature_data = $1, 
-            updated_at = NOW()
-          WHERE therapist_id = $2 RETURNING *`,
-          [signatureData, therapistId]
-        );
-      } else {
-        // Créer une nouvelle signature
-        result = await db.execute(
-          `INSERT INTO signatures (
-            therapist_id, signature_data
-          ) VALUES ($1, $2) RETURNING *`,
-          [therapistId, signatureData]
-        );
+      if (!therapistId || !signatureData) {
+        return res.status(400).json({ error: 'Données de signature incomplètes' });
       }
       
-      res.status(201).json(result.rows[0]);
+      // Vérifier si une signature existe déjà pour ce thérapeute
+      const existingSignature = await storage.getSignatureForTherapist(therapistId);
+      
+      let signature;
+      
+      if (existingSignature) {
+        // Mettre à jour la signature existante
+        signature = await storage.updateSignature(existingSignature.id, {
+          therapistId,
+          signatureData
+        });
+      } else {
+        // Créer une nouvelle signature
+        signature = await storage.createSignature({
+          therapistId,
+          signatureData
+        });
+      }
+      
+      res.status(201).json(signature);
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la signature:', error);
       res.status(500).json({ error: 'Erreur lors de l\'enregistrement de la signature' });
     }
   });
   
-  // Récupération de la signature d'un thérapeute
-  app.get("/api/signatures/:therapistId", async (req, res) => {
+  // Suppression d'une signature
+  app.delete("/api/signatures/:id", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { therapistId } = req.params;
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSignature(id);
       
-      const signatures = await db.execute(
-        'SELECT * FROM signatures WHERE therapist_id = $1',
-        [therapistId]
-      );
-      
-      if (signatures.rows.length === 0) {
+      if (!success) {
         return res.status(404).json({ error: 'Signature non trouvée' });
       }
       
-      res.json(signatures.rows[0]);
+      res.status(200).json({ message: 'Signature supprimée avec succès' });
     } catch (error) {
-      console.error('Erreur lors de la récupération de la signature:', error);
-      res.status(500).json({ error: 'Erreur lors de la récupération de la signature' });
+      console.error('Erreur lors de la suppression de la signature:', error);
+      res.status(500).json({ error: 'Erreur lors de la suppression de la signature' });
     }
   });
 
