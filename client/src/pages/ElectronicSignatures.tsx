@@ -34,7 +34,7 @@ export default function ElectronicSignatures() {
     queryKey: ['/api/admin-signature'],
     queryFn: async () => {
       try {
-        return await apiRequest('/api/admin-signature');
+        return await apiRequest("GET", '/api/admin-signature');
       } catch (error: any) {
         if (error.status === 404) {
           // Aucune signature trouvée, c'est normal
@@ -49,8 +49,8 @@ export default function ElectronicSignatures() {
   const saveSignatureMutation = useMutation({
     mutationFn: async (data: { signatureData: string }) => {
       return apiRequest(
-        '/api/admin-signature',
         'POST',
+        '/api/admin-signature',
         data
       );
     },
