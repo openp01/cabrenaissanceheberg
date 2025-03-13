@@ -20,9 +20,11 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [isMultipleTimeSlots, setIsMultipleTimeSlots] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState("Hebdomadaire");
   const [recurringCount, setRecurringCount] = useState(4);
   const [recurringDates, setRecurringDates] = useState<string[]>([]);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<Array<{date: string, time: string}>>([]);
   
   // État pour le thérapeute actuellement sélectionné dans l'interface
   const [currentTherapistIndex, setCurrentTherapistIndex] = useState<number>(0);

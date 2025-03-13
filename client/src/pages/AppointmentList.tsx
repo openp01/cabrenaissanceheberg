@@ -167,7 +167,12 @@ export default function AppointmentList() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {appointments.map((appointment) => (
+                            {appointments
+                              .sort((a, b) => {
+                                // Trier par date de création, du plus récent au plus ancien
+                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                              })
+                              .map((appointment) => (
                               <tr key={appointment.id}>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex items-center">

@@ -58,6 +58,7 @@ export const appointments = pgTable("appointments", {
   notes: text("notes"),
   status: text("status").notNull().default("confirmed"),
   isRecurring: boolean("is_recurring").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
   recurringFrequency: text("recurring_frequency"),
   recurringCount: integer("recurring_count"),
   parentAppointmentId: integer("parent_appointment_id"),
@@ -117,6 +118,7 @@ export interface BookingFormData {
   date?: string;
   time?: string;
   isRecurring?: boolean;
+  isMultipleTimeSlots?: boolean; // Nouvelle option pour réserver plusieurs créneaux horaires
   recurringFrequency?: string;
   recurringCount?: number;
   recurringDates?: string[];
@@ -124,6 +126,7 @@ export interface BookingFormData {
   isMultipleTherapists?: boolean; // Indique si le mode multiple thérapeutes est activé
   therapistSchedules?: TherapistSchedule[]; // Horaires spécifiques pour chaque thérapeute
   currentTherapistIndex?: number; // Index du thérapeute actuellement sélectionné
+  selectedTimeSlots?: Array<{date: string, time: string}>; // Créneaux horaires sélectionnés pour rendez-vous multiples
 }
 
 // For displaying appointments with related data
@@ -143,6 +146,7 @@ export interface AppointmentWithDetails {
   recurringFrequency: string | null;
   recurringCount: number | null;
   parentAppointmentId: number | null;
+  createdAt: Date;
   patientInfo?: string;
   relatedAppointments?: Array<{
     id: number;
