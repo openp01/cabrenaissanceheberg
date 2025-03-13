@@ -279,17 +279,17 @@ export interface TherapistPaymentWithDetails extends Omit<TherapistPayment, 'amo
 
 
 
-// Signatures électroniques
-export const signatures = pgTable("signatures", {
+// Signature électronique administrative (pour Christian)
+export const signatures = pgTable("admin_signature", {
   id: serial("id").primaryKey(),
-  therapistId: integer("therapist_id").references(() => therapists.id, { onDelete: "cascade" }).notNull(),
+  name: text("name").notNull().default("Christian"),
   signatureData: text("signature_data").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertSignatureSchema = createInsertSchema(signatures).pick({
-  therapistId: true,
+  name: true,
   signatureData: true,
 });
 

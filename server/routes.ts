@@ -1083,75 +1083,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Routes pour les signatures électroniques
   
-  // Récupération de toutes les signatures (admin uniquement)
-  app.get("/api/signatures", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  // Récupération de la signature administrative (Christian)
+  app.get("/api/admin-signature", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const signatures = await storage.getSignatures();
-      res.json(signatures);
+      if (signatures.length > 0) {
+        res.json(signatures[0]); // Retourner la première (et normalement unique) signature
+      } else {
+        res.status(404).json({ error: 'Signature non trouvée' });
+      }
     } catch (error) {
-      console.error('Erreur lors de la récupération des signatures:', error);
-      res.status(500).json({ error: 'Erreur lors de la récupération des signatures' });
+      console.error('Erreur lors de la récupération de la signature administrative:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération de la signature administrative' });
     }
   });
   
-  // Récupération d'une signature spécifique
-  app.get("/api/signatures/:id", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  // Enregistrement ou mise à jour de la signature administrative
+  app.post("/api/admin-signature", isAdmin, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const signature = await storage.getSignature(id);
+      const { signatureData } = req.body;
       
-      if (!signature) {
-        return res.status(404).json({ error: 'Signature non trouvée' });
+      if (!signatureData) {
+        return res.status(400).json({ error: 'Données de signature manquantes' });
       }
       
-      res.json(signature);
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la signature:', error);
-      res.status(500).json({ error: 'Erreur lors de la récupération de la signature' });
-    }
-  });
-  
-  // Récupération de la signature d'un thérapeute
-  app.get("/api/signatures/therapist/:therapistId", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const therapistId = parseInt(req.params.therapistId);
-      const signature = await storage.getSignatureForTherapist(therapistId);
-      
-      if (!signature) {
-        return res.status(404).json({ error: 'Signature non trouvée' });
-      }
-      
-      res.json(signature);
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la signature:', error);
-      res.status(500).json({ error: 'Erreur lors de la récupération de la signature' });
-    }
-  });
-  
-  // Enregistrement d'une signature
-  app.post("/api/signatures", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { therapistId, signatureData } = req.body;
-      
-      if (!therapistId || !signatureData) {
-        return res.status(400).json({ error: 'Données de signature incomplètes' });
-      }
-      
-      // Vérifier si une signature existe déjà pour ce thérapeute
-      const existingSignature = await storage.getSignatureForTherapist(therapistId);
-      
+      // Vérifier si une signature existe déjà
+      const signatures = await storage.getSignatures();
       let signature;
       
-      if (existingSignature) {
+      if (signatures.length > 0) {
         // Mettre à jour la signature existante
-        signature = await storage.updateSignature(existingSignature.id, {
-          therapistId,
+        signature = await storage.updateSignature(signatures[0].id, {
+          name: "Christian", // Nom fixe pour la signature administrative
           signatureData
         });
       } else {
         // Créer une nouvelle signature
         signature = await storage.createSignature({
-          therapistId,
+          name: "Christian", // Nom fixe pour la signature administrative
           signatureData
         });
       }
@@ -1160,23 +1129,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la signature:', error);
       res.status(500).json({ error: 'Erreur lors de l\'enregistrement de la signature' });
-    }
-  });
-  
-  // Suppression d'une signature
-  app.delete("/api/signatures/:id", isAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteSignature(id);
-      
-      if (!success) {
-        return res.status(404).json({ error: 'Signature non trouvée' });
-      }
-      
-      res.status(200).json({ message: 'Signature supprimée avec succès' });
-    } catch (error) {
-      console.error('Erreur lors de la suppression de la signature:', error);
-      res.status(500).json({ error: 'Erreur lors de la suppression de la signature' });
     }
   });
 

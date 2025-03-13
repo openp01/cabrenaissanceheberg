@@ -1549,104 +1549,136 @@ export class PgStorage implements IStorage {
     return this.createTherapistPayment(insertPayment);
   }
   
-  // Méthodes pour les signatures électroniques
+  // Méthodes pour la signature administrative (Christian)
   async getSignatures(): Promise<Signature[]> {
-    const query = `
-      SELECT s.*, t.name as therapistName
-      FROM signatures s
-      JOIN therapists t ON s.therapist_id = t.id
-      ORDER BY t.name
-    `;
-    const result = await pool.query(query);
-    return result.rows.map(row => ({
-      id: row.id,
-      therapistId: row.therapist_id,
-      signatureData: row.signature_data,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }));
+    try {
+      // Vérifie si la table admin_signature existe
+      const tableExists = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'admin_signature'
+        );
+      `);
+      
+      // Si la table n'existe pas, on la crée
+      if (!tableExists.rows[0].exists) {
+        await pool.query(`
+          CREATE TABLE admin_signature (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL DEFAULT 'Christian',
+            signature_data TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+          );
+        `);
+        return []; // La table vient d'être créée, donc pas encore de signatures
+      }
+      
+      // Si la table existe, récupérer les signatures
+      const result = await pool.query(`
+        SELECT * FROM admin_signature 
+        ORDER BY id
+      `);
+      
+      return result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        signatureData: row.signature_data,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    } catch (error) {
+      console.error("Erreur lors de la récupération des signatures:", error);
+      return [];
+    }
   }
 
   async getSignature(id: number): Promise<Signature | undefined> {
-    const result = await pool.query('SELECT * FROM signatures WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
+    try {
+      const result = await pool.query('SELECT * FROM admin_signature WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        name: row.name,
+        signatureData: row.signature_data,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    } catch (error) {
+      console.error("Erreur lors de la récupération de la signature:", error);
       return undefined;
     }
-    const row = result.rows[0];
-    return {
-      id: row.id,
-      therapistId: row.therapist_id,
-      signatureData: row.signature_data,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
   }
 
+  // On garde cette méthode pour la compatibilité mais elle n'est plus utilisée
   async getSignatureForTherapist(therapistId: number): Promise<Signature | undefined> {
-    const result = await pool.query('SELECT * FROM signatures WHERE therapist_id = $1', [therapistId]);
-    if (result.rows.length === 0) {
-      return undefined;
-    }
-    const row = result.rows[0];
-    return {
-      id: row.id,
-      therapistId: row.therapist_id,
-      signatureData: row.signature_data,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
+    // On retourne simplement la signature administrative dans tous les cas
+    const signatures = await this.getSignatures();
+    return signatures.length > 0 ? signatures[0] : undefined;
   }
 
   async createSignature(signature: InsertSignature): Promise<Signature> {
-    // On vérifie d'abord si une signature existe déjà pour ce thérapeute
-    const existingSignature = await this.getSignatureForTherapist(signature.therapistId);
-    
-    if (existingSignature) {
-      // Si elle existe, on la met à jour
-      return this.updateSignature(existingSignature.id, signature);
+    try {
+      // Vérifier si la table existe
+      await this.getSignatures();
+      
+      const now = new Date();
+      const result = await pool.query(
+        'INSERT INTO admin_signature (name, signature_data, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
+        [signature.name || "Christian", signature.signatureData, now, now]
+      );
+      
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        name: row.name,
+        signatureData: row.signature_data,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    } catch (error) {
+      console.error("Erreur lors de la création de la signature:", error);
+      throw error;
     }
-    
-    // Sinon on en crée une nouvelle
-    const now = new Date();
-    const result = await pool.query(
-      'INSERT INTO signatures (therapist_id, signature_data, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
-      [signature.therapistId, signature.signatureData, now, now]
-    );
-    
-    const row = result.rows[0];
-    return {
-      id: row.id,
-      therapistId: row.therapist_id,
-      signatureData: row.signature_data,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
   }
 
   async updateSignature(id: number, signature: InsertSignature): Promise<Signature> {
-    const now = new Date();
-    const result = await pool.query(
-      'UPDATE signatures SET therapist_id = $1, signature_data = $2, updated_at = $3 WHERE id = $4 RETURNING *',
-      [signature.therapistId, signature.signatureData, now, id]
-    );
-    
-    if (result.rows.length === 0) {
-      throw new Error('Signature non trouvée');
+    try {
+      const now = new Date();
+      const result = await pool.query(
+        'UPDATE admin_signature SET name = $1, signature_data = $2, updated_at = $3 WHERE id = $4 RETURNING *',
+        [signature.name || "Christian", signature.signatureData, now, id]
+      );
+      
+      if (result.rows.length === 0) {
+        throw new Error('Signature non trouvée');
+      }
+      
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        name: row.name,
+        signatureData: row.signature_data,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la signature:", error);
+      throw error;
     }
-    
-    const row = result.rows[0];
-    return {
-      id: row.id,
-      therapistId: row.therapist_id,
-      signatureData: row.signature_data,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
   }
 
   async deleteSignature(id: number): Promise<boolean> {
-    const result = await pool.query('DELETE FROM signatures WHERE id = $1 RETURNING id', [id]);
-    return result.rows.length > 0;
+    try {
+      const result = await pool.query('DELETE FROM admin_signature WHERE id = $1 RETURNING id', [id]);
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la signature:", error);
+      return false;
+    }
   }
 }
 
