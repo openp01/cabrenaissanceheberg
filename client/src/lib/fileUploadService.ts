@@ -1,34 +1,40 @@
 /**
- * Service de simulation d'upload de fichiers
+ * Service d'upload de fichiers local
  * 
- * Dans une implémentation réelle, ce service interagirait avec un serveur
- * pour télécharger les fichiers et récupérer leurs URLs.
+ * Cette implémentation utilise l'objet URL.createObjectURL pour créer une URL locale
+ * qui pointe vers le fichier, ce qui fonctionne dans le navigateur sans serveur.
  */
 
+// Stockage des blobs pour les conserver en mémoire
+const blobStorage: { [url: string]: Blob } = {};
+
 /**
- * Génère une URL simulée pour un fichier
+ * Crée une URL locale pour un fichier
  * @param file Fichier à télécharger
- * @param prefix Préfixe pour l'URL (par défaut: 'receipts')
- * @returns URL simulée du fichier
+ * @param prefix Préfixe pour identifiant (par défaut: 'receipts')
+ * @returns URL locale du fichier
  */
 export async function uploadFile(file: File, prefix: string = 'receipts'): Promise<string> {
-  // Simuler un délai pour le téléchargement
+  // Simuler un délai pour donner l'impression d'un téléchargement
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Générer un identifiant unique pour éviter les collisions de noms
-  const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+  // Créer un blob URL pour le fichier
+  const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+  const blobUrl = URL.createObjectURL(blob);
   
-  // Simuler une URL avec le nom du fichier
-  const fileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-  const fileUrl = `https://storage.example.com/${prefix}/${uniqueId}_${fileName}`;
+  // Stocke le blob pour éviter qu'il ne soit garbage collected
+  blobStorage[blobUrl] = blob;
   
-  console.log(`Fichier téléchargé (simulé): ${fileUrl}`);
+  // Enregistre le nom de fichier pour pouvoir le retrouver
+  registerFileName(blobUrl, file.name);
   
-  return fileUrl;
+  console.log(`Fichier téléchargé localement: ${blobUrl}, nom: ${file.name}`);
+  
+  return blobUrl;
 }
 
 /**
- * Simule la suppression d'un fichier stocké
+ * Supprime un fichier stocké et nettoie les ressources
  * @param fileUrl URL du fichier à supprimer
  * @returns true si la suppression a réussi
  */
@@ -36,9 +42,41 @@ export async function deleteFile(fileUrl: string): Promise<boolean> {
   // Simuler un délai pour la suppression
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  console.log(`Fichier supprimé (simulé): ${fileUrl}`);
+  if (fileUrl.startsWith('blob:')) {
+    try {
+      // Libérer la mémoire du blob
+      if (blobStorage[fileUrl]) {
+        URL.revokeObjectURL(fileUrl);
+        delete blobStorage[fileUrl];
+      }
+      
+      // Supprimer le nom de fichier enregistré
+      if (fileNames[fileUrl]) {
+        delete fileNames[fileUrl];
+      }
+      
+      console.log(`Fichier supprimé: ${fileUrl}`);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression du fichier:', error);
+      return false;
+    }
+  }
   
+  console.log(`Fichier supprimé (simulé): ${fileUrl}`);
   return true;
+}
+
+// Stocker les noms de fichiers originaux pour les URLs Blob
+const fileNames: { [url: string]: string } = {};
+
+/**
+ * Enregistre le nom de fichier original pour une URL Blob
+ * @param url URL Blob
+ * @param fileName Nom du fichier original
+ */
+export function registerFileName(url: string, fileName: string): void {
+  fileNames[url] = fileName;
 }
 
 /**
@@ -49,6 +87,12 @@ export async function deleteFile(fileUrl: string): Promise<boolean> {
 export function getFileNameFromUrl(fileUrl: string): string {
   if (!fileUrl) return '';
   
+  // Pour les URLs Blob, utiliser le nom enregistré
+  if (fileUrl.startsWith('blob:') && fileNames[fileUrl]) {
+    return fileNames[fileUrl];
+  }
+  
+  // Fallback pour les URLs traditionnelles
   const urlParts = fileUrl.split('/');
   const fileName = urlParts[urlParts.length - 1];
   
@@ -81,4 +125,29 @@ export function isPdfFile(fileName: string): boolean {
   if (!fileName) return false;
   const extension = fileName.split('.').pop()?.toLowerCase();
   return extension === 'pdf';
+}
+
+/**
+ * Ouvre un PDF directement dans un nouvel onglet du navigateur
+ * @param url URL du fichier PDF
+ */
+export function openPdfInNewTab(url: string): void {
+  if (!url) return;
+  
+  // Si c'est déjà une URL Blob, l'ouvrir directement
+  if (url.startsWith('blob:')) {
+    window.open(url, '_blank');
+    return;
+  }
+  
+  // Sinon, essayer de trouver le blob correspondant et l'ouvrir
+  for (const [blobUrl, filename] of Object.entries(fileNames)) {
+    if (filename === getFileNameFromUrl(url)) {
+      window.open(blobUrl, '_blank');
+      return;
+    }
+  }
+  
+  // Fallback: ouvrir l'URL directement
+  window.open(url, '_blank');
 }

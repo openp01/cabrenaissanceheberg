@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeftIcon, PencilIcon, TrashIcon, FileIcon, ExternalLinkIcon, ImageIcon, FileTextIcon } from "lucide-react";
 import type { Expense } from "@shared/schema";
 import { HomeButton } from "@/components/ui/home-button";
-import { getFileNameFromUrl, isImageFile, isPdfFile } from "@/lib/fileUploadService";
+import { getFileNameFromUrl, isImageFile, isPdfFile, openPdfInNewTab } from "@/lib/fileUploadService";
 
 export default function ExpenseDetails() {
   const { id } = useParams<{ id: string }>();
@@ -269,21 +269,30 @@ export default function ExpenseDetails() {
                         </p>
                       </div>
                     )}
-                    <a
-                      href={expense.receiptUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center"
-                    >
-                      <Button variant="outline" className="w-full">
+                    {expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => openPdfInNewTab(expense.receiptUrl!)}
+                      >
                         <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                        {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl))
-                          ? "Voir l'image en taille réelle"
-                          : expense.receiptUrl && isPdfFile(getFileNameFromUrl(expense.receiptUrl))
-                          ? "Ouvrir le PDF"
-                          : "Voir le justificatif"}
+                        Ouvrir le PDF
                       </Button>
-                    </a>
+                    ) : (
+                      <a
+                        href={expense.receiptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center w-full"
+                      >
+                        <Button variant="outline" className="w-full">
+                          <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                          {expense.receiptUrl && isImageFile(getFileNameFromUrl(expense.receiptUrl))
+                            ? "Voir l'image en taille réelle"
+                            : "Voir le justificatif"}
+                        </Button>
+                      </a>
+                    )}
                   </div>
                 </div>
               ) : (
