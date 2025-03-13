@@ -366,7 +366,7 @@ export class MemStorage implements IStorage {
     }));
   }
 
-  async createAppointment(insertAppointment: InsertAppointment): Promise<Appointment> {
+  async createAppointment(insertAppointment: InsertAppointment, skipInvoiceGeneration: boolean = false): Promise<Appointment> {
     const id = this.appointmentCurrentId++;
     const appointment: Appointment = { 
       id,
@@ -377,16 +377,19 @@ export class MemStorage implements IStorage {
       duration: insertAppointment.duration ?? null,
       type: insertAppointment.type ?? null,
       notes: insertAppointment.notes ?? null,
-      status: insertAppointment.status || 'Confirmé',
+      status: insertAppointment.status || 'confirmed',
       isRecurring: insertAppointment.isRecurring ?? null,
       recurringFrequency: insertAppointment.recurringFrequency ?? null,
       recurringCount: insertAppointment.recurringCount ?? null,
-      parentAppointmentId: insertAppointment.parentAppointmentId ?? null
+      parentAppointmentId: insertAppointment.parentAppointmentId ?? null,
+      createdAt: new Date()
     };
     this.appointmentsData.set(id, appointment);
     
-    // Générer automatiquement une facture si le rendez-vous est confirmé
-    if (appointment.status === 'Confirmé') {
+    // Générer automatiquement une facture si le rendez-vous est confirmé et qu'on ne saute pas la génération
+    if (appointment.status.toLowerCase() === 'confirmed' && !skipInvoiceGeneration) {
+      console.log(`Statut du rendez-vous créé: ${appointment.status}`);
+      console.log(`Génération d'une facture pour le rendez-vous ${appointment.id}`);
       this.generateInvoiceForAppointment(appointment);
     }
     

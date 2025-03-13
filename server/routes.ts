@@ -127,6 +127,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route spéciale pour créer plusieurs rendez-vous avec une seule facture
+  app.post("/api/appointments/multiple", async (req, res) => {
+    try {
+      // Valider les données
+      const { patientId, therapistId, slots } = req.body;
+      
+      if (!patientId || !therapistId || !Array.isArray(slots) || slots.length === 0) {
+        return res.status(400).json({ error: "Données invalides pour la création de rendez-vous multiples" });
+      }
+      
+      // Vérifier la disponibilité pour chaque créneau
+      for (const slot of slots) {
+        const isAvailable = await storage.checkAvailability(therapistId, slot.date, slot.time);
+        if (!isAvailable) {
+          return res.status(409).json({ 
+            error: `Le créneau du ${slot.date} à ${slot.time} est déjà réservé` 
+          });
+        }
+      }
+      
+      // Créer les rendez-vous sans générer de factures automatiquement
+      const appointments = [];
+      for (const slot of slots) {
+        const appointment = await storage.createAppointment({
+          patientId,
+          therapistId,
+          date: slot.date,
+          time: slot.time,
+          status: "confirmed",
+          // Ne pas générer de facture automatiquement
+        }, true); // Passer skipInvoiceGeneration = true
+        
+        appointments.push(appointment);
+      }
+      
+      // Créer une seule facture pour tous les rendez-vous
+      if (appointments.length > 0) {
+        // Calculer le montant total (prix unitaire multiplié par le nombre de créneaux)
+        const unitPrice = 50.00; // Prix par défaut d'une séance
+        const totalAmount = (unitPrice * appointments.length).toFixed(2);
+        
+        // Obtenir les détails pour la facture
+        const today = new Date();
+        const issueDate = format(today, 'dd/MM/yyyy');
+        const dueDate = format(addDays(today, 30), 'dd/MM/yyyy');
+        const invoiceNumber = `F-${today.getFullYear()}-${String(storage.getNextInvoiceId()).padStart(4, '0')}`;
+        
+        // Construire les notes avec les détails de tous les créneaux
+        const appointmentDetails = appointments.map(app => 
+          `${app.date} à ${app.time}`
+        ).join(", ");
+        
+        const invoice = await storage.createInvoice({
+          invoiceNumber,
+          patientId,
+          therapistId,
+          appointmentId: appointments[0].id, // Lier à premier rendez-vous
+          amount: totalAmount,
+          taxRate: "0", // Pas de TVA sur les actes médicaux
+          totalAmount: totalAmount,
+          status: "En attente",
+          issueDate,
+          dueDate,
+          paymentMethod: null,
+          notes: `Facture groupée pour ${appointments.length} séances d'orthophonie: ${appointmentDetails}`,
+          relatedAppointmentIds: appointments.map(app => app.id)
+        });
+        
+        res.status(201).json({
+          appointments,
+          invoice
+        });
+      } else {
+        res.status(500).json({ error: "Aucun rendez-vous n'a pu être créé" });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création des rendez-vous multiples:", error);
+      res.status(500).json({ error: "Erreur lors de la création des rendez-vous multiples" });
+    }
+  });
+
   app.get("/api/appointments/patient/:patientId", async (req, res) => {
     try {
       const patientId = parseInt(req.params.patientId);
