@@ -20,9 +20,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeftIcon, PencilIcon, TrashIcon, FileIcon, ExternalLinkIcon } from "lucide-react";
+import { ArrowLeftIcon, PencilIcon, TrashIcon, FileIcon, ExternalLinkIcon, ImageIcon, FileTextIcon } from "lucide-react";
 import type { Expense } from "@shared/schema";
 import { HomeButton } from "@/components/ui/home-button";
+import { getFileNameFromUrl, isImageFile, isPdfFile } from "@/lib/fileUploadService";
 
 export default function ExpenseDetails() {
   const { id } = useParams<{ id: string }>();

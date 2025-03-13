@@ -21,8 +21,9 @@ import { expenseFormSchema, type ExpenseFormData } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeftIcon, FileIcon, UploadIcon } from "lucide-react";
+import { ArrowLeftIcon, FileIcon, UploadIcon, Loader2, FileTextIcon, ImageIcon } from "lucide-react";
 import { HomeButton } from "@/components/ui/home-button";
+import { uploadFile, isImageFile, isPdfFile } from "@/lib/fileUploadService";
 
 export default function ExpenseForm() {
   const [, navigate] = useLocation();
@@ -52,28 +53,34 @@ export default function ExpenseForm() {
     }
   };
 
-  // Upload receipt file (simulated for now)
+  // Upload receipt file
   const uploadReceipt = async (expenseId: number): Promise<string | null> => {
     if (!receiptFile) return null;
     
     setIsUploading(true);
     
     try {
-      // Simulation de l'upload - dans un cas réel, nous enverrions le fichier à un serveur
-      // et récupérerions l'URL du fichier téléchargé
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // URL simulée
-      const fileUrl = `https://example.com/receipts/${receiptFile.name}`;
+      // Utiliser notre service d'upload pour télécharger le fichier
+      const fileUrl = await uploadFile(receiptFile, 'receipts');
       
       // Mettre à jour l'URL du justificatif pour cette dépense
       await apiRequest(`/api/expenses/${expenseId}/receipt`, "POST", { 
         fileUrl 
       });
       
+      toast({
+        title: "Justificatif ajouté",
+        description: "Le justificatif a été téléchargé avec succès",
+      });
+      
       return fileUrl;
     } catch (error) {
       console.error("Erreur lors de l'upload du justificatif:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le justificatif",
+        variant: "destructive",
+      });
       return null;
     } finally {
       setIsUploading(false);

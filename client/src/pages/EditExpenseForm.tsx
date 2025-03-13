@@ -96,21 +96,27 @@ export default function EditExpenseForm() {
     setIsUploading(true);
     
     try {
-      // Dans une implémentation réelle, nous ferions un upload vers un service de stockage
-      // et récupérerions l'URL du fichier téléchargé
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // URL simulée basée sur le nom du fichier
-      const fileUrl = `https://example.com/receipts/${receiptFile.name}`;
+      // Utiliser notre service d'upload pour télécharger le fichier
+      const fileUrl = await uploadFile(receiptFile, 'receipts');
       
       // Mettre à jour l'URL du justificatif pour cette dépense
       await apiRequest(`/api/expenses/${id}/receipt`, "POST", { 
         fileUrl 
       });
       
+      toast({
+        title: "Justificatif ajouté",
+        description: "Le justificatif a été téléchargé avec succès",
+      });
+      
       return fileUrl;
     } catch (error) {
       console.error("Erreur lors de l'upload du justificatif:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le justificatif",
+        variant: "destructive",
+      });
       return currentReceiptUrl;
     } finally {
       setIsUploading(false);
