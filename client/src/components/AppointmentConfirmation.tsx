@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { BookingFormData } from "@shared/schema";
+import { BookingFormData, TherapistSchedule } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +24,9 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
     recurringFrequency, 
     recurringCount, 
     recurringDates,
-    allowMultiplePerWeek
+    allowMultiplePerWeek,
+    therapistSchedules,
+    isMultipleTherapists: formMultipleTherapists
   } = formData;
   
   // Déterminer si nous sommes en mode multiple ou simple
@@ -39,13 +41,26 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
       
       // En mode multiple, on crée un rendez-vous pour chaque thérapeute sélectionné
       if (isMultipleTherapists && selectedTherapists) {
-        // Créer tous les rendez-vous
+        // Créer tous les rendez-vous avec leurs horaires spécifiques
         const promises = selectedTherapists.map(therapist => {
+          // Trouver l'horaire spécifique pour ce thérapeute
+          const schedule = therapistSchedules?.find((s: TherapistSchedule) => s.therapistId === therapist.id);
+          
+          // Utiliser l'horaire spécifique s'il existe, sinon utiliser l'horaire par défaut
+          const appointmentDate = schedule?.date || date;
+          const appointmentTime = schedule?.time || time;
+          
+          // Vérifier que l'horaire est bien défini
+          if (!appointmentDate || !appointmentTime) {
+            console.warn(`Horaire manquant pour le thérapeute ${therapist.name}`);
+            return Promise.resolve(null); // Ignorer ce thérapeute
+          }
+          
           const appointmentData = {
             patientId: patient.id,
             therapistId: therapist.id,
-            date,
-            time,
+            date: appointmentDate,
+            time: appointmentTime,
             status: "confirmed",
             isRecurring: isRecurring || false,
             recurringFrequency: recurringFrequency,
@@ -208,7 +223,30 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
             </div>
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Date et heure</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{date} à {time}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {isMultipleTherapists && selectedTherapists && therapistSchedules && therapistSchedules.some((s: TherapistSchedule) => s.date && s.time) ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-amber-600 font-medium mb-2">Horaires spécifiques par thérapeute :</p>
+                    <ul className="space-y-1">
+                      {selectedTherapists.map(therapist => {
+                        const schedule = therapistSchedules.find(s => s.therapistId === therapist.id);
+                        const scheduleDate = schedule?.date || date;
+                        const scheduleTime = schedule?.time || time;
+                        
+                        return (
+                          <li key={therapist.id} className="flex items-center">
+                            <span className="w-2 h-2 rounded-full mr-2 bg-primary"></span>
+                            <span className="font-medium">{therapist.name} :</span>
+                            <span className="ml-2">{scheduleDate} à {scheduleTime}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : (
+                  <>{date} à {time}</>
+                )}
+              </dd>
             </div>
             <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Type</dt>
