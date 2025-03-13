@@ -366,7 +366,7 @@ export class PgStorage implements IStorage {
       FROM appointments a
       JOIN patients p ON a.patientId = p.id
       JOIN therapists t ON a.therapistId = t.id
-      ORDER BY a.created_at DESC
+      ORDER BY a.date, a.time
     `;
     const result = await pool.query(query);
     return result.rows.map(row => ({
@@ -384,8 +384,7 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid,
       patientName: row.patientname,
-      therapistName: row.therapistname,
-      createdAt: row.created_at
+      therapistName: row.therapistname
     }));
   }
 
