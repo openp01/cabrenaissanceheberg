@@ -128,6 +128,48 @@ export function isPdfFile(fileName: string): boolean {
 }
 
 /**
+ * Vérifie si une URL est externe (par exemple, storage.example.com)
+ * @param url URL à vérifier
+ * @returns True si l'URL est externe
+ */
+export function isExternalUrl(url: string): boolean {
+  if (!url) return false;
+  
+  // Si c'est une URL Blob, ce n'est pas externe
+  if (url.startsWith('blob:')) {
+    return false;
+  }
+  
+  // Vérifie si l'URL contient "storage.example.com" ou d'autres domaines externes
+  return url.includes('storage.example.com') || 
+         url.includes('http://') || 
+         url.includes('https://');
+}
+
+/**
+ * Nettoie les URLs externes pour affichage dans l'interface
+ * @param url URL à nettoyer
+ * @returns URL nettoyée pour affichage
+ */
+export function getSafeDisplayUrl(url: string): string {
+  if (!url) return '';
+  
+  // Si c'est une URL Blob, l'utiliser telle quelle
+  if (url.startsWith('blob:')) {
+    return url;
+  }
+  
+  // Si c'est une URL externe, remplacer par le nom du fichier
+  if (isExternalUrl(url)) {
+    // Pour les fichiers externes, on n'essaie pas de les afficher directement
+    // On retourne une chaîne vide pour éviter les erreurs d'affichage
+    return '';
+  }
+  
+  return url;
+}
+
+/**
  * Ouvre un PDF directement dans un nouvel onglet du navigateur
  * @param url URL du fichier PDF
  */
@@ -137,6 +179,12 @@ export function openPdfInNewTab(url: string): void {
   // Si c'est déjà une URL Blob, l'ouvrir directement
   if (url.startsWith('blob:')) {
     window.open(url, '_blank');
+    return;
+  }
+  
+  // Si c'est une URL externe, ne pas essayer de l'ouvrir
+  if (isExternalUrl(url)) {
+    console.log('URL externe ignorée:', url);
     return;
   }
   
