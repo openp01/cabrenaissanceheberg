@@ -127,11 +127,23 @@ export interface BookingFormData {
 }
 
 // For displaying appointments with related data
-export interface AppointmentWithDetails extends Omit<Appointment, 'notes'> {
+export interface AppointmentWithDetails {
+  id: number;
+  patientId: number;
+  therapistId: number;
   patientName: string;
   therapistName: string;
-  patientInfo?: string;
+  date: string;
+  time: string;
+  duration: number | null;
+  type: string | null;
+  status: string;
   notes: string | null;
+  isRecurring: boolean | null;
+  recurringFrequency: string | null;
+  recurringCount: number | null;
+  parentAppointmentId: number | null;
+  patientInfo?: string;
   relatedAppointments?: Array<{
     id: number;
     therapistName: string;
