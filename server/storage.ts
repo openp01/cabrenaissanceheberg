@@ -333,7 +333,16 @@ export class MemStorage implements IStorage {
 
   // Appointment methods
   async getAppointments(): Promise<AppointmentWithDetails[]> {
-    const appointments = Array.from(this.appointmentsData.values());
+    // Récupérer tous les rendez-vous et les trier par date de création (du plus récent au plus ancien)
+    const appointments = Array.from(this.appointmentsData.values())
+      .sort((a, b) => {
+        // Si createdAt n'existe pas, utiliser l'ID comme critère de tri (plus grand ID = plus récent)
+        if (!a.createdAt || !b.createdAt) {
+          return b.id - a.id;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    
     return Promise.all(appointments.map(async appointment => {
       const patient = await this.getPatient(appointment.patientId);
       const therapist = await this.getTherapist(appointment.therapistId);
@@ -381,7 +390,8 @@ export class MemStorage implements IStorage {
       isRecurring: insertAppointment.isRecurring ?? null,
       recurringFrequency: insertAppointment.recurringFrequency ?? null,
       recurringCount: insertAppointment.recurringCount ?? null,
-      parentAppointmentId: insertAppointment.parentAppointmentId ?? null
+      parentAppointmentId: insertAppointment.parentAppointmentId ?? null,
+      createdAt: new Date()
     };
     this.appointmentsData.set(id, appointment);
     
