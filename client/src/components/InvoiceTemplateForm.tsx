@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { InvoiceTemplate, invoiceTemplateFormSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Button, Input, Textarea, Switch, Label, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
-import { Loader2 } from 'lucide-react';
-import { InvoiceTemplate, invoiceTemplateFormSchema } from "@shared/schema";
-import { Card, CardContent } from "@/components/ui/card";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import InvoiceTemplatePreview from "@/components/InvoiceTemplatePreview";
+import { Loader2, Save, Upload } from "lucide-react";
 
 interface InvoiceTemplateFormProps {
   template?: InvoiceTemplate;
@@ -19,78 +22,163 @@ interface InvoiceTemplateFormProps {
 export default function InvoiceTemplateForm({ template, onSuccess }: InvoiceTemplateFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState(template ? "preview" : "edit");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(template?.logoUrl || null);
   
+  // Valeurs par défaut pour un nouveau template
+  const defaultValues = {
+    name: template?.name || 'Nouveau modèle',
+    description: template?.description || 'Modèle de facture standard',
+    headerContent: template?.headerContent || `<div>
+      <p><strong>Cabinet d'Orthophonie</strong></p>
+      <p>123 Avenue des Soins</p>
+      <p>75000 Paris, France</p>
+      <p>Tél: 01 23 45 67 89</p>
+      <p>Email: contact@cabinet-ortho.fr</p>
+    </div>`,
+    footerContent: template?.footerContent || `<div>
+      <p>Merci pour votre confiance.</p>
+      <p>Règlement à réception de la facture par chèque, espèces ou virement.</p>
+      <p>SIRET: 12345678900000 | N° TVA: FR12345678900</p>
+    </div>`,
+    primaryColor: template?.primaryColor || '#4f46e5',
+    secondaryColor: template?.secondaryColor || '#6366f1',
+    fontFamily: template?.fontFamily || 'Arial, sans-serif',
+    showTherapistSignature: template?.showTherapistSignature ?? true,
+    isDefault: template?.isDefault ?? false
+  };
+
   const form = useForm({
     resolver: zodResolver(invoiceTemplateFormSchema),
-    defaultValues: template ? {
-      ...template,
-    } : {
-      name: '',
-      description: '',
-      headerContent: `<div style="text-align: center; margin-bottom: 20px;">
-  <h1>Cabinet d'Orthophonie</h1>
-  <p>123 Rue de la Santé, 75000 Paris</p>
-  <p>Tél: 01 23 45 67 89 - Email: contact@ortho-cabinet.fr</p>
-</div>`,
-      footerContent: `<div style="text-align: center; font-size: 12px; margin-top: 30px; color: #666;">
-  <p>SIRET: 123 456 789 00010 - N° ADELI: 759912345</p>
-  <p>Paiement à réception - TVA non applicable, article 293B du CGI</p>
-</div>`,
-      showTherapistSignature: true,
-      logoUrl: '',
-      primaryColor: '#4f46e5',
-      secondaryColor: '#6366f1',
-      fontFamily: 'Arial, sans-serif',
-      isDefault: false,
-    },
+    defaultValues,
   });
+
+  const watchedValues = form.watch();
   
-  const mutation = useMutation({
-    mutationFn: async (data: any) => {
-      if (template) {
-        return apiRequest(`/api/invoice-templates/${template.id}`, "PUT", data);
-      } else {
-        return apiRequest('/api/invoice-templates', "POST", data);
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: template ? "Template mis à jour" : "Template créé",
-        description: template ? "Le template a été mis à jour avec succès." : "Le nouveau template a été créé avec succès.",
-        variant: "default",
+  // Prépare un objet template pour l'aperçu
+  const previewTemplate: InvoiceTemplate = {
+    id: template?.id || 0,
+    name: watchedValues.name,
+    description: watchedValues.description || '',
+    headerContent: watchedValues.headerContent,
+    footerContent: watchedValues.footerContent,
+    logoUrl: logoPreview || '',
+    primaryColor: watchedValues.primaryColor,
+    secondaryColor: watchedValues.secondaryColor,
+    fontFamily: watchedValues.fontFamily,
+    showTherapistSignature: watchedValues.showTherapistSignature,
+    isDefault: watchedValues.isDefault,
+    createdAt: template?.createdAt || new Date(),
+    updatedAt: template?.updatedAt || new Date()
+  };
+
+  // Mutation pour sauvegarder ou mettre à jour le template
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const endpoint = template 
+        ? `/api/invoice-templates/${template.id}` 
+        : '/api/invoice-templates';
+      const method = template ? 'PUT' : 'POST';
+      
+      const response = await fetch(endpoint, {
+        method,
+        body: data
       });
       
-      queryClient.invalidateQueries({ queryKey: ["/api/invoice-templates"] });
-      
-      if (onSuccess) {
-        onSuccess();
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || "Erreur lors de la sauvegarde du template");
       }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoice-templates"] });
+      toast({
+        title: template ? "Template mis à jour" : "Template créé",
+        description: template 
+          ? "Les modifications ont été enregistrées" 
+          : "Le nouveau template a été créé avec succès",
+        variant: "default",
+      });
+      if (onSuccess) onSuccess();
     },
     onError: (error) => {
       toast({
         title: "Erreur",
-        description: `Erreur lors de ${template ? 'la mise à jour' : 'la création'} du template.`,
+        description: error.message || "Une erreur est survenue lors de la sauvegarde",
         variant: "destructive",
       });
     },
   });
-  
-  const onSubmit = (data: any) => {
-    mutation.mutate(data);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Vérifier le type de fichier
+    if (!file.type.match('image.*')) {
+      toast({
+        title: "Format invalide",
+        description: "Veuillez sélectionner une image (JPG, PNG, SVG)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Limite de taille (2 Mo)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "La taille maximale est de 2 Mo",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLogoFile(file);
+    
+    // Créer un aperçu
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
-  
+
+  const onSubmit = (formData: any) => {
+    const data = new FormData();
+    
+    // Ajouter les champs du formulaire
+    Object.keys(formData).forEach((key) => {
+      if (key === 'isDefault' || key === 'showTherapistSignature') {
+        data.append(key, formData[key] ? 'true' : 'false');
+      } else {
+        data.append(key, formData[key]);
+      }
+    });
+    
+    // Ajouter le logo s'il existe
+    if (logoFile) {
+      data.append('logo', logoFile);
+    }
+    
+    saveTemplateMutation.mutate(data);
+  };
+
   return (
-    <Tabs defaultValue="edition">
-      <TabsList className="mb-4">
-        <TabsTrigger value="edition">Édition</TabsTrigger>
-        <TabsTrigger value="preview">Aperçu</TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="edition">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div>
+        <Tabs defaultValue="edit" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="edit">Édition</TabsTrigger>
+            <TabsTrigger value="preview">Aperçu</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="edit">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="name"
@@ -98,7 +186,7 @@ export default function InvoiceTemplateForm({ template, onSuccess }: InvoiceTemp
                     <FormItem>
                       <FormLabel>Nom du template</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: Template Standard" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -112,40 +200,56 @@ export default function InvoiceTemplateForm({ template, onSuccess }: InvoiceTemp
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Décrivez brièvement ce template..." 
-                          className="resize-none h-20"
-                          {...field} 
+                        <Input {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Une courte description du modèle de facture
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Logo */}
+                <div className="space-y-2">
+                  <FormLabel>Logo</FormLabel>
+                  <div className="flex items-center gap-4">
+                    {logoPreview && (
+                      <div className="w-20 h-20 border rounded flex items-center justify-center overflow-hidden">
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo preview" 
+                          className="max-w-full max-h-full object-contain"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      </div>
+                    )}
+                    <div>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        className="flex-1"
+                      />
+                      <FormDescription>
+                        Format recommandé: PNG ou SVG transparent, max 2 Mo
+                      </FormDescription>
+                    </div>
+                  </div>
+                </div>
                 
-                <FormField
-                  control={form.control}
-                  name="logoUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL du logo (optionnel)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="primaryColor"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Couleur primaire</FormLabel>
+                        <FormLabel>Couleur principale</FormLabel>
                         <div className="flex items-center gap-2">
-                          <Input type="color" {...field} className="w-12 h-8 p-1" />
+                          <input 
+                            type="color" 
+                            {...field} 
+                            className="w-10 h-10 rounded-md cursor-pointer"
+                          />
                           <Input {...field} className="flex-1" />
                         </div>
                         <FormMessage />
@@ -160,9 +264,27 @@ export default function InvoiceTemplateForm({ template, onSuccess }: InvoiceTemp
                       <FormItem>
                         <FormLabel>Couleur secondaire</FormLabel>
                         <div className="flex items-center gap-2">
-                          <Input type="color" {...field} className="w-12 h-8 p-1" />
+                          <input 
+                            type="color" 
+                            {...field} 
+                            className="w-10 h-10 rounded-md cursor-pointer"
+                          />
                           <Input {...field} className="flex-1" />
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="fontFamily"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Police</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -171,77 +293,20 @@ export default function InvoiceTemplateForm({ template, onSuccess }: InvoiceTemp
                 
                 <FormField
                   control={form.control}
-                  name="fontFamily"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Police de caractères</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Arial, sans-serif" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="showTherapistSignature"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Signature du thérapeute</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Afficher un espace pour la signature électronique du thérapeute
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                
-                {!template && (
-                  <FormField
-                    control={form.control}
-                    name="isDefault"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                          <FormLabel>Template par défaut</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            Utiliser ce template pour toutes les nouvelles factures
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-              
-              <div className="space-y-6">
-                <FormField
-                  control={form.control}
                   name="headerContent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contenu de l'en-tête (HTML)</FormLabel>
+                      <FormLabel>Contenu de l'en-tête</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="<div>Contenu de l'en-tête...</div>" 
-                          className="font-mono text-sm h-32 resize-none"
                           {...field} 
+                          rows={6}
+                          placeholder="<div><p>Information du cabinet...</p></div>"
                         />
                       </FormControl>
+                      <FormDescription>
+                        Vous pouvez utiliser du HTML simple pour la mise en forme
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -252,72 +317,112 @@ export default function InvoiceTemplateForm({ template, onSuccess }: InvoiceTemp
                   name="footerContent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contenu du pied de page (HTML)</FormLabel>
+                      <FormLabel>Contenu du pied de page</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="<div>Contenu du pied de page...</div>" 
-                          className="font-mono text-sm h-32 resize-none"
                           {...field} 
+                          rows={6}
+                          placeholder="<div><p>Mentions légales, infos supplémentaires...</p></div>"
                         />
                       </FormControl>
+                      <FormDescription>
+                        Vous pouvez utiliser du HTML simple pour la mise en forme
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-                <div className="border rounded-md p-3 bg-muted/20">
-                  <h3 className="font-medium mb-2">Aide HTML</h3>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p><code className="bg-muted p-1 rounded">&lt;div&gt;</code> - Conteneur</p>
-                    <p><code className="bg-muted p-1 rounded">&lt;h1&gt;</code> - Titre principal</p>
-                    <p><code className="bg-muted p-1 rounded">&lt;p&gt;</code> - Paragraphe</p>
-                    <p><code className="bg-muted p-1 rounded">&lt;strong&gt;</code> - Texte en gras</p>
-                    <p><code className="bg-muted p-1 rounded">&lt;em&gt;</code> - Texte en italique</p>
-                    <p><code className="bg-muted p-1 rounded">style="..."</code> - Styles CSS</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="showTherapistSignature"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
+                        <div>
+                          <FormLabel>Signature du thérapeute</FormLabel>
+                          <FormDescription>
+                            Afficher un espace pour la signature
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="isDefault"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
+                        <div>
+                          <FormLabel>Template par défaut</FormLabel>
+                          <FormDescription>
+                            Utiliser ce modèle comme template par défaut
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={template?.isDefault}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              {template && (
-                <Button type="button" variant="outline" onClick={onSuccess}>
-                  Annuler
+                
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab("preview")}
+                  >
+                    Aperçu
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={saveTemplateMutation.isPending}
+                  >
+                    {saveTemplateMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    <Save className="mr-2 h-4 w-4" />
+                    {template ? "Mettre à jour" : "Enregistrer"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="preview">
+            <div className="space-y-4">
+              <InvoiceTemplatePreview template={previewTemplate} />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  onClick={() => setActiveTab("edit")}
+                  variant="outline"
+                >
+                  Retourner à l'édition
                 </Button>
-              )}
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {template ? "Mise à jour..." : "Création..."}
-                  </>
-                ) : (
-                  template ? "Mettre à jour" : "Créer le template"
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </TabsContent>
-      
-      <TabsContent value="preview">
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="font-medium mb-3">Aperçu du template</h3>
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-gray-100 p-4 aspect-[8.5/11]">
-                <InvoiceTemplatePreview 
-                  template={{
-                    ...form.getValues(),
-                    id: template?.id || 0,
-                    createdAt: template?.createdAt || new Date(),
-                  }}
-                />
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
+      
+      {/* Vue d'aperçu permanente sur grand écran */}
+      <div className="hidden lg:block">
+        <h3 className="text-lg font-medium mb-3">Aperçu en temps réel</h3>
+        <InvoiceTemplatePreview template={previewTemplate} />
+      </div>
+    </div>
   );
 }

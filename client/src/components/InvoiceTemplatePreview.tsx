@@ -1,173 +1,130 @@
 import React from 'react';
-import { InvoiceTemplate } from '@shared/schema';
+import { Card } from "@/components/ui/card";
+import { InvoiceTemplate } from "@shared/schema";
 
 interface InvoiceTemplatePreviewProps {
   template: InvoiceTemplate;
 }
 
 export default function InvoiceTemplatePreview({ template }: InvoiceTemplatePreviewProps) {
-  // Données factices pour la prévisualisation
-  const previewData = {
-    invoiceNumber: 'F-2025-0001',
-    issueDate: '01/01/2025',
-    patientName: 'Patient Exemple',
-    therapistName: 'Dr. Sophie Martin',
-    appointmentDate: '01/01/2025',
-    appointmentTime: '10:00',
-    totalAmount: '50,00',
-    status: 'En attente',
-  };
-  
-  const containerStyle = {
-    fontFamily: template.fontFamily || 'Arial, sans-serif',
-    fontSize: '10px',
-    lineHeight: '1.5',
-    color: '#333',
-    backgroundColor: '#fff',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-    position: 'relative' as const,
-    height: '100%',
-    overflow: 'hidden',
-  };
-  
-  const headerStyle = {
-    marginBottom: '20px',
-  };
-  
-  const contentStyle = {
-    marginBottom: '20px',
-  };
-  
-  const footerStyle = {
-    marginTop: '20px',
-    borderTop: `1px solid ${template.secondaryColor || '#eaeaea'}`,
-    paddingTop: '10px',
-  };
-  
-  const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-    marginBottom: '20px',
-    fontSize: '10px',
-  };
-  
-  const thStyle = {
-    backgroundColor: template.primaryColor || '#f3f4f6',
-    color: '#fff',
-    padding: '8px',
-    textAlign: 'left' as const,
-    fontWeight: 'bold' as const,
-  };
-  
-  const tdStyle = {
-    padding: '8px',
-    borderBottom: '1px solid #eaeaea',
-  };
-  
-  const signatureStyle = {
-    marginTop: '30px',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  };
-  
-  const signatureBoxStyle = {
-    border: '1px dashed #ccc',
-    padding: '10px',
-    width: '200px',
-    height: '80px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    justifyContent: 'space-between',
-  };
-  
+  const {
+    name,
+    headerContent,
+    footerContent,
+    primaryColor,
+    secondaryColor,
+    fontFamily,
+    logoUrl
+  } = template;
+
+  const previewStyle = {
+    fontFamily: fontFamily || 'Arial, sans-serif',
+    '--primary-color': primaryColor || '#4f46e5',
+    '--secondary-color': secondaryColor || '#6366f1',
+  } as React.CSSProperties;
+
   return (
-    <div style={containerStyle}>
-      {/* En-tête */}
-      <div 
-        style={headerStyle}
-        dangerouslySetInnerHTML={{ __html: template.headerContent || '' }}
-      />
+    <div className="w-full">
+      <h3 className="text-lg font-medium mb-3">Aperçu du template : {name}</h3>
       
-      {/* Informations principales */}
-      <div style={contentStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div>
-            <h2 style={{ color: template.primaryColor, marginBottom: '5px' }}>Facture #{previewData.invoiceNumber}</h2>
-            <p>Date d'émission: {previewData.issueDate}</p>
-          </div>
-          {template.logoUrl && (
-            <div>
-              <img 
-                src={template.logoUrl} 
-                alt="Logo" 
-                style={{ maxHeight: '60px', maxWidth: '150px' }} 
-              />
-            </div>
-          )}
-        </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div>
-            <h3 style={{ color: template.primaryColor, marginBottom: '5px' }}>Patient</h3>
-            <p>{previewData.patientName}</p>
-          </div>
-          <div>
-            <h3 style={{ color: template.primaryColor, marginBottom: '5px' }}>Orthophoniste</h3>
-            <p>{previewData.therapistName}</p>
-          </div>
-        </div>
-        
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Description</th>
-              <th style={thStyle}>Date</th>
-              <th style={thStyle}>Heure</th>
-              <th style={thStyle}>Montant</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={tdStyle}>Séance d'orthophonie</td>
-              <td style={tdStyle}>{previewData.appointmentDate}</td>
-              <td style={tdStyle}>{previewData.appointmentTime}</td>
-              <td style={tdStyle}>{previewData.totalAmount} €</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={3} style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>Total</td>
-              <td style={{ ...tdStyle, fontWeight: 'bold' }}>{previewData.totalAmount} €</td>
-            </tr>
-          </tfoot>
-        </table>
-        
-        <div style={{ padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '4px', marginBottom: '20px' }}>
-          <p style={{ margin: 0, color: template.primaryColor }}>
-            <strong>Statut:</strong> {previewData.status}
-          </p>
-        </div>
-        
-        {template.showTherapistSignature && (
-          <div style={signatureStyle}>
-            <div>
-              <p style={{ marginBottom: '5px' }}>Signature du thérapeute:</p>
-              <div style={signatureBoxStyle}>
-                <p style={{ margin: 0, fontSize: '9px', color: '#999' }}>Signature électronique</p>
-                <p style={{ margin: 0, fontSize: '9px', textAlign: 'right' as const }}>Date: {previewData.issueDate}</p>
+      <Card className="overflow-hidden border shadow-md">
+        <div 
+          className="p-6" 
+          style={previewStyle}
+        >
+          {/* Header */}
+          <div 
+            className="border-b pb-4 mb-4"
+            style={{ borderColor: 'var(--primary-color)' }}
+          >
+            <div className="flex justify-between items-start">
+              {logoUrl && (
+                <div className="w-40 h-auto mb-4">
+                  <img src={logoUrl} alt="Logo" className="max-w-full" />
+                </div>
+              )}
+              <div className="text-right">
+                <div 
+                  className="text-2xl font-bold mb-2" 
+                  style={{ color: 'var(--primary-color)' }}
+                >
+                  FACTURE
+                </div>
+                <div className="text-gray-600">Numéro : ###</div>
+                <div className="text-gray-600">Date : 13/03/2025</div>
               </div>
             </div>
+            <div 
+              className="mt-4 p-3 rounded-md" 
+              style={{ backgroundColor: 'rgba(var(--primary-color-rgb), 0.05)' }}
+              dangerouslySetInnerHTML={{ __html: headerContent }}
+            />
           </div>
-        )}
-      </div>
-      
-      {/* Pied de page */}
-      <div 
-        style={footerStyle}
-        dangerouslySetInnerHTML={{ __html: template.footerContent || '' }}
-      />
+          
+          {/* Content */}
+          <div className="mb-6">
+            <div className="flex justify-between mb-4">
+              <div>
+                <h3 className="font-bold mb-1">Patient</h3>
+                <div>Nom du Patient</div>
+                <div>123 Rue du Patient</div>
+                <div>75000 Paris</div>
+                <div>contact@patient.com</div>
+              </div>
+              <div>
+                <h3 className="font-bold mb-1">Thérapeute</h3>
+                <div>Dr. Thérapeute</div>
+                <div>456 Avenue du Cabinet</div>
+                <div>75000 Paris</div>
+                <div>contact@therapeute.com</div>
+              </div>
+            </div>
+            
+            <table className="w-full border-collapse mt-6">
+              <thead>
+                <tr 
+                  style={{ backgroundColor: 'var(--primary-color)', color: 'white' }}
+                >
+                  <th className="p-2 text-left">Description</th>
+                  <th className="p-2 text-center">Date</th>
+                  <th className="p-2 text-center">Durée</th>
+                  <th className="p-2 text-right">Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="p-2 text-left">Séance d'orthophonie</td>
+                  <td className="p-2 text-center">13/03/2025</td>
+                  <td className="p-2 text-center">45 min</td>
+                  <td className="p-2 text-right">50,00 €</td>
+                </tr>
+                <tr>
+                  <td colSpan={3} className="p-2 text-right font-bold">Total</td>
+                  <td className="p-2 text-right font-bold">50,00 €</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div className="mt-6 flex justify-end">
+              {template.showTherapistSignature && (
+                <div className="text-center">
+                  <div className="w-40 h-20 border border-dashed mb-2 flex items-center justify-center text-gray-400">
+                    Signature
+                  </div>
+                  <div>Dr. Thérapeute</div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div 
+            className="mt-6 pt-4 border-t text-sm text-gray-600"
+            style={{ borderColor: 'var(--primary-color)' }}
+            dangerouslySetInnerHTML={{ __html: footerContent }}
+          />
+        </div>
+      </Card>
     </div>
   );
 }

@@ -2,13 +2,10 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Button, 
-  Badge, 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger,
   Dialog,
   DialogTrigger,
   DialogContent,
@@ -17,7 +14,7 @@ import {
   DialogHeader,
   DialogFooter,
   DialogClose
-} from "@/components/ui";
+} from "@/components/ui/dialog";
 import { HomeButton } from "@/components/ui/home-button";
 import { Loader2, Plus, PencilIcon, Trash2Icon, CheckIcon, AlertCircle, FilePlus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";

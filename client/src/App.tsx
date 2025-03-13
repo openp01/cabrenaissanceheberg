@@ -42,6 +42,11 @@ function Router() {
         roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
       />
       <ProtectedRoute 
+        path="/invoice-templates" 
+        component={InvoiceTemplates} 
+        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
         path="/expenses" 
         component={Expenses} 
         roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
