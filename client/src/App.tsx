@@ -5,6 +5,7 @@ import AppointmentList from "./pages/AppointmentList";
 import TherapistSchedule from "./pages/TherapistSchedule";
 import Invoices from "./pages/Invoices";
 import InvoiceTemplates from "./pages/InvoiceTemplates";
+import ElectronicSignatures from "./pages/ElectronicSignatures";
 import Expenses from "./pages/Expenses";
 import ExpenseForm from "./pages/ExpenseForm";
 import ExpenseDetails from "./pages/ExpenseDetails";
@@ -70,6 +71,12 @@ function Router() {
         path="/payments" 
         component={Payments} 
         roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      {/* Route accessible uniquement à l'administrateur */}
+      <ProtectedRoute 
+        path="/signatures" 
+        component={ElectronicSignatures} 
+        roles={[UserRole.ADMIN]} 
       />
       
       {/* Route 404 - accessible à tous */}

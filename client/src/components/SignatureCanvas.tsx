@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Trash2, Download, Check } from "lucide-react";
+import { Eraser, Save } from "lucide-react";
 
 interface SignatureCanvasProps {
   onSave: (signatureData: string) => void;
@@ -17,144 +17,122 @@ export default function SignatureCanvas({
 }: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(!initialSignature);
-  const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
   
-  // Initialiser le contexte de canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const context = canvas.getContext('2d');
-    if (!context) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
-    // Configuration du style de trait
-    context.lineWidth = 2;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    context.strokeStyle = '#000000';
+    // Réinitialiser le canvas
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    setCtx(context);
+    // Paramètres pour un effet signature
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'black';
     
-    // Charger la signature initiale si disponible
+    // Si une signature initiale est fournie, l'afficher
     if (initialSignature) {
       const img = new Image();
       img.onload = () => {
-        context.drawImage(img, 0, 0);
-        setIsEmpty(false);
+        ctx.drawImage(img, 0, 0);
+        setHasDrawn(true);
       };
       img.src = initialSignature;
     }
   }, [initialSignature]);
   
-  // Vérifier si le canvas est vide
-  const checkIfEmpty = () => {
-    if (!ctx || !canvasRef.current) return true;
-    
-    const pixelData = ctx.getImageData(
-      0, 0, canvasRef.current.width, canvasRef.current.height
-    ).data;
-    
-    // Vérifier si tous les pixels sont transparents
-    for (let i = 0; i < pixelData.length; i += 4) {
-      if (pixelData[i + 3] > 0) {
-        return false;
-      }
-    }
-    
-    return true;
-  };
-  
-  // Fonctions de dessin
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    ctx.beginPath();
-    
-    // Position initiale
-    const { offsetX, offsetY } = getCoordinates(e);
-    ctx.moveTo(offsetX, offsetY);
     
     setIsDrawing(true);
-  };
-  
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !ctx) return;
+    setHasDrawn(true);
     
-    const { offsetX, offsetY } = getCoordinates(e);
-    ctx.lineTo(offsetX, offsetY);
-    ctx.stroke();
-    
-    setIsEmpty(false);
-  };
-  
-  const stopDrawing = () => {
-    if (!ctx) return;
-    
-    ctx.closePath();
-    setIsDrawing(false);
-    
-    // Vérifier si le canvas est vide après le dessin
-    setIsEmpty(checkIfEmpty());
-  };
-  
-  // Obtenir les coordonnées pour les événements de souris et tactiles
-  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { offsetX: 0, offsetY: 0 };
-    
-    let offsetX, offsetY;
+    const rect = canvas.getBoundingClientRect();
+    let x: number, y: number;
     
     if ('touches' in e) {
       // Événement tactile
-      const rect = canvas.getBoundingClientRect();
-      const touch = e.touches[0];
-      offsetX = touch.clientX - rect.left;
-      offsetY = touch.clientY - rect.top;
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
     } else {
-      // Événement de souris
-      offsetX = e.nativeEvent.offsetX;
-      offsetY = e.nativeEvent.offsetY;
+      // Événement souris
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
     }
     
-    return { offsetX, offsetY };
+    ctx.beginPath();
+    ctx.moveTo(x, y);
   };
   
-  // Effacer la signature
-  const clearSignature = () => {
-    if (!ctx || !canvasRef.current) return;
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
     
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    setIsEmpty(true);
-  };
-  
-  // Télécharger la signature
-  const downloadSignature = () => {
-    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     
-    const dataUrl = canvasRef.current.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = 'signature.png';
-    link.href = dataUrl;
-    link.click();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    let x: number, y: number;
+    
+    if ('touches' in e) {
+      // Événement tactile
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      // Événement souris
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
+    
+    ctx.lineTo(x, y);
+    ctx.stroke();
   };
   
-  // Sauvegarder la signature
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+  
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+  };
+  
   const saveSignature = () => {
-    if (!canvasRef.current || isEmpty) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     
-    const dataUrl = canvasRef.current.toDataURL('image/png');
-    onSave(dataUrl);
+    // Convertir le canvas en image data URL
+    const signatureData = canvas.toDataURL('image/png');
+    onSave(signatureData);
   };
   
   return (
     <div className="flex flex-col items-center">
-      <div className="border rounded-md p-2 bg-white mb-2">
-        <canvas 
+      <div className="border rounded-md p-1 bg-white mb-2">
+        <canvas
           ref={canvasRef}
           width={width}
           height={height}
-          className="border border-dashed border-gray-300 cursor-crosshair touch-none"
+          className="touch-none cursor-crosshair"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -162,47 +140,28 @@ export default function SignatureCanvas({
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
-        ></canvas>
+        />
       </div>
       
-      <div className="flex gap-2 mt-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={clearSignature}
-          disabled={isEmpty}
+      <div className="flex space-x-2">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={clearCanvas}
         >
-          <Trash2 className="h-4 w-4 mr-1" />
+          <Eraser className="h-4 w-4 mr-2" />
           Effacer
         </Button>
         
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={downloadSignature}
-          disabled={isEmpty}
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Télécharger
-        </Button>
-        
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
+        <Button 
+          type="button" 
           onClick={saveSignature}
-          disabled={isEmpty}
+          disabled={!hasDrawn}
         >
-          <Check className="h-4 w-4 mr-1" />
+          <Save className="h-4 w-4 mr-2" />
           Enregistrer
         </Button>
       </div>
-      
-      <p className="text-xs text-gray-500 mt-2">
-        {isEmpty ? "Signez dans la zone ci-dessus" : ""}
-      </p>
     </div>
   );
 }

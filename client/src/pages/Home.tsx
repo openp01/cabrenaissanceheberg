@@ -2,14 +2,15 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Clock, FileText, WalletIcon, Plus, List, LineChart, ArrowLeft, CreditCard, LogOut } from "lucide-react";
+import { CalendarDays, Clock, FileText, WalletIcon, Plus, List, LineChart, ArrowLeft, CreditCard, LogOut, Pen, ScrollText } from "lucide-react";
 import BookingForm from "@/components/BookingForm";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, useIsAdmin } from "@/hooks/use-auth";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
   const [showBookingForm, setShowBookingForm] = useState(false);
   const { logoutMutation } = useAuth();
+  const isAdmin = useIsAdmin();
   
   const handleNavigation = (path: string) => {
     setLocation(path);
@@ -240,6 +241,68 @@ export default function Home() {
                   </Button>
                 </CardFooter>
               </Card>
+              
+              {/* Carte des modèles de factures */}
+              <Card className="overflow-hidden transition-all hover:shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Modèles de factures</CardTitle>
+                    <ScrollText className="h-8 w-8 text-indigo-100" />
+                  </div>
+                  <CardDescription className="text-indigo-100">
+                    Personnalisation des modèles
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Créez et modifiez les modèles de factures utilisés pour les documents clients.
+                    </p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleNavigation("/invoice-templates")}
+                    variant="default"
+                  >
+                    <ScrollText className="h-4 w-4 mr-2" />
+                    Gérer les modèles
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Signatures Électroniques - visible uniquement pour les administrateurs */}
+              {isAdmin && (
+                <Card className="overflow-hidden transition-all hover:shadow-lg">
+                  <CardHeader className="bg-gradient-to-r from-rose-500 to-rose-600 text-white">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xl">Signatures Électroniques</CardTitle>
+                      <Pen className="h-8 w-8 text-rose-100" />
+                    </div>
+                    <CardDescription className="text-rose-100">
+                      Administration des signatures
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Gérez les signatures électroniques des thérapeutes pour les documents officiels.
+                      </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleNavigation("/signatures")}
+                      variant="default"
+                    >
+                      <Pen className="h-4 w-4 mr-2" />
+                      Gérer les signatures
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
             </div>
             
             <div className="mt-16 text-center text-sm text-gray-500">
