@@ -229,24 +229,60 @@ export default function ExpenseDetails() {
               {expense.receiptUrl ? (
                 <div className="text-center">
                   <div className="border rounded-md p-4 mb-4">
-                    <FileIcon className="h-16 w-16 mx-auto text-primary" />
-                    <p className="text-sm mt-2">Justificatif disponible</p>
+                    {isImageFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                      <ImageIcon className="h-16 w-16 mx-auto text-primary" />
+                    ) : isPdfFile(getFileNameFromUrl(expense.receiptUrl)) ? (
+                      <FileTextIcon className="h-16 w-16 mx-auto text-primary" />
+                    ) : (
+                      <FileIcon className="h-16 w-16 mx-auto text-primary" />
+                    )}
+                    <p className="text-sm mt-2 font-medium">
+                      {getFileNameFromUrl(expense.receiptUrl)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isImageFile(getFileNameFromUrl(expense.receiptUrl)) 
+                        ? "Image" 
+                        : isPdfFile(getFileNameFromUrl(expense.receiptUrl))
+                        ? "Document PDF"
+                        : "Document"}
+                    </p>
                   </div>
-                  <a
-                    href={expense.receiptUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center"
-                  >
-                    <Button variant="outline" className="w-full">
-                      <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                      Voir le justificatif
-                    </Button>
-                  </a>
+                  <div className="flex flex-col gap-2">
+                    {isImageFile(getFileNameFromUrl(expense.receiptUrl)) && (
+                      <div className="border rounded-md p-2 overflow-hidden">
+                        <img 
+                          src={expense.receiptUrl} 
+                          alt="Aperçu du justificatif" 
+                          className="max-h-[200px] object-contain w-full"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <a
+                      href={expense.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center"
+                    >
+                      <Button variant="outline" className="w-full">
+                        <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                        {isImageFile(getFileNameFromUrl(expense.receiptUrl))
+                          ? "Voir l'image en taille réelle"
+                          : isPdfFile(getFileNameFromUrl(expense.receiptUrl))
+                          ? "Ouvrir le PDF"
+                          : "Voir le justificatif"}
+                      </Button>
+                    </a>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">Aucun justificatif disponible</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Ajoutez un justificatif en modifiant cette dépense
+                  </p>
                 </div>
               )}
             </CardContent>
