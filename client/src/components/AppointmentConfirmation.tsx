@@ -78,9 +78,13 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
       }
     },
     onSuccess: () => {
+      const isMultipleAppointments = isMultipleTherapists && selectedTherapists && selectedTherapists.length > 1;
+      
       toast({
-        title: "Rendez-vous confirmé",
-        description: "Votre rendez-vous a été créé avec succès",
+        title: isMultipleAppointments ? "Rendez-vous confirmés" : "Rendez-vous confirmé",
+        description: isMultipleAppointments 
+          ? `${selectedTherapists?.length} rendez-vous ont été créés avec succès` 
+          : "Votre rendez-vous a été créé avec succès",
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
@@ -99,7 +103,12 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
     },
   });
   
-  if (!patient || !therapist || !date || !time) {
+  // Vérification des informations requises en mode standard ou multiple
+  const isMissingInfo = !patient || !date || !time || 
+    (!isMultipleTherapists && !therapist) || 
+    (isMultipleTherapists && (!selectedTherapists || selectedTherapists.length === 0));
+
+  if (isMissingInfo) {
     return (
       <div className="max-w-3xl mx-auto">
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
@@ -127,7 +136,10 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
           </div>
           <div className="ml-3">
             <p className="text-sm text-green-700">
-              Vous êtes sur le point de confirmer votre rendez-vous.
+              {isMultipleTherapists && selectedTherapists ? 
+                `Vous êtes sur le point de créer ${selectedTherapists.length} rendez-vous simultanés.` :
+                "Vous êtes sur le point de confirmer votre rendez-vous."
+              }
             </p>
           </div>
         </div>
@@ -164,8 +176,35 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
         <div className="border-t border-gray-200">
           <dl>
             <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">Thérapeute</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{therapist.name}</dd>
+              <dt className="text-sm font-medium text-gray-500">
+                {isMultipleTherapists ? "Thérapeutes" : "Thérapeute"}
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {isMultipleTherapists && selectedTherapists ? (
+                  <div>
+                    <ul className="divide-y divide-gray-200">
+                      {selectedTherapists.map((t, index) => (
+                        <li key={t.id} className={index === 0 ? "" : "pt-2"}>
+                          <div className="flex items-center">
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
+                              t.color ? `bg-[${t.color}]` : 
+                              index === 0 ? 'bg-primary' : 
+                              index === 1 ? 'bg-blue-400' : 'bg-purple-500'
+                            }`}></div>
+                            {t.name}
+                            {index === 0 && <span className="ml-2 text-xs font-medium text-gray-500">(principal)</span>}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-amber-600 font-medium">
+                      Mode multi-thérapeutes activé. Un rendez-vous sera créé pour chaque thérapeute.
+                    </p>
+                  </div>
+                ) : (
+                  <>{therapist && therapist.name}</>
+                )}
+              </dd>
             </div>
             <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Date et heure</dt>
@@ -200,6 +239,27 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
             )}
           </dl>
         </div>
+      </div>
+      
+      {/* Bouton de confirmation */}
+      <div className="flex justify-end mt-6">
+        <button
+          type="button"
+          className="inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          onClick={() => createAppointmentMutation.mutate()}
+          disabled={createAppointmentMutation.isPending}
+        >
+          {createAppointmentMutation.isPending ? (
+            <>
+              <span className="animate-spin inline-block h-4 w-4 border-t-2 border-white rounded-full mr-2"></span>
+              Création en cours...
+            </>
+          ) : isMultipleTherapists ? (
+            <>Confirmer {selectedTherapists?.length} rendez-vous</>
+          ) : (
+            <>Confirmer le rendez-vous</>
+          )}
+        </button>
       </div>
     </div>
   );
