@@ -47,24 +47,15 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
           throw new Error("Thérapeute manquant pour créer le rendez-vous");
         }
         
-        // Créer un rendez-vous pour chaque créneau sélectionné
-        const promises = selectedTimeSlots.map(slot => {
-          const appointmentData = {
-            patientId: patient.id,
-            therapistId: therapist.id,
-            date: slot.date,
-            time: slot.time,
-            status: "confirmed",
-            isRecurring: false,
-            recurringFrequency: null,
-            recurringCount: null,
-          };
-          
-          return apiRequest("/api/appointments", "POST", appointmentData);
-        });
+        // Utiliser la nouvelle API pour créer plusieurs rendez-vous avec une seule facture
+        const multipleAppointmentData = {
+          patientId: patient.id,
+          therapistId: therapist.id,
+          slots: selectedTimeSlots,
+        };
         
-        // Attendre que tous les rendez-vous soient créés
-        return Promise.all(promises);
+        // Appeler l'API pour créer plusieurs rendez-vous avec une seule facture
+        return apiRequest("/api/appointments/multiple", "POST", multipleAppointmentData);
       }
       // Mode multi-thérapeutes - plusieurs thérapeutes, chacun avec son propre horaire
       else if (isMultipleTherapists && selectedTherapists) {

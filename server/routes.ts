@@ -170,9 +170,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Obtenir les détails pour la facture
         const today = new Date();
-        const issueDate = format(today, 'dd/MM/yyyy');
-        const dueDate = format(addDays(today, 30), 'dd/MM/yyyy');
-        const invoiceNumber = `F-${today.getFullYear()}-${String(storage.getNextInvoiceId()).padStart(4, '0')}`;
+        const formatDate = (date: Date) => {
+          return date.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+        };
+        const addDays = (date: Date, days: number) => {
+          const result = new Date(date);
+          result.setDate(result.getDate() + days);
+          return result;
+        };
+        
+        const issueDate = formatDate(today);
+        const dueDate = formatDate(addDays(today, 30));
+        
+        // Générer un numéro de facture unique
+        // Utiliser l'ID de facture à partir du dernier ID en cours plus 1
+        const invoices = await storage.getInvoices();
+        const lastInvoiceId = invoices.length > 0 
+          ? Math.max(...invoices.map(inv => inv.id)) + 1
+          : 1;
+        const invoiceNumber = `F-${today.getFullYear()}-${String(lastInvoiceId).padStart(4, '0')}`;
         
         // Construire les notes avec les détails de tous les créneaux
         const appointmentDetails = appointments.map(app => 
@@ -191,9 +211,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           issueDate,
           dueDate,
           paymentMethod: null,
-          notes: `Facture groupée pour ${appointments.length} séances d'orthophonie: ${appointmentDetails}`,
-          relatedAppointmentIds: appointments.map(app => app.id)
+          notes: `Facture groupée pour ${appointments.length} séances d'orthophonie: ${appointmentDetails}`
         });
+        
+        // Mettre à jour tous les RDV pour indiquer qu'ils sont liés à cette facture
+        for (const appointment of appointments) {
+          if (appointment.id !== appointments[0].id) {
+            await storage.updateAppointment(appointment.id, {
+              notes: `Facturé avec le RDV #${appointments[0].id} sur la facture ${invoiceNumber}`
+            });
+          }
+        }
         
         res.status(201).json({
           appointments,
