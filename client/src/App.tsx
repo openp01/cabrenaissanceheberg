@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import AppointmentList from "./pages/AppointmentList";
 import TherapistSchedule from "./pages/TherapistSchedule";
 import Invoices from "./pages/Invoices";
+import InvoiceTemplates from "./pages/InvoiceTemplates";
 import Expenses from "./pages/Expenses";
 import ExpenseForm from "./pages/ExpenseForm";
 import ExpenseDetails from "./pages/ExpenseDetails";

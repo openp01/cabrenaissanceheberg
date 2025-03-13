@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { 
   insertPatientSchema, 
   patientFormSchema, 
@@ -831,6 +832,314 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erreur lors de la génération du PDF des dépenses:", error);
       res.status(500).json({ error: "Erreur lors de la génération du PDF des dépenses" });
+    }
+  });
+
+  // Gestion des templates de facture
+  app.post("/api/create-invoice-templates-table", isAdmin, async (req, res) => {
+    try {
+      // Création de la table des templates de facture
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS invoice_templates (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          header_content TEXT NOT NULL,
+          footer_content TEXT NOT NULL,
+          logo_url TEXT,
+          primary_color TEXT NOT NULL DEFAULT '#4f46e5',
+          secondary_color TEXT NOT NULL DEFAULT '#6366f1',
+          font_family TEXT NOT NULL DEFAULT 'Arial, sans-serif',
+          show_therapist_signature BOOLEAN NOT NULL DEFAULT true,
+          is_default BOOLEAN NOT NULL DEFAULT false,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+      `);
+      
+      // Ajout d'une colonne template_id à la table invoices
+      await db.execute(`
+        ALTER TABLE invoices 
+        ADD COLUMN IF NOT EXISTS template_id INTEGER REFERENCES invoice_templates(id),
+        ADD COLUMN IF NOT EXISTS signature_image_url TEXT;
+      `);
+      
+      // Création de la table des signatures
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS signatures (
+          id SERIAL PRIMARY KEY,
+          therapist_id INTEGER NOT NULL REFERENCES therapists(id) ON DELETE CASCADE,
+          signature_data TEXT NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+      `);
+      
+      // Création d'un template par défaut
+      const templateCount = await db.execute(`SELECT COUNT(*) FROM invoice_templates WHERE is_default = true`);
+      
+      if (templateCount.rows[0].count === '0') {
+        await db.execute(`
+          INSERT INTO invoice_templates (
+            name, description, header_content, footer_content, primary_color, secondary_color, 
+            font_family, show_therapist_signature, is_default
+          ) VALUES (
+            'Template standard', 
+            'Template par défaut pour les factures',
+            '<div style="text-align: center; margin-bottom: 20px;">
+              <h1>Cabinet d''Orthophonie</h1>
+              <p>123 Rue de la Santé, 75000 Paris</p>
+              <p>Tél: 01 23 45 67 89 - Email: contact@ortho-cabinet.fr</p>
+            </div>',
+            '<div style="text-align: center; font-size: 12px; margin-top: 30px; color: #666;">
+              <p>SIRET: 123 456 789 00010 - N° ADELI: 759912345</p>
+              <p>Paiement à réception - TVA non applicable, article 293B du CGI</p>
+            </div>',
+            '#4f46e5',
+            '#6366f1',
+            'Arial, sans-serif',
+            true,
+            true
+          );
+        `);
+      }
+      
+      res.status(200).json({ message: 'Tables créées avec succès' });
+    } catch (error) {
+      console.error('Erreur lors de la création des tables:', error);
+      res.status(500).json({ error: 'Erreur lors de la création des tables' });
+    }
+  });
+  
+  // Récupération de tous les templates
+  app.get("/api/invoice-templates", isAdminStaff, async (req, res) => {
+    try {
+      const templates = await db.execute('SELECT * FROM invoice_templates ORDER BY is_default DESC, name ASC');
+      res.json(templates.rows);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des templates:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération des templates' });
+    }
+  });
+  
+  // Récupération d'un template par ID
+  app.get("/api/invoice-templates/:id", isAdminStaff, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const templates = await db.execute('SELECT * FROM invoice_templates WHERE id = $1', [id]);
+      
+      if (templates.rows.length === 0) {
+        return res.status(404).json({ error: 'Template non trouvé' });
+      }
+      
+      res.json(templates.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la récupération du template:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération du template' });
+    }
+  });
+  
+  // Récupération du template par défaut
+  app.get("/api/invoice-templates/default", async (req, res) => {
+    try {
+      const templates = await db.execute('SELECT * FROM invoice_templates WHERE is_default = true');
+      
+      if (templates.rows.length === 0) {
+        return res.status(404).json({ error: 'Aucun template par défaut trouvé' });
+      }
+      
+      res.json(templates.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la récupération du template par défaut:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération du template par défaut' });
+    }
+  });
+  
+  // Création d'un nouveau template
+  app.post("/api/invoice-templates", isAdminStaff, async (req, res) => {
+    try {
+      const { 
+        name, description, headerContent, footerContent, logoUrl, primaryColor, 
+        secondaryColor, fontFamily, showTherapistSignature, isDefault 
+      } = req.body;
+      
+      // Si le template est défini comme par défaut, mettre à jour les autres templates
+      if (isDefault) {
+        await db.execute('UPDATE invoice_templates SET is_default = false');
+      }
+      
+      const result = await db.execute(
+        `INSERT INTO invoice_templates (
+          name, description, header_content, footer_content, logo_url, primary_color, 
+          secondary_color, font_family, show_therapist_signature, is_default
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        [
+          name, description, headerContent, footerContent, logoUrl, primaryColor, 
+          secondaryColor, fontFamily, showTherapistSignature, isDefault
+        ]
+      );
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la création du template:', error);
+      res.status(500).json({ error: 'Erreur lors de la création du template' });
+    }
+  });
+  
+  // Mise à jour d'un template
+  app.put("/api/invoice-templates/:id", isAdminStaff, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { 
+        name, description, headerContent, footerContent, logoUrl, primaryColor, 
+        secondaryColor, fontFamily, showTherapistSignature, isDefault 
+      } = req.body;
+      
+      // Si le template est défini comme par défaut, mettre à jour les autres templates
+      if (isDefault) {
+        await db.execute('UPDATE invoice_templates SET is_default = false');
+      }
+      
+      const result = await db.execute(
+        `UPDATE invoice_templates SET 
+          name = $1, 
+          description = $2, 
+          header_content = $3, 
+          footer_content = $4, 
+          logo_url = $5, 
+          primary_color = $6, 
+          secondary_color = $7, 
+          font_family = $8, 
+          show_therapist_signature = $9, 
+          is_default = $10,
+          updated_at = NOW()
+        WHERE id = $11 RETURNING *`,
+        [
+          name, description, headerContent, footerContent, logoUrl, primaryColor, 
+          secondaryColor, fontFamily, showTherapistSignature, isDefault, id
+        ]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Template non trouvé' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du template:', error);
+      res.status(500).json({ error: 'Erreur lors de la mise à jour du template' });
+    }
+  });
+  
+  // Définition d'un template comme template par défaut
+  app.put("/api/invoice-templates/:id/set-default", isAdminStaff, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Mettre à jour tous les templates pour désactiver le statut par défaut
+      await db.execute('UPDATE invoice_templates SET is_default = false');
+      
+      // Définir le template spécifié comme par défaut
+      const result = await db.execute(
+        'UPDATE invoice_templates SET is_default = true WHERE id = $1 RETURNING *',
+        [id]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Template non trouvé' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la définition du template par défaut:', error);
+      res.status(500).json({ error: 'Erreur lors de la définition du template par défaut' });
+    }
+  });
+  
+  // Suppression d'un template
+  app.delete("/api/invoice-templates/:id", isAdminStaff, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Vérifier si le template est par défaut
+      const checkDefault = await db.execute('SELECT is_default FROM invoice_templates WHERE id = $1', [id]);
+      
+      if (checkDefault.rows.length === 0) {
+        return res.status(404).json({ error: 'Template non trouvé' });
+      }
+      
+      if (checkDefault.rows[0].is_default) {
+        return res.status(400).json({ error: 'Impossible de supprimer le template par défaut' });
+      }
+      
+      await db.execute('DELETE FROM invoice_templates WHERE id = $1', [id]);
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error('Erreur lors de la suppression du template:', error);
+      res.status(500).json({ error: 'Erreur lors de la suppression du template' });
+    }
+  });
+  
+  // Routes pour les signatures électroniques
+  
+  // Enregistrement d'une signature
+  app.post("/api/signatures", async (req, res) => {
+    try {
+      const { therapistId, signatureData } = req.body;
+      
+      // Vérifier si une signature existe déjà pour ce thérapeute
+      const existingSignature = await db.execute(
+        'SELECT * FROM signatures WHERE therapist_id = $1',
+        [therapistId]
+      );
+      
+      let result;
+      
+      if (existingSignature.rows.length > 0) {
+        // Mettre à jour la signature existante
+        result = await db.execute(
+          `UPDATE signatures SET 
+            signature_data = $1, 
+            updated_at = NOW()
+          WHERE therapist_id = $2 RETURNING *`,
+          [signatureData, therapistId]
+        );
+      } else {
+        // Créer une nouvelle signature
+        result = await db.execute(
+          `INSERT INTO signatures (
+            therapist_id, signature_data
+          ) VALUES ($1, $2) RETURNING *`,
+          [therapistId, signatureData]
+        );
+      }
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la signature:', error);
+      res.status(500).json({ error: 'Erreur lors de l\'enregistrement de la signature' });
+    }
+  });
+  
+  // Récupération de la signature d'un thérapeute
+  app.get("/api/signatures/:therapistId", async (req, res) => {
+    try {
+      const { therapistId } = req.params;
+      
+      const signatures = await db.execute(
+        'SELECT * FROM signatures WHERE therapist_id = $1',
+        [therapistId]
+      );
+      
+      if (signatures.rows.length === 0) {
+        return res.status(404).json({ error: 'Signature non trouvée' });
+      }
+      
+      res.json(signatures.rows[0]);
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la signature:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération de la signature' });
     }
   });
 
