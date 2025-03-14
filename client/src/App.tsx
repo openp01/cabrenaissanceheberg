@@ -106,7 +106,7 @@ function App() {
     <AuthProvider>
       <div className="min-h-screen flex flex-col font-sans bg-gray-50">
         <Navbar /> {/* Ajout de la barre de navigation */}
-        <div className="container mx-auto px-4 pt-20"> {/* Ajouter padding pour éviter chevauchement avec navbar */}
+        <div className="px-4 pt-16"> {/* Réduction du padding pour moins d'espace après la barre */}
           <Router />
         </div>
         <Toaster />
