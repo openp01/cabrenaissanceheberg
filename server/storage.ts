@@ -33,7 +33,7 @@ export interface IStorage {
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   createRecurringAppointments(baseAppointment: InsertAppointment, frequency: string, count: number): Promise<Appointment[]>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
-  deleteAppointment(id: number): Promise<boolean>;
+  deleteAppointment(id: number): Promise<{ success: boolean; message?: string }>;
   checkAvailability(therapistId: number, date: string, time: string): Promise<boolean>;
   
   // Invoice methods
@@ -502,8 +502,37 @@ export class MemStorage implements IStorage {
     return updatedAppointment;
   }
 
-  async deleteAppointment(id: number): Promise<boolean> {
-    return this.appointmentsData.delete(id);
+  async deleteAppointment(id: number): Promise<{ success: boolean; message?: string }> {
+    const appointment = this.appointmentsData.get(id);
+    if (!appointment) {
+      return { success: false, message: "Rendez-vous non trouvé" };
+    }
+    
+    // Vérifier s'il existe une facture liée à ce rendez-vous
+    const invoices = Array.from(this.invoicesData.values())
+      .filter(invoice => invoice.appointmentId === id);
+    
+    // Vérifier s'il existe des paiements liés à ces factures
+    for (const invoice of invoices) {
+      const payments = Array.from(this.therapistPaymentsData.values())
+        .filter(payment => payment.invoiceId === invoice.id);
+      
+      if (payments.length > 0) {
+        return { 
+          success: false, 
+          message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
+        };
+      }
+    }
+    
+    // Supprimer les factures associées
+    for (const invoice of invoices) {
+      this.invoicesData.delete(invoice.id);
+    }
+    
+    // Supprimer le rendez-vous
+    const deleted = this.appointmentsData.delete(id);
+    return { success: deleted };
   }
 
   async checkAvailability(therapistId: number, date: string, time: string): Promise<boolean> {

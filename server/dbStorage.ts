@@ -711,13 +711,34 @@ export class PgStorage implements IStorage {
     return updatedAppointment;
   }
 
-  async deleteAppointment(id: number): Promise<boolean> {
+  async deleteAppointment(id: number): Promise<{ success: boolean; message?: string }> {
     try {
       // Récupérer les informations sur le rendez-vous
       const appointment = await this.getAppointment(id);
       
       if (!appointment) {
-        return false;
+        return { success: false, message: "Rendez-vous non trouvé" };
+      }
+      
+      // Vérifier s'il existe des factures liées à ce rendez-vous
+      const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
+      
+      // Vérifier si des paiements sont associés à ces factures
+      if (invoiceResult.rows.length > 0) {
+        for (const row of invoiceResult.rows) {
+          const paymentResult = await pool.query(
+            'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+            [row.id]
+          );
+          
+          if (paymentResult.rows.length > 0) {
+            console.log(`Impossible de supprimer le rendez-vous ${id} car il a des paiements associés`);
+            return { 
+              success: false, 
+              message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
+            };
+          }
+        }
       }
       
       // Vérifier si ce rendez-vous est récurrent et s'il est le premier d'une série
@@ -760,10 +781,31 @@ export class PgStorage implements IStorage {
               [childAppointment.id]
             );
             
-            // Mettre à jour le statut des factures associées
             if (childInvoiceResult.rows.length > 0) {
+              // Vérifier s'il existe des paiements pour ces factures
+              let hasPayments = false;
               for (const row of childInvoiceResult.rows) {
-                await this.updateInvoice(row.id, { status: 'Annulée' });
+                const paymentResult = await pool.query(
+                  'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+                  [row.id]
+                );
+                
+                if (paymentResult.rows.length > 0) {
+                  hasPayments = true;
+                  console.log(`Le rendez-vous enfant ${childAppointment.id} a des paiements associés et ne peut pas être supprimé`);
+                  break;
+                }
+              }
+              
+              if (hasPayments) {
+                // Continuer avec les autres rendez-vous enfants
+                continue;
+              }
+              
+              // Supprimer les factures qui n'ont pas de paiements
+              for (const row of childInvoiceResult.rows) {
+                console.log(`Suppression de la facture ${row.id} liée au rendez-vous enfant ${childAppointment.id}`);
+                await pool.query('DELETE FROM invoices WHERE id = $1', [row.id]);
               }
             }
             
@@ -776,24 +818,44 @@ export class PgStorage implements IStorage {
         }
       }
       
-      // Vérifier s'il existe des factures liées à ce rendez-vous
-      const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
+      // Vérifier à nouveau s'il existe des factures liées à ce rendez-vous
+      const finalInvoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
-      // Si des factures existent, les supprimer directement
-      if (invoiceResult.rows.length > 0) {
-        for (const row of invoiceResult.rows) {
-          console.log(`Suppression de la facture ${row.id} liée au rendez-vous ${id}`);
+      // Si des factures existent, les supprimer
+      if (finalInvoiceResult.rows.length > 0) {
+        for (const row of finalInvoiceResult.rows) {
+          // Vérifier à nouveau s'il n'y a pas de paiements associés (par sécurité)
+          const paymentCheckResult = await pool.query(
+            'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+            [row.id]
+          );
           
-          // Supprimer complètement la facture
+          if (paymentCheckResult.rows.length > 0) {
+            return { 
+              success: false, 
+              message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
+            };
+          }
+          
+          console.log(`Suppression de la facture ${row.id} liée au rendez-vous ${id}`);
           await pool.query('DELETE FROM invoices WHERE id = $1', [row.id]);
         }
       }
       
       // Supprimer le rendez-vous principal
       const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
-      return result.rows.length > 0;
+      return { success: result.rows.length > 0 };
     } catch (error) {
       console.error("Erreur lors de la suppression du rendez-vous:", error);
+      
+      // Vérifier si l'erreur est liée à une contrainte de clé étrangère concernant les paiements
+      if (error.code === '23503' && error.constraint === 'therapist_payments_invoiceid_fkey') {
+        return {
+          success: false,
+          message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute"
+        };
+      }
+      
       throw error; // Propager l'erreur pour pouvoir la capturer dans la route
     }
   }
