@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeButton } from "@/components/ui/home-button";
 import { Checkbox } from "@/components/ui/checkbox";
+import EditAppointmentDialog from "@/components/EditAppointmentDialog";
 
 export default function AppointmentList() {
   const [location, setLocation] = useLocation();
@@ -16,6 +17,7 @@ export default function AppointmentList() {
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("date"); // "date", "therapist", "type"
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [editingAppointmentId, setEditingAppointmentId] = useState<number | null>(null);
 
   // Fetch appointments
   const { data: appointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
@@ -78,6 +80,14 @@ export default function AppointmentList() {
     if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous ?")) {
       deleteMutation.mutate(id);
     }
+  };
+  
+  const handleEditAppointment = (id: number) => {
+    setEditingAppointmentId(id);
+  };
+  
+  const handleCloseEditDialog = () => {
+    setEditingAppointmentId(null);
   };
 
   const toggleAppointmentSelection = (id: number) => {
@@ -472,13 +482,21 @@ export default function AppointmentList() {
                                       {selectedAppointments.includes(appointment.id) ? "Désélectionner" : "Sélectionner"}
                                     </button>
                                   ) : (
-                                    <button 
-                                      onClick={() => handleCancelAppointment(appointment.id)}
-                                      className="text-red-600 hover:text-red-900 ml-3"
-                                      disabled={deleteMutation.isPending}
-                                    >
-                                      Annuler
-                                    </button>
+                                    <div className="flex space-x-2">
+                                      <button 
+                                        onClick={() => handleEditAppointment(appointment.id)}
+                                        className="text-blue-600 hover:text-blue-900"
+                                      >
+                                        Modifier
+                                      </button>
+                                      <button 
+                                        onClick={() => handleCancelAppointment(appointment.id)}
+                                        className="text-red-600 hover:text-red-900 ml-3"
+                                        disabled={deleteMutation.isPending}
+                                      >
+                                        Annuler
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                               </tr>
@@ -502,6 +520,15 @@ export default function AppointmentList() {
           </div>
         </div>
       </main>
+
+      {/* Dialogue de modification d'un rendez-vous */}
+      {editingAppointmentId && (
+        <EditAppointmentDialog
+          appointmentId={editingAppointmentId}
+          isOpen={editingAppointmentId !== null}
+          onClose={handleCloseEditDialog}
+        />
+      )}
     </>
   );
 }
