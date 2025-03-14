@@ -779,11 +779,17 @@ export class PgStorage implements IStorage {
       // Vérifier s'il existe des factures liées à ce rendez-vous
       const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
-      // Si des factures existent, mettre à jour leur statut plutôt que de les supprimer
+      // Si des factures existent, mettre à jour leur statut et supprimer la référence au rendez-vous
       if (invoiceResult.rows.length > 0) {
         for (const row of invoiceResult.rows) {
           console.log(`Mise à jour de la facture ${row.id} suite à la suppression du rendez-vous ${id}`);
-          await this.updateInvoice(row.id, { status: 'Annulée' });
+          
+          // Dissocier la facture du rendez-vous en définissant appointmentId à NULL
+          // et mettre à jour le statut en "Annulée"
+          await pool.query(
+            'UPDATE invoices SET appointmentid = NULL, status = $1 WHERE id = $2',
+            ['Annulée', row.id]
+          );
         }
       }
       
