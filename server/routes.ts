@@ -118,8 +118,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Appointment routes
-  app.get("/api/appointments", async (req, res) => {
+  app.get("/api/appointments", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Si l'utilisateur est un thérapeute, renvoyer uniquement ses rendez-vous
+      if (req.user && req.user.role === UserRole.THERAPIST && req.user.therapistId) {
+        const appointments = await storage.getAppointmentsForTherapist(req.user.therapistId);
+        return res.json(appointments);
+      }
+      
+      // Sinon (admin ou secrétariat), renvoyer tous les rendez-vous
       const appointments = await storage.getAppointments();
       res.json(appointments);
     } catch (error) {

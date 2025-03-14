@@ -436,7 +436,38 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid,
       patientName: row.patientname,
-      therapistName: row.therapistname
+      therapistName: row.therapistname,
+      createdAt: row.createdat || new Date()
+    }));
+  }
+  
+  async getAppointmentsForTherapist(therapistId: number): Promise<AppointmentWithDetails[]> {
+    const query = `
+      SELECT a.*, p.firstName || ' ' || p.lastName as patientName, t.name as therapistName
+      FROM appointments a
+      JOIN patients p ON a.patientId = p.id
+      JOIN therapists t ON a.therapistId = t.id
+      WHERE a.therapistId = $1
+      ORDER BY a.date, a.time
+    `;
+    const result = await pool.query(query, [therapistId]);
+    return result.rows.map(row => ({
+      id: row.id,
+      patientId: row.patientid,
+      therapistId: row.therapistid,
+      date: row.date,
+      time: row.time,
+      duration: row.duration,
+      type: row.type,
+      notes: row.notes,
+      status: row.status,
+      isRecurring: row.isrecurring,
+      recurringFrequency: row.recurringfrequency,
+      recurringCount: row.recurringcount,
+      parentAppointmentId: row.parentappointmentid,
+      patientName: row.patientname,
+      therapistName: row.therapistname,
+      createdAt: row.createdat || new Date()
     }));
   }
 

@@ -30,6 +30,7 @@ export interface IStorage {
   getAppointments(): Promise<AppointmentWithDetails[]>;
   getAppointment(id: number): Promise<Appointment | undefined>;
   getAppointmentsForPatient(patientId: number): Promise<AppointmentWithDetails[]>;
+  getAppointmentsForTherapist(therapistId: number): Promise<AppointmentWithDetails[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   createRecurringAppointments(baseAppointment: InsertAppointment, frequency: string, count: number): Promise<Appointment[]>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
@@ -353,6 +354,22 @@ export class MemStorage implements IStorage {
   async getAppointmentsForPatient(patientId: number): Promise<AppointmentWithDetails[]> {
     const appointments = Array.from(this.appointmentsData.values())
       .filter(app => app.patientId === patientId);
+    
+    return Promise.all(appointments.map(async appointment => {
+      const patient = await this.getPatient(appointment.patientId);
+      const therapist = await this.getTherapist(appointment.therapistId);
+      
+      return {
+        ...appointment,
+        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
+        therapistName: therapist ? therapist.name : 'Unknown'
+      };
+    }));
+  }
+  
+  async getAppointmentsForTherapist(therapistId: number): Promise<AppointmentWithDetails[]> {
+    const appointments = Array.from(this.appointmentsData.values())
+      .filter(app => app.therapistId === therapistId);
     
     return Promise.all(appointments.map(async appointment => {
       const patient = await this.getPatient(appointment.patientId);
