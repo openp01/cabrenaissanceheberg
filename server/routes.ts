@@ -1291,7 +1291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enregistrement ou mise à jour de la signature administrative
   app.post("/api/admin-signature", isAdmin, async (req: Request, res: Response) => {
     try {
-      const { signatureData } = req.body;
+      const { signatureData, paidStampData } = req.body;
       
       if (!signatureData) {
         return res.status(400).json({ error: 'Données de signature manquantes' });
@@ -1305,13 +1305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Mettre à jour la signature existante
         signature = await storage.updateSignature(signatures[0].id, {
           name: "Christian", // Nom fixe pour la signature administrative
-          signatureData
+          signatureData,
+          paidStampData // Peut être undefined si non fourni
         });
       } else {
         // Créer une nouvelle signature
         signature = await storage.createSignature({
           name: "Christian", // Nom fixe pour la signature administrative
-          signatureData
+          signatureData,
+          paidStampData // Peut être undefined si non fourni
         });
       }
       
