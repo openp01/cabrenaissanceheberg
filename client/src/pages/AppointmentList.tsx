@@ -7,17 +7,20 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeButton } from "@/components/ui/home-button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AppointmentList() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const [selectedAppointments, setSelectedAppointments] = useState<number[]>([]);
+  const [selectMode, setSelectMode] = useState<boolean>(false);
 
   // Fetch appointments
   const { data: appointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
     queryKey: ['/api/appointments'],
   });
 
-  // Delete appointment mutation
+  // Delete single appointment mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest(`/api/appointments/${id}`, "DELETE");
@@ -38,6 +41,29 @@ export default function AppointmentList() {
     },
   });
 
+  // Delete multiple appointments mutation
+  const deleteMultipleMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await apiRequest('/api/appointments', "DELETE", { ids });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+      toast({
+        title: "Rendez-vous annulés",
+        description: `${selectedAppointments.length} rendez-vous ont été annulés avec succès.`,
+      });
+      setSelectedAppointments([]);
+      setSelectMode(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'annuler les rendez-vous sélectionnés. Veuillez réessayer plus tard.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleNewAppointment = () => {
     setLocation("/");
   };
@@ -49,6 +75,49 @@ export default function AppointmentList() {
   const handleCancelAppointment = (id: number) => {
     if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous ?")) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const toggleAppointmentSelection = (id: number) => {
+    if (selectedAppointments.includes(id)) {
+      setSelectedAppointments(selectedAppointments.filter(appointmentId => appointmentId !== id));
+    } else {
+      setSelectedAppointments([...selectedAppointments, id]);
+    }
+  };
+
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    if (selectMode) {
+      // Si on quitte le mode sélection, on efface les sélections
+      setSelectedAppointments([]);
+    }
+  };
+
+  const selectAllAppointments = () => {
+    if (appointments && appointments.length > 0) {
+      if (selectedAppointments.length === appointments.length) {
+        // Si tous sont déjà sélectionnés, désélectionner tout
+        setSelectedAppointments([]);
+      } else {
+        // Sinon, sélectionner tous
+        setSelectedAppointments(appointments.map(a => a.id));
+      }
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedAppointments.length === 0) {
+      toast({
+        title: "Attention",
+        description: "Veuillez sélectionner au moins un rendez-vous à annuler.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (confirm(`Êtes-vous sûr de vouloir annuler ${selectedAppointments.length} rendez-vous ?`)) {
+      deleteMultipleMutation.mutate(selectedAppointments);
     }
   };
 
@@ -115,13 +184,36 @@ export default function AppointmentList() {
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-gray-900">Mes rendez-vous</h2>
-                <button 
-                  onClick={handleNewAppointment}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <span className="material-icons mr-2 text-sm">add</span>
-                  Nouveau rendez-vous
-                </button>
+                <div className="flex space-x-2">
+                  {selectMode && selectedAppointments.length > 0 && (
+                    <button 
+                      onClick={handleDeleteSelected}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      disabled={deleteMultipleMutation.isPending}
+                    >
+                      <span className="material-icons mr-2 text-sm">delete</span>
+                      Annuler ({selectedAppointments.length})
+                    </button>
+                  )}
+                  <button 
+                    onClick={toggleSelectMode}
+                    className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      selectMode 
+                        ? "border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-gray-500" 
+                        : "border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:ring-indigo-500"
+                    }`}
+                  >
+                    <span className="material-icons mr-2 text-sm">{selectMode ? "cancel" : "checklist"}</span>
+                    {selectMode ? "Annuler la sélection" : "Mode sélection"}
+                  </button>
+                  <button 
+                    onClick={handleNewAppointment}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <span className="material-icons mr-2 text-sm">add</span>
+                    Nouveau rendez-vous
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -146,6 +238,18 @@ export default function AppointmentList() {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
+                              {selectMode && (
+                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  <div className="flex items-center">
+                                    <Checkbox 
+                                      id="select-all" 
+                                      checked={selectedAppointments.length > 0 && selectedAppointments.length === appointments.length}
+                                      onCheckedChange={selectAllAppointments} 
+                                      className="cursor-pointer" 
+                                    />
+                                  </div>
+                                </th>
+                              )}
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Patient
                               </th>
@@ -173,7 +277,19 @@ export default function AppointmentList() {
                                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                               })
                               .map((appointment) => (
-                              <tr key={appointment.id}>
+                              <tr key={appointment.id} className={selectedAppointments.includes(appointment.id) ? "bg-indigo-50" : ""}>
+                                {selectMode && (
+                                  <td className="px-3 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <Checkbox 
+                                        id={`select-appointment-${appointment.id}`} 
+                                        checked={selectedAppointments.includes(appointment.id)} 
+                                        onCheckedChange={() => toggleAppointmentSelection(appointment.id)}
+                                        className="cursor-pointer"
+                                      />
+                                    </div>
+                                  </td>
+                                )}
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex items-center">
                                     <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
@@ -213,13 +329,22 @@ export default function AppointmentList() {
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  <button 
-                                    onClick={() => handleCancelAppointment(appointment.id)}
-                                    className="text-red-600 hover:text-red-900 ml-3"
-                                    disabled={deleteMutation.isPending}
-                                  >
-                                    Annuler
-                                  </button>
+                                  {selectMode ? (
+                                    <button 
+                                      onClick={() => toggleAppointmentSelection(appointment.id)}
+                                      className={`text-sm font-medium ${selectedAppointments.includes(appointment.id) ? "text-indigo-600 hover:text-indigo-900" : "text-gray-600 hover:text-gray-900"}`}
+                                    >
+                                      {selectedAppointments.includes(appointment.id) ? "Désélectionner" : "Sélectionner"}
+                                    </button>
+                                  ) : (
+                                    <button 
+                                      onClick={() => handleCancelAppointment(appointment.id)}
+                                      className="text-red-600 hover:text-red-900 ml-3"
+                                      disabled={deleteMutation.isPending}
+                                    >
+                                      Annuler
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}

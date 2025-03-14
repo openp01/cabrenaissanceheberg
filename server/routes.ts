@@ -359,6 +359,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Erreur lors de la suppression du rendez-vous" });
     }
   });
+  
+  // Route pour supprimer plusieurs rendez-vous simultanément
+  app.delete("/api/appointments", async (req, res) => {
+    try {
+      const ids: number[] = req.body.ids;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: "Liste d'IDs de rendez-vous invalide" });
+      }
+      
+      console.log(`Tentative de suppression de ${ids.length} rendez-vous: ${ids.join(', ')}`);
+      
+      const results = [];
+      const failures = [];
+      
+      // Traiter chaque rendez-vous individuellement pour une meilleure gestion des erreurs
+      for (const id of ids) {
+        try {
+          const success = await storage.deleteAppointment(id);
+          if (success) {
+            results.push({ id, success: true });
+          } else {
+            failures.push({ id, reason: "Rendez-vous non trouvé" });
+          }
+        } catch (error) {
+          console.error(`Erreur lors de la suppression du rendez-vous ${id}:`, error);
+          failures.push({ id, reason: "Erreur interne" });
+        }
+      }
+      
+      // Si tous les rendez-vous ont été supprimés avec succès
+      if (failures.length === 0) {
+        console.log(`${results.length} rendez-vous supprimés avec succès`);
+        res.status(204).send();
+      } else {
+        // Si certains rendez-vous n'ont pas pu être supprimés
+        console.log(`${results.length} rendez-vous supprimés, ${failures.length} échecs`);
+        res.status(207).json({
+          message: "Suppression partielle des rendez-vous",
+          results,
+          failures
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression multiple de rendez-vous:", error);
+      res.status(500).json({ error: "Erreur lors de la suppression des rendez-vous" });
+    }
+  });
 
   // Availability check
   app.get("/api/availability", async (req, res) => {
