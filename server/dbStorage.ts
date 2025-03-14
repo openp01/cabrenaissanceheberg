@@ -755,6 +755,83 @@ export class PgStorage implements IStorage {
         return { success: false, message: "Rendez-vous non trouvé" };
       }
       
+      // Déterminer si c'est un rendez-vous parent ou enfant
+      const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
+      const isChildAppointment = appointment.parentAppointmentId !== null;
+      
+      // CAS SPÉCIAL: Traitement d'un rendez-vous enfant individuel
+      if (isChildAppointment) {
+        console.log(`Traitement du rendez-vous enfant ${id} avec parent ${appointment.parentAppointmentId}`);
+        
+        // Récupérer le rendez-vous parent
+        const parentAppointment = await this.getAppointment(appointment.parentAppointmentId as number);
+        if (!parentAppointment) {
+          return { success: false, message: "Rendez-vous parent non trouvé" };
+        }
+        
+        // Vérifier s'il existe une facture pour le rendez-vous parent
+        const parentInvoiceResult = await pool.query(
+          'SELECT * FROM invoices WHERE appointmentId = $1',
+          [parentAppointment.id]
+        );
+        
+        // S'il y a une facture parent et qu'elle a des paiements, empêcher la suppression
+        if (parentInvoiceResult.rows.length > 0) {
+          for (const invoice of parentInvoiceResult.rows) {
+            const paymentResult = await pool.query(
+              'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+              [invoice.id]
+            );
+            
+            if (paymentResult.rows.length > 0) {
+              return { 
+                success: false, 
+                message: "Ce rendez-vous ne peut pas être supprimé car la série complète a déjà été réglée au thérapeute" 
+              };
+            }
+          }
+          
+          // Si aucun paiement n'est trouvé, nous pouvons procéder à la modification de la facture
+          // 1. Récupérer tous les rendez-vous enfants restants
+          const remainingChildrenResult = await pool.query(
+            'SELECT * FROM appointments WHERE parentAppointmentId = $1 AND id != $2',
+            [parentAppointment.id, id]
+          );
+          
+          // 2. Mettre à jour la facture existante pour refléter le rendez-vous supprimé
+          // Calculer le nouveau montant total basé sur les rendez-vous restants
+          const remainingCount = remainingChildrenResult.rowCount + 1; // +1 pour le parent
+          const currentInvoice = parentInvoiceResult.rows[0];
+          
+          // Calculer le nouveau montant (montant unitaire * nombre restant)
+          const unitAmount = parseFloat(currentInvoice.amount) / (remainingCount + 1); // +1 car on va enlever un rdv
+          const newAmount = (unitAmount * remainingCount).toFixed(2);
+          const newTotalAmount = (parseFloat(newAmount) * (1 + parseFloat(currentInvoice.taxrate) / 100)).toFixed(2);
+          
+          // Mettre à jour la facture
+          await pool.query(
+            'UPDATE invoices SET amount = $1, totalAmount = $2, notes = $3 WHERE id = $4',
+            [
+              newAmount, 
+              newTotalAmount, 
+              `${currentInvoice.notes || ""} (Mis à jour après suppression d'un rendez-vous le ${new Date().toLocaleDateString()})`,
+              currentInvoice.id
+            ]
+          );
+          
+          // 3. Supprimer le rendez-vous enfant
+          await pool.query('DELETE FROM appointments WHERE id = $1', [id]);
+          
+          return { success: true };
+        }
+        
+        // S'il n'y a pas de facture parent, simplement supprimer le rendez-vous enfant
+        await pool.query('DELETE FROM appointments WHERE id = $1', [id]);
+        return { success: true };
+      }
+      
+      // TRAITEMENT STANDARD POUR LES RENDEZ-VOUS NON-ENFANTS
+      
       // Vérifier s'il existe des factures liées à ce rendez-vous
       const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
@@ -775,9 +852,6 @@ export class PgStorage implements IStorage {
           }
         }
       }
-      
-      // Vérifier si ce rendez-vous est récurrent et s'il est le premier d'une série
-      const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
       
       // Si c'est un rendez-vous parent, récupérer tous les rendez-vous enfants
       let childAppointments: Appointment[] = [];
