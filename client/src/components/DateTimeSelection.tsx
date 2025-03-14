@@ -307,6 +307,31 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     }
   };
   
+  // Fonction pour supprimer un créneau horaire sélectionné
+  const handleRemoveTimeSlot = (index: number) => {
+    const updatedTimeSlots = [...selectedTimeSlots];
+    updatedTimeSlots.splice(index, 1);
+    setSelectedTimeSlots(updatedTimeSlots);
+    
+    // Mettre à jour le formData
+    updateFormData({
+      selectedTimeSlots: updatedTimeSlots
+    });
+    
+    // Si tous les créneaux sont supprimés, désactiver l'option créneaux multiples
+    if (updatedTimeSlots.length === 0) {
+      setIsMultipleTimeSlots(false);
+      updateFormData({
+        isMultipleTimeSlots: false
+      });
+    }
+    
+    toast({
+      title: "Créneau supprimé",
+      description: "Le créneau horaire a été retiré de votre sélection."
+    });
+  };
+  
   const handleFrequencyChange = (value: string) => {
     setRecurringFrequency(value);
     
@@ -604,6 +629,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
             isMultipleTimeSlots={isMultipleTimeSlots}
             selectedTimeSlots={selectedTimeSlots}
             onMultipleTimeSlotsChange={handleMultipleTimeSlotsChange}
+            onRemoveTimeSlot={handleRemoveTimeSlot}
           />
         </div>
       )}
