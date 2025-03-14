@@ -56,6 +56,7 @@ export default function RecurringOptions({
                   <SelectItem value="Hebdomadaire">Hebdomadaire</SelectItem>
                   <SelectItem value="Bimensuel">Bimensuel</SelectItem>
                   <SelectItem value="Mensuel">Mensuel</SelectItem>
+                  <SelectItem value="Annuel">Annuel</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -76,6 +77,9 @@ export default function RecurringOptions({
                   <SelectItem value="4">4 séances</SelectItem>
                   <SelectItem value="5">5 séances</SelectItem>
                   <SelectItem value="6">6 séances</SelectItem>
+                  <SelectItem value="12">12 séances</SelectItem>
+                  <SelectItem value="24">24 séances</SelectItem>
+                  <SelectItem value="52">52 séances</SelectItem>
                 </SelectContent>
               </Select>
             </div>

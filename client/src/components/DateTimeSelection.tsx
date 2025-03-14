@@ -339,6 +339,10 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
           nextDate = new Date(currentDate);
           nextDate.setMonth(nextDate.getMonth() + 1);
           break;
+        case 'Annuel':
+          nextDate = new Date(currentDate);
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          break;
         default:
           nextDate = addDays(currentDate, 7);
       }

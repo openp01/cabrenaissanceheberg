@@ -547,12 +547,14 @@ export class PgStorage implements IStorage {
       nextDate = new Date(year, month - 1, day);
       
       // Calculer la date du prochain rendez-vous en fonction de la fréquence
-      if (frequency === 'weekly') {
+      if (frequency === 'weekly' || frequency === 'Hebdomadaire') {
         nextDate.setDate(nextDate.getDate() + (7 * i));
-      } else if (frequency === 'biweekly') {
+      } else if (frequency === 'biweekly' || frequency === 'Bimensuel') {
         nextDate.setDate(nextDate.getDate() + (14 * i));
-      } else if (frequency === 'monthly') {
+      } else if (frequency === 'monthly' || frequency === 'Mensuel') {
         nextDate.setMonth(nextDate.getMonth() + i);
+      } else if (frequency === 'Annuel') {
+        nextDate.setFullYear(nextDate.getFullYear() + i);
       }
       
       const newDate = format(nextDate, 'dd/MM/yyyy');
