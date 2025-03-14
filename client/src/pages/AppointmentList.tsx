@@ -14,6 +14,8 @@ export default function AppointmentList() {
   const { toast } = useToast();
   const [selectedAppointments, setSelectedAppointments] = useState<number[]>([]);
   const [selectMode, setSelectMode] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<string>("date"); // "date", "therapist", "type"
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Fetch appointments
   const { data: appointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
@@ -146,6 +148,63 @@ export default function AppointmentList() {
         return status;
     }
   };
+  
+  // Fonction pour déterminer le type de rendez-vous
+  const getAppointmentType = (appointment: AppointmentWithDetails) => {
+    if (appointment.isRecurring) {
+      return "recurring";
+    } else if (appointment.relatedAppointments && appointment.relatedAppointments.length > 0) {
+      return "multiple";
+    } else {
+      return "single";
+    }
+  };
+  
+  // Fonction pour obtenir le libellé du type de rendez-vous
+  const getAppointmentTypeLabel = (type: string) => {
+    switch (type) {
+      case "recurring":
+        return "Récurrent";
+      case "multiple":
+        return "Multiple";
+      case "single":
+        return "Ponctuel";
+      default:
+        return type;
+    }
+  };
+  
+  // Fonction pour trier les rendez-vous
+  const sortAppointments = (appointments: AppointmentWithDetails[]) => {
+    if (!appointments) return [];
+    
+    return [...appointments].sort((a, b) => {
+      if (sortBy === "date") {
+        // Convertir les dates en objets Date pour comparaison
+        const dateA = new Date(`${a.date} ${a.time}`);
+        const dateB = new Date(`${b.date} ${b.time}`);
+        return sortOrder === "asc" 
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      } else if (sortBy === "therapist") {
+        // Trier par nom du thérapeute
+        return sortOrder === "asc"
+          ? a.therapistName.localeCompare(b.therapistName)
+          : b.therapistName.localeCompare(a.therapistName);
+      } else if (sortBy === "type") {
+        // Trier par type de rendez-vous
+        const typeA = getAppointmentType(a);
+        const typeB = getAppointmentType(b);
+        return sortOrder === "asc"
+          ? typeA.localeCompare(typeB)
+          : typeB.localeCompare(typeA);
+      }
+      // Par défaut, trier par date de création
+      return sortOrder === "asc"
+        ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  };
 
   return (
     <>
@@ -215,6 +274,66 @@ export default function AppointmentList() {
                   </button>
                 </div>
               </div>
+              
+              {/* Options de tri */}
+              {appointments && appointments.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2 items-center">
+                  <span className="text-sm font-medium text-gray-700">Trier par :</span>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setSortBy("date");
+                        setSortOrder(sortOrder === "asc" && sortBy === "date" ? "desc" : "asc");
+                      }}
+                      className={`px-3 py-1 rounded-md text-sm flex items-center ${
+                        sortBy === "date" ? "bg-indigo-100 text-indigo-800" : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      Date
+                      {sortBy === "date" && (
+                        <span className="material-icons ml-1 text-sm">
+                          {sortOrder === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
+                      )}
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        setSortBy("therapist");
+                        setSortOrder(sortOrder === "asc" && sortBy === "therapist" ? "desc" : "asc");
+                      }}
+                      className={`px-3 py-1 rounded-md text-sm flex items-center ${
+                        sortBy === "therapist" ? "bg-indigo-100 text-indigo-800" : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      Thérapeute
+                      {sortBy === "therapist" && (
+                        <span className="material-icons ml-1 text-sm">
+                          {sortOrder === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
+                      )}
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        setSortBy("type");
+                        setSortOrder(sortOrder === "asc" && sortBy === "type" ? "desc" : "asc");
+                      }}
+                      className={`px-3 py-1 rounded-md text-sm flex items-center ${
+                        sortBy === "type" ? "bg-indigo-100 text-indigo-800" : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      Type de rendez-vous
+                      {sortBy === "type" && (
+                        <span className="material-icons ml-1 text-sm">
+                          {sortOrder === "asc" ? "arrow_upward" : "arrow_downward"}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="px-4 py-6 sm:px-6">
@@ -263,6 +382,9 @@ export default function AppointmentList() {
                                 Heure
                               </th>
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Type
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Statut
                               </th>
                               <th scope="col" className="relative px-6 py-3">
@@ -271,11 +393,7 @@ export default function AppointmentList() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {appointments
-                              .sort((a, b) => {
-                                // Trier par date de création, du plus récent au plus ancien
-                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                              })
+                            {sortAppointments(appointments)
                               .map((appointment) => (
                               <tr key={appointment.id} className={selectedAppointments.includes(appointment.id) ? "bg-indigo-50" : ""}>
                                 {selectMode && (
@@ -322,6 +440,23 @@ export default function AppointmentList() {
                                     <span className="material-icons text-green-500 mr-1 text-sm">schedule</span>
                                     <div className="text-sm text-gray-900">{appointment.time}</div>
                                   </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {(() => {
+                                    const appointmentType = getAppointmentType(appointment);
+                                    const badgeClass = 
+                                      appointmentType === "recurring" 
+                                        ? "bg-purple-100 text-purple-800"
+                                        : appointmentType === "multiple"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-gray-100 text-gray-800";
+                                    
+                                    return (
+                                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}`}>
+                                        {getAppointmentTypeLabel(appointmentType)}
+                                      </span>
+                                    );
+                                  })()}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
