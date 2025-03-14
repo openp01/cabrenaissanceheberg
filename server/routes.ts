@@ -366,23 +366,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "ID de rendez-vous invalide" });
       }
       
-      console.log(`Tentative de suppression du rendez-vous ${id}`);
+      console.log(`Tentative d'annulation du rendez-vous ${id}`);
       const result = await storage.deleteAppointment(id);
       
       if (!result.success) {
-        console.log(`Impossible de supprimer le rendez-vous ${id}: ${result.message}`);
-        return res.status(400).json({ error: result.message || "Impossible de supprimer ce rendez-vous" });
+        console.log(`Impossible d'annuler le rendez-vous ${id}: ${result.message}`);
+        return res.status(400).json({ error: result.message || "Impossible d'annuler ce rendez-vous" });
       }
       
-      console.log(`Rendez-vous ${id} supprimé avec succès`);
+      console.log(`Rendez-vous ${id} annulé avec succès`);
       res.status(204).send();
     } catch (error) {
-      console.error(`Erreur détaillée lors de la suppression du rendez-vous ${req.params.id}:`, error);
-      res.status(500).json({ error: "Erreur lors de la suppression du rendez-vous" });
+      console.error(`Erreur détaillée lors de l'annulation du rendez-vous ${req.params.id}:`, error);
+      res.status(500).json({ error: "Erreur lors de l'annulation du rendez-vous" });
     }
   });
   
-  // Route pour supprimer plusieurs rendez-vous simultanément
+  // Route pour annuler plusieurs rendez-vous simultanément
   app.delete("/api/appointments", async (req, res) => {
     try {
       const ids: number[] = req.body.ids;
@@ -391,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Liste d'IDs de rendez-vous invalide" });
       }
       
-      console.log(`Tentative de suppression de ${ids.length} rendez-vous: ${ids.join(', ')}`);
+      console.log(`Tentative d'annulation de ${ids.length} rendez-vous: ${ids.join(', ')}`);
       
       const results = [];
       const failures = [];
@@ -403,30 +403,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (result.success) {
             results.push({ id, success: true });
           } else {
-            failures.push({ id, reason: result.message || "Échec de la suppression" });
+            failures.push({ id, reason: result.message || "Échec de l'annulation" });
           }
         } catch (error) {
-          console.error(`Erreur lors de la suppression du rendez-vous ${id}:`, error);
+          console.error(`Erreur lors de l'annulation du rendez-vous ${id}:`, error);
           failures.push({ id, reason: "Erreur interne" });
         }
       }
       
-      // Si tous les rendez-vous ont été supprimés avec succès
+      // Si tous les rendez-vous ont été annulés avec succès
       if (failures.length === 0) {
-        console.log(`${results.length} rendez-vous supprimés avec succès`);
+        console.log(`${results.length} rendez-vous annulés avec succès`);
         res.status(204).send();
       } else {
-        // Si certains rendez-vous n'ont pas pu être supprimés
-        console.log(`${results.length} rendez-vous supprimés, ${failures.length} échecs`);
+        // Si certains rendez-vous n'ont pas pu être annulés
+        console.log(`${results.length} rendez-vous annulés, ${failures.length} échecs`);
         res.status(207).json({
-          message: "Suppression partielle des rendez-vous",
+          message: "Annulation partielle des rendez-vous",
           results,
           failures
         });
       }
     } catch (error) {
-      console.error("Erreur lors de la suppression multiple de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur lors de la suppression des rendez-vous" });
+      console.error("Erreur lors de l'annulation multiple de rendez-vous:", error);
+      res.status(500).json({ error: "Erreur lors de l'annulation des rendez-vous" });
     }
   });
 
