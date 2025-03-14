@@ -1,5 +1,6 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
+import { Navbar } from "@/components/ui/navbar"; // Importation de la barre de navigation
 import Home from "./pages/Home";
 import AppointmentList from "./pages/AppointmentList";
 import TherapistSchedule from "./pages/TherapistSchedule";
@@ -104,7 +105,10 @@ function App() {
   return (
     <AuthProvider>
       <div className="min-h-screen flex flex-col font-sans bg-gray-50">
-        <Router />
+        <Navbar /> {/* Ajout de la barre de navigation */}
+        <div className="container mx-auto px-4 pt-20"> {/* Ajouter padding pour éviter chevauchement avec navbar */}
+          <Router />
+        </div>
         <Toaster />
       </div>
     </AuthProvider>

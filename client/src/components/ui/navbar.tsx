@@ -112,8 +112,8 @@ export function Navbar() {
           {/* Lien vers le profil utilisateur */}
           <Link href="/profile">
             <Button
-              variant={isActive("/profile") ? "default" : "primary"}
-              className="flex items-center font-bold"
+              variant={isActive("/profile") ? "default" : "secondary"}
+              className="flex items-center font-bold bg-blue-600 text-white hover:bg-blue-700"
               size="lg"
             >
               <Settings className="mr-2 h-5 w-5" />
@@ -125,8 +125,8 @@ export function Navbar() {
           {user.role === UserRole.ADMIN && (
             <Link href="/admin/users">
               <Button
-                variant={isActive("/admin/users") ? "default" : "primary"}
-                className="flex items-center font-bold"
+                variant={isActive("/admin/users") ? "default" : "secondary"}
+                className="flex items-center font-bold bg-blue-600 text-white hover:bg-blue-700"
                 size="lg"
               >
                 <Users className="mr-2 h-5 w-5" />
