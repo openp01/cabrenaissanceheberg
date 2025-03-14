@@ -463,6 +463,10 @@ export class MemStorage implements IStorage {
         case 'Mensuel':
           nextDate = addMonths(baseDate, i);
           break;
+        case 'Annuel':
+          nextDate = new Date(baseDate);
+          nextDate.setFullYear(baseDate.getFullYear() + i);
+          break;
         default:
           nextDate = addWeeks(baseDate, i);
       }
