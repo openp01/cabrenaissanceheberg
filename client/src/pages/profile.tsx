@@ -68,19 +68,13 @@ export default function ProfilePage() {
   // Mutation pour changer le mot de passe
   const changePasswordMutation = useMutation({
     mutationFn: async (data: PasswordChangeData) => {
-      return apiRequest("/api/auth/change-password", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      return apiRequest<{success: boolean; message: string}>("/api/auth/change-password", "POST", data);
     },
     onSuccess: () => {
       toast({
         title: "Mot de passe modifié",
         description: "Votre mot de passe a été modifié avec succès.",
-        variant: "success",
+        variant: "default",
       });
       
       // Réinitialiser le formulaire

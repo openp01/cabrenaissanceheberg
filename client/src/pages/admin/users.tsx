@@ -61,16 +61,14 @@ export default function UserAdminPage() {
   // Mutation pour désactiver un utilisateur
   const deactivateUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      return apiRequest(`/api/auth/deactivate-user/${userId}`, {
-        method: "POST",
-      });
+      return apiRequest<{success: boolean; message: string}>(`/api/auth/deactivate-user/${userId}`, "POST");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/users"] });
       toast({
         title: "Compte désactivé",
         description: "Le compte utilisateur a été désactivé avec succès.",
-        variant: "success",
+        variant: "default",
       });
       setShowDeactivateDialog(false);
     },
