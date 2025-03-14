@@ -319,37 +319,50 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     frequency: string = recurringFrequency, 
     count: number = recurringCount
   ) => {
+    // Réinitialiser les dates à chaque appel
     const dates = [];
     const baseDateStr = format(baseDate, 'EEEE d MMMM', { locale: fr });
+    
+    // Toujours ajouter la première date
     dates.push(`${baseDateStr} à ${time}`);
     
-    let currentDate = baseDate;
+    // Si le nombre de séances est 1 ou si ce n'est pas récurrent, on s'arrête ici
+    if (count <= 1 || !isRecurring) {
+      setRecurringDates(dates);
+      return;
+    }
+    
+    // Pour les récurrences multiples, calculer les dates suivantes
+    let currentDate = new Date(baseDate);
     
     for (let i = 1; i < count; i++) {
       let nextDate;
       
       switch (frequency) {
         case 'Hebdomadaire':
-          nextDate = addDays(currentDate, 7);
+          // Une fois par semaine
+          nextDate = addDays(new Date(baseDate), i * 7);
           break;
         case 'Bimensuel':
-          nextDate = addDays(currentDate, 14);
+          // Une fois toutes les deux semaines
+          nextDate = addDays(new Date(baseDate), i * 14);
           break;
         case 'Mensuel':
-          nextDate = new Date(currentDate);
-          nextDate.setMonth(nextDate.getMonth() + 1);
+          // Une fois par mois à la même date du mois
+          nextDate = new Date(baseDate);
+          nextDate.setMonth(baseDate.getMonth() + i);
           break;
         case 'Annuel':
-          nextDate = new Date(currentDate);
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          // Une fois par an à la même date de l'année
+          nextDate = new Date(baseDate);
+          nextDate.setFullYear(baseDate.getFullYear() + i);
           break;
         default:
-          nextDate = addDays(currentDate, 7);
+          nextDate = addDays(new Date(baseDate), i * 7);
       }
       
       const formattedDate = format(nextDate, 'EEEE d MMMM', { locale: fr });
       dates.push(`${formattedDate} à ${time}`);
-      currentDate = nextDate;
     }
     
     setRecurringDates(dates);
