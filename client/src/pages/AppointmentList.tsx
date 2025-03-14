@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import React from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -9,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HomeButton } from "@/components/ui/home-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth, useIsAdmin, useIsAdminStaff, useIsTherapist } from "@/hooks/use-auth";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function AppointmentList() {
   const [location, setLocation] = useLocation();
@@ -177,6 +179,45 @@ export default function AppointmentList() {
         return type;
     }
   };
+  
+  // Grouper les rendez-vous récurrents
+  const groupedAppointments = useMemo(() => {
+    if (!appointments) return [];
+    
+    // Créer une map des parents et leurs enfants
+    const parentMap = new Map<number, AppointmentWithDetails[]>();
+    
+    // Collecter tous les rendez-vous qui ont un parentAppointmentId
+    appointments.forEach(appointment => {
+      if (appointment.parentAppointmentId) {
+        const parentId = appointment.parentAppointmentId;
+        if (!parentMap.has(parentId)) {
+          parentMap.set(parentId, []);
+        }
+        parentMap.get(parentId)?.push(appointment);
+      }
+    });
+    
+    // Filtrer les rendez-vous pour n'inclure que les parents ou les rendez-vous sans parent
+    const filteredAppointments = appointments.filter(appointment => 
+      !appointment.parentAppointmentId || 
+      (appointment.parentAppointmentId && !appointments.some(a => a.id === appointment.parentAppointmentId))
+    );
+    
+    // Ajouter les enfants à leurs parents respectifs
+    filteredAppointments.forEach(appointment => {
+      if (parentMap.has(appointment.id)) {
+        appointment.relatedAppointments = parentMap.get(appointment.id)?.map(child => ({
+          id: child.id,
+          therapistName: child.therapistName,
+          date: child.date,
+          time: child.time
+        }));
+      }
+    });
+    
+    return filteredAppointments;
+  }, [appointments]);
   
   // Fonction pour trier les rendez-vous
   const sortAppointments = (appointments: AppointmentWithDetails[]) => {
@@ -372,7 +413,7 @@ export default function AppointmentList() {
                 <div className="p-4 bg-red-50 text-red-700 rounded-md">
                   Erreur lors du chargement des rendez-vous. Veuillez réessayer plus tard.
                 </div>
-              ) : appointments && appointments.length > 0 ? (
+              ) : groupedAppointments && groupedAppointments.length > 0 ? (
                 <div className="flex flex-col">
                   <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
@@ -385,7 +426,7 @@ export default function AppointmentList() {
                                   <div className="flex items-center">
                                     <Checkbox 
                                       id="select-all" 
-                                      checked={selectedAppointments.length > 0 && selectedAppointments.length === appointments.length}
+                                      checked={selectedAppointments.length > 0 && appointments && selectedAppointments.length === appointments.length}
                                       onCheckedChange={selectAllAppointments} 
                                       className="cursor-pointer" 
                                     />
@@ -416,96 +457,139 @@ export default function AppointmentList() {
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {sortAppointments(appointments)
-                              .map((appointment) => (
-                              <tr key={appointment.id} className={selectedAppointments.includes(appointment.id) ? "bg-indigo-50" : ""}>
-                                {selectMode && (
-                                  <td className="px-3 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                      <Checkbox 
-                                        id={`select-appointment-${appointment.id}`} 
-                                        checked={selectedAppointments.includes(appointment.id)} 
-                                        onCheckedChange={() => toggleAppointmentSelection(appointment.id)}
-                                        className="cursor-pointer"
-                                      />
-                                    </div>
-                                  </td>
-                                )}
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                                      {appointment.patientName.split(" ").map(n => n[0]).join("").toUpperCase()}
-                                    </div>
-                                    <div className="ml-3">
-                                      <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
-                                      {/* Future feature: Show additional patient info */}
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
-                                    <div className="text-sm font-medium text-gray-900">{appointment.therapistName}</div>
-                                    {/* Future feature: Show related appointments indicator */}
-                                  </div>
-                                  {appointment.notes && (
-                                    <div className="text-xs text-gray-500 mt-1 italic">{appointment.notes}</div>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <span className="material-icons text-blue-500 mr-1 text-sm">event</span>
-                                    <div className="text-sm text-gray-900">{appointment.date}</div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <span className="material-icons text-green-500 mr-1 text-sm">schedule</span>
-                                    <div className="text-sm text-gray-900">{appointment.time}</div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  {(() => {
-                                    const appointmentType = getAppointmentType(appointment);
-                                    const badgeClass = 
-                                      appointmentType === "recurring" 
-                                        ? "bg-purple-100 text-purple-800"
-                                        : appointmentType === "multiple"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-gray-100 text-gray-800";
-                                    
-                                    return (
-                                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}`}>
-                                        {getAppointmentTypeLabel(appointmentType)}
+                            {sortAppointments(groupedAppointments).map((appointment) => {
+                              const isRecurringParent = appointment.relatedAppointments && appointment.relatedAppointments.length > 0;
+                              
+                              return (
+                                <React.Fragment key={appointment.id}>
+                                  <tr className={selectedAppointments.includes(appointment.id) ? "bg-indigo-50" : ""}>
+                                    {selectMode && (
+                                      <td className="px-3 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                          <Checkbox 
+                                            id={`select-appointment-${appointment.id}`} 
+                                            checked={selectedAppointments.includes(appointment.id)} 
+                                            onCheckedChange={() => toggleAppointmentSelection(appointment.id)}
+                                            className="cursor-pointer"
+                                          />
+                                        </div>
+                                      </td>
+                                    )}
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                          {appointment.patientName.split(" ").map(n => n[0]).join("").toUpperCase()}
+                                        </div>
+                                        <div className="ml-3">
+                                          <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="w-2 h-2 rounded-full bg-primary mr-2"></div>
+                                        <div className="text-sm font-medium text-gray-900">{appointment.therapistName}</div>
+                                      </div>
+                                      {appointment.notes && (
+                                        <div className="text-xs text-gray-500 mt-1 italic">{appointment.notes}</div>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <span className="material-icons text-blue-500 mr-1 text-sm">event</span>
+                                        <div className="text-sm text-gray-900">{appointment.date}</div>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <span className="material-icons text-green-500 mr-1 text-sm">schedule</span>
+                                        <div className="text-sm text-gray-900">{appointment.time}</div>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      {(() => {
+                                        const appointmentType = getAppointmentType(appointment);
+                                        const badgeClass = 
+                                          appointmentType === "recurring" 
+                                            ? "bg-purple-100 text-purple-800"
+                                            : appointmentType === "multiple"
+                                              ? "bg-blue-100 text-blue-800"
+                                              : "bg-gray-100 text-gray-800";
+                                        
+                                        return (
+                                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}`}>
+                                            {getAppointmentTypeLabel(appointmentType)}
+                                          </span>
+                                        );
+                                      })()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
+                                        {getStatusLabel(appointment.status)}
                                       </span>
-                                    );
-                                  })()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                                    {getStatusLabel(appointment.status)}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                  {selectMode ? (
-                                    <button 
-                                      onClick={() => toggleAppointmentSelection(appointment.id)}
-                                      className={`text-sm font-medium ${selectedAppointments.includes(appointment.id) ? "text-indigo-600 hover:text-indigo-900" : "text-gray-600 hover:text-gray-900"}`}
-                                    >
-                                      {selectedAppointments.includes(appointment.id) ? "Désélectionner" : "Sélectionner"}
-                                    </button>
-                                  ) : (
-                                    <button 
-                                      onClick={() => handleCancelAppointment(appointment.id)}
-                                      className="text-red-600 hover:text-red-900 ml-3"
-                                      disabled={deleteMutation.isPending}
-                                    >
-                                      Annuler
-                                    </button>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                      {isRecurringParent && (
+                                        <button
+                                          onClick={() => {
+                                            // Logique d'expansion à implémenter
+                                          }}
+                                          className="text-indigo-600 hover:text-indigo-900 mr-3"
+                                        >
+                                          <span className="material-icons text-sm">expand_more</span>
+                                        </button>
+                                      )}
+                                      {selectMode ? (
+                                        <button 
+                                          onClick={() => toggleAppointmentSelection(appointment.id)}
+                                          className={`text-sm font-medium ${selectedAppointments.includes(appointment.id) ? "text-indigo-600 hover:text-indigo-900" : "text-gray-600 hover:text-gray-900"}`}
+                                        >
+                                          {selectedAppointments.includes(appointment.id) ? "Désélectionner" : "Sélectionner"}
+                                        </button>
+                                      ) : (
+                                        <button 
+                                          onClick={() => handleCancelAppointment(appointment.id)}
+                                          className="text-red-600 hover:text-red-900 ml-3"
+                                          disabled={deleteMutation.isPending}
+                                        >
+                                          Annuler
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                  
+                                  {isRecurringParent && (
+                                    <tr>
+                                      <td colSpan={selectMode ? 8 : 7} className="p-0">
+                                        <Accordion type="single" collapsible className="border-0">
+                                          <AccordionItem value={`appointment-${appointment.id}`} className="border-0">
+                                            <AccordionContent className="px-6 py-2 bg-gray-50">
+                                              <div className="text-sm font-medium text-gray-800 mb-2">Rendez-vous liés:</div>
+                                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                {appointment.relatedAppointments?.map((related) => (
+                                                  <div key={related.id} className="p-2 bg-white rounded border border-gray-200 flex justify-between items-center">
+                                                    <div>
+                                                      <div className="font-medium">{related.therapistName}</div>
+                                                      <div className="text-xs text-gray-500">{related.date} - {related.time}</div>
+                                                    </div>
+                                                    <button
+                                                      onClick={() => handleCancelAppointment(related.id)}
+                                                      className="text-xs text-red-600 hover:text-red-900"
+                                                    >
+                                                      Annuler
+                                                    </button>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </AccordionContent>
+                                          </AccordionItem>
+                                        </Accordion>
+                                      </td>
+                                    </tr>
                                   )}
-                                </td>
-                              </tr>
-                            ))}
+                                </React.Fragment>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
