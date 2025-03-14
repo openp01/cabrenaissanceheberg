@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HomeButton } from "@/components/ui/home-button";
-import { Loader2, Save, RefreshCw, PenTool, Upload, Stamp } from "lucide-react";
+import { Loader2, Save, RefreshCw, PenTool, Upload, Stamp, ImageIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Signature } from "@shared/schema";
@@ -56,7 +56,7 @@ export default function ElectronicSignatures() {
   
   // Mutation pour sauvegarder une signature
   const saveSignatureMutation = useMutation({
-    mutationFn: async (data: { signatureData: string, paidStampData?: string | null }) => {
+    mutationFn: async (data: { signatureData: string, paidStampData?: string | null, permanentStampData?: string | null }) => {
       return apiRequest(
         '/api/admin-signature',
         'POST',
@@ -68,8 +68,10 @@ export default function ElectronicSignatures() {
       refetchSignature();
       setIsSignatureDialogOpen(false);
       setIsPaidStampDialogOpen(false);
+      setIsPermanentStampDialogOpen(false);
       setSignatureData(null);
       setPaidStampData(null);
+      setPermanentStampData(null);
       toast({
         title: "Mise à jour réussie",
         description: "Les données de signature ont été enregistrées avec succès.",
@@ -337,7 +339,7 @@ export default function ElectronicSignatures() {
                     </div>
                   ) : (
                     <div className="border border-dashed rounded-md p-2 bg-gray-50 h-[150px] flex flex-col items-center justify-center text-gray-400">
-                      <FileImage className="h-8 w-8 mb-2" />
+                      <ImageIcon className="h-8 w-8 mb-2" />
                       Aucun tampon permanent enregistré
                     </div>
                   )}
