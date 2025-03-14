@@ -115,11 +115,8 @@ export async function generateInvoicePDF(
     detailsY += 20;
   }
   
-  // Si des notes sont présentes, les afficher
-  if (invoice.notes) {
-    doc.text(`Notes: ${invoice.notes}`, 50, detailsY);
-    detailsY += 20;
-  }
+  // Vérifier si des notes sont présentes, mais ne pas les afficher ici
+  // Les notes d'assurance seront affichées sous le motif de consultation plus bas
   
   // Tableau des prestations avec positionnement dynamique
   const tableTop = detailsY + 30; // Espace après les détails
@@ -144,6 +141,16 @@ export async function generateInvoicePDF(
   
   doc.font('Helvetica').fontSize(12);
   doc.text(descriptionText, tableLeft + 10, tableTop + 35);
+  
+  // Affichage des notes d'assurance sous le motif de consultation
+  // Mais seulement si elles ne contiennent pas "Facture groupée" (qui est un type de note système)
+  if (invoice.notes && !invoice.notes.includes('Facture groupée')) {
+    doc.font('Helvetica-Oblique').fontSize(10);
+    doc.fillColor('#1e3a8a'); // Couleur bleue pour différencier des autres textes
+    doc.text(`Note assurance: ${invoice.notes}`, tableLeft + 15, tableTop + 55);
+    doc.fillColor('#000'); // Remettre la couleur par défaut
+    doc.font('Helvetica').fontSize(12);
+  }
   doc.text(formatCurrency(invoice.amount), tableRight - 110, tableTop + 35, { width: 100, align: 'right' });
   
   // TVA si applicable (généralement pas de TVA pour les actes médicaux)

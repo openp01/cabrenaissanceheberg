@@ -23,6 +23,7 @@ import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import InvoiceActions from "@/components/InvoiceActions";
+import InvoiceNotesDialog from "@/components/InvoiceNotesDialog";
 import { HomeButton } from "@/components/ui/home-button";
 
 export default function Invoices() {
@@ -292,6 +293,12 @@ export default function Invoices() {
                       >
                         Détails
                       </Button>
+
+                      <InvoiceNotesDialog 
+                        invoiceId={invoice.id}
+                        invoiceNumber={invoice.invoiceNumber}
+                        currentNotes={invoice.notes || ""}
+                      />
                       
                       {invoice.status === "En attente" && (
                         <AlertDialog>
