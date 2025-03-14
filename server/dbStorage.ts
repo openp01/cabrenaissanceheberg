@@ -644,10 +644,26 @@ export class PgStorage implements IStorage {
     const updates: string[] = [];
     let paramIndex = 1;
     
+    // Map de conversion des noms de champs JavaScript en noms de colonnes PostgreSQL
+    const columnMapping: Record<string, string> = {
+      patientId: "patient_id",
+      therapistId: "therapist_id",
+      date: "date",
+      time: "time",
+      duration: "duration",
+      type: "type",
+      notes: "notes",
+      status: "status",
+      isRecurring: "is_recurring",
+      recurringFrequency: "recurring_frequency",
+      recurringCount: "recurring_count",
+      parentAppointmentId: "parent_appointment_id"
+    };
+    
     // Parcourir les champs à mettre à jour
     for (const [key, value] of Object.entries(appointmentUpdate)) {
-      // Convertir camelCase en snake_case pour les noms de colonnes
-      const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      // Utiliser le mapping pour obtenir le nom de colonne correct
+      const columnName = columnMapping[key as keyof typeof columnMapping] || key;
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
       paramIndex++;

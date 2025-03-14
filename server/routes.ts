@@ -406,7 +406,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Si une facture existe, mettre à jour certaines informations si nécessaire
       if (invoice) {
-        const invoiceUpdates: Partial<InsertInvoice> = {};
+        // Type provenant du schema importé
+        const invoiceUpdates: Partial<typeof invoice> = {};
         let updateNeeded = false;
         
         // Mettre à jour le thérapeute sur la facture si changé
