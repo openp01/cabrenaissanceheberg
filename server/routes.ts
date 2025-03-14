@@ -351,6 +351,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  
+  // Route PATCH pour mettre à jour partiellement un rendez-vous (et sa facture associée si nécessaire)
+  app.patch("/api/appointments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de rendez-vous invalide" });
+      }
+      
+      // Récupérer le rendez-vous actuel pour les contrôles
+      const existingAppointment = await storage.getAppointment(id);
+      if (!existingAppointment) {
+        return res.status(404).json({ error: "Rendez-vous non trouvé" });
+      }
+      
+      // Valider les données
+      const validatedData = appointmentFormSchema.partial().parse(req.body);
+      
+      // Si date/heure/thérapeute changés, vérifier la disponibilité
+      if ((validatedData.date && validatedData.date !== existingAppointment.date) || 
+          (validatedData.time && validatedData.time !== existingAppointment.time) ||
+          (validatedData.therapistId && validatedData.therapistId !== existingAppointment.therapistId)) {
+            
+        // Vérifier la disponibilité du nouveau créneau
+        const checkTherapistId = validatedData.therapistId || existingAppointment.therapistId;
+        const checkDate = validatedData.date || existingAppointment.date;
+        const checkTime = validatedData.time || existingAppointment.time;
+        
+        const availabilityCheck = await storage.checkAvailability(
+          checkTherapistId, 
+          checkDate, 
+          checkTime,
+          id // Exclure le rendez-vous en cours de modification
+        );
+        
+        if (!availabilityCheck.available) {
+          return res.status(409).json({ 
+            error: "Conflit d'horaire", 
+            conflictInfo: availabilityCheck.conflictInfo 
+          });
+        }
+      }
+      
+      // Mettre à jour le rendez-vous
+      const updatedAppointment = await storage.updateAppointment(id, validatedData);
+      
+      if (!updatedAppointment) {
+        return res.status(500).json({ error: "Erreur lors de la mise à jour du rendez-vous" });
+      }
+      
+      // Récupérer la facture associée au rendez-vous
+      const invoice = await storage.getInvoiceForAppointment(id);
+      
+      // Si une facture existe, mettre à jour certaines informations si nécessaire
+      if (invoice) {
+        const invoiceUpdates: Partial<InsertInvoice> = {};
+        let updateNeeded = false;
+        
+        // Mettre à jour le thérapeute sur la facture si changé
+        if (validatedData.therapistId && validatedData.therapistId !== existingAppointment.therapistId) {
+          invoiceUpdates.therapistId = validatedData.therapistId;
+          updateNeeded = true;
+        }
+        
+        // Mettre à jour d'autres informations potentiellement importantes pour la facture
+        if (validatedData.type && validatedData.type !== existingAppointment.type) {
+          // Ajouter une note dans la description de la facture sur le changement de type
+          const therapistName = (await storage.getTherapist(updatedAppointment.therapistId))?.name || "Thérapeute";
+          const notes = invoice.notes ? 
+            `${invoice.notes}\nMise à jour - Type de rendez-vous modifié: ${validatedData.type}` : 
+            `Mise à jour - Type de rendez-vous modifié: ${validatedData.type}`;
+          
+          invoiceUpdates.notes = notes;
+          updateNeeded = true;
+        }
+        
+        // Si date ou heure modifiées, mettre à jour la facture
+        if ((validatedData.date && validatedData.date !== existingAppointment.date) ||
+            (validatedData.time && validatedData.time !== existingAppointment.time)) {
+          const appointmentDate = validatedData.date || existingAppointment.date;
+          const appointmentTime = validatedData.time || existingAppointment.time;
+          
+          // Ajouter une note sur le changement de date/heure
+          const notes = invoice.notes ? 
+            `${invoice.notes}\nMise à jour - Date/heure modifiées: ${appointmentDate} à ${appointmentTime}` : 
+            `Mise à jour - Date/heure modifiées: ${appointmentDate} à ${appointmentTime}`;
+          
+          invoiceUpdates.notes = notes;
+          updateNeeded = true;
+        }
+        
+        // Mettre à jour la facture si nécessaire
+        if (updateNeeded) {
+          const updatedInvoice = await storage.updateInvoice(invoice.id, invoiceUpdates);
+          if (!updatedInvoice) {
+            console.error(`Erreur lors de la mise à jour de la facture ${invoice.id} pour le rendez-vous ${id}`);
+          }
+        }
+      }
+      
+      res.json(updatedAppointment);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du rendez-vous:", error);
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la mise à jour du rendez-vous" });
+      }
+    }
+  });
 
   app.delete("/api/appointments/:id", async (req, res) => {
     try {
@@ -428,11 +539,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const date = req.query.date as string;
       const time = req.query.time as string;
       
+      // Récupérer l'ID de rendez-vous à exclure (pour les modifications)
+      let excludeAppointmentId: number | undefined = undefined;
+      if (req.query.excludeAppointmentId) {
+        excludeAppointmentId = parseInt(req.query.excludeAppointmentId as string);
+        if (isNaN(excludeAppointmentId)) {
+          excludeAppointmentId = undefined;
+        }
+      }
+      
       if (isNaN(therapistId) || !date || !time) {
         return res.status(400).json({ error: "Paramètres invalides" });
       }
       
-      const availabilityResult = await storage.checkAvailability(therapistId, date, time);
+      // Passer l'ID de rendez-vous à exclure si nécessaire
+      const availabilityResult = await storage.checkAvailability(
+        therapistId, 
+        date, 
+        time,
+        excludeAppointmentId
+      );
       
       if (!availabilityResult.available && availabilityResult.conflictInfo) {
         res.json({
