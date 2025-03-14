@@ -190,8 +190,8 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     
     try {
       const formattedDate = format(date, 'dd/MM/yyyy');
-      const therapistId = isMultipleTherapists 
-        ? selectedTherapists[currentTherapistIndex].id 
+      const therapistId = isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0
+        ? selectedTherapists[currentTherapistIndex]?.id 
         : formData.therapist!.id;
       
       // Appeler l'API pour vérifier la disponibilité
