@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
-import { Calendar, ClipboardList, CreditCard, LogOut, User, Menu } from "lucide-react";
+import { Calendar, ClipboardList, CreditCard, LogOut, User, Menu, Settings, Users } from "lucide-react";
 
 export function Navbar() {
   const { user, logoutMutation } = useAuth();
@@ -132,6 +132,20 @@ export function Navbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Mon profil
+                </DropdownMenuItem>
+                
+                {/* Option admin pour gérer les utilisateurs */}
+                {user.role === UserRole.ADMIN && (
+                  <DropdownMenuItem onClick={() => setLocation("/admin/users")}>
+                    <Users className="mr-2 h-4 w-4" />
+                    Gestion des utilisateurs
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500">
                   <LogOut className="mr-2 h-4 w-4" />
                   Se déconnecter
@@ -180,6 +194,20 @@ export function Navbar() {
                         Paiements
                       </DropdownMenuItem>
                     </>
+                  )}
+                  
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Mon profil
+                  </DropdownMenuItem>
+                  
+                  {/* Option admin pour gérer les utilisateurs */}
+                  {user.role === UserRole.ADMIN && (
+                    <DropdownMenuItem onClick={() => setLocation("/admin/users")}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Gestion des utilisateurs
+                    </DropdownMenuItem>
                   )}
                   
                   <DropdownMenuSeparator />

@@ -14,6 +14,8 @@ import Payments from "./pages/Payments";
 import NotFound from "./pages/not-found";
 import AuthPage from "./pages/auth-page";
 import LogoutPage from "./pages/logout-page";
+import ProfilePage from "./pages/profile";
+import UserAdminPage from "./pages/admin/users";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
 import { UserRole } from "@shared/schema";
@@ -76,6 +78,19 @@ function Router() {
       <ProtectedRoute 
         path="/signatures" 
         component={ElectronicSignatures} 
+        roles={[UserRole.ADMIN]} 
+      />
+      
+      {/* Route pour le profil utilisateur - Accessible à tous les utilisateurs authentifiés */}
+      <ProtectedRoute 
+        path="/profile" 
+        component={ProfilePage} 
+      />
+      
+      {/* Route pour la gestion des utilisateurs - Admin uniquement */}
+      <ProtectedRoute 
+        path="/admin/users" 
+        component={UserAdminPage} 
         roles={[UserRole.ADMIN]} 
       />
       

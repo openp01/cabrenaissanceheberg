@@ -3,11 +3,12 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
 import { authService } from "./authService";
-import { SessionUser } from "./authMiddleware";
+import { SessionUser, isAuthenticated, isAdmin } from "./authMiddleware";
 import { UserRole, UserRoleType, User } from "@shared/schema";
 import { createId } from "@paralleldrive/cuid2";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import bcrypt from "bcrypt";
 
 // Étendre les types Express
 declare global {
@@ -138,6 +139,30 @@ export function setupAuth(app: Express) {
       res.json({ message: "Déconnecté avec succès" });
     });
   });
+  
+  // Route pour récupérer la liste des utilisateurs (admin uniquement)
+  app.get("/api/auth/users", isAdmin, async (req, res) => {
+    try {
+      const users = await authService.getAllUsers();
+      
+      // Ne pas envoyer les mots de passe hashés
+      const safeUsers = users.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        therapistId: user.therapistId,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        isActive: user.isActive
+      }));
+      
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des utilisateurs:", error);
+      res.status(500).json({ error: "Erreur lors de la récupération des utilisateurs" });
+    }
+  });
 
   app.get("/api/auth/user", (req, res) => {
     if (!req.isAuthenticated()) {
@@ -152,6 +177,74 @@ export function setupAuth(app: Express) {
       role: user.role,
       therapistId: user.therapistId,
     });
+  });
+  
+  // Route pour changer le mot de passe d'un utilisateur connecté
+  app.post("/api/auth/change-password", isAuthenticated, async (req, res) => {
+    try {
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+      const userId = (req.user as SessionUser).id;
+      
+      // Vérifier que les données requises sont présentes
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({ error: "Tous les champs sont requis" });
+      }
+      
+      // Vérifier que les mots de passe correspondent
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ error: "Les nouveaux mots de passe ne correspondent pas" });
+      }
+      
+      // Récupérer l'utilisateur pour vérifier le mot de passe actuel
+      const user = await authService.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      
+      // Vérifier le mot de passe actuel
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Mot de passe actuel incorrect" });
+      }
+      
+      // Mettre à jour le mot de passe
+      await authService.updateUser(userId, { password: newPassword });
+      
+      res.json({ success: true, message: "Mot de passe modifié avec succès" });
+    } catch (error) {
+      console.error("Erreur lors du changement de mot de passe:", error);
+      res.status(500).json({ error: "Erreur lors du changement de mot de passe" });
+    }
+  });
+  
+  // Route pour désactiver un compte utilisateur (admin uniquement)
+  app.post("/api/auth/deactivate-user/:id", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Vérifier que l'utilisateur existe
+      const user = await authService.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      
+      // Empêcher la désactivation de son propre compte
+      if (userId === (req.user as SessionUser).id) {
+        return res.status(400).json({ error: "Vous ne pouvez pas désactiver votre propre compte" });
+      }
+      
+      // Désactiver l'utilisateur
+      const success = await authService.deactivateUser(userId);
+      
+      if (success) {
+        res.json({ success: true, message: "Compte utilisateur désactivé avec succès" });
+      } else {
+        res.status(500).json({ error: "Erreur lors de la désactivation du compte" });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la désactivation du compte:", error);
+      res.status(500).json({ error: "Erreur lors de la désactivation du compte" });
+    }
   });
 
   app.post("/api/auth/register", async (req, res, next) => {
