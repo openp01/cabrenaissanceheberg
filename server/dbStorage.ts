@@ -1004,8 +1004,36 @@ export class PgStorage implements IStorage {
     
     // Parcourir les champs à mettre à jour
     for (const [key, value] of Object.entries(invoiceUpdate)) {
-      // Convertir camelCase en snake_case pour les noms de colonnes
-      const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      // Utiliser une correspondance directe pour les noms de colonnes au lieu de la conversion en snake_case
+      let columnName = key.toLowerCase();
+      
+      // Correspondance directe pour les champs spécifiques
+      const columnMapping: Record<string, string> = {
+        'invoicenumber': 'invoicenumber',
+        'patientid': 'patientid',
+        'therapistid': 'therapistid',
+        'appointmentid': 'appointmentid',
+        'amount': 'amount',
+        'taxrate': 'taxrate',
+        'totalamount': 'totalamount',
+        'status': 'status',
+        'issuedate': 'issuedate',
+        'duedate': 'duedate',
+        'paymentmethod': 'paymentmethod',
+        'notes': 'notes'
+      };
+      
+      // Vérifier les cas particuliers pour les propriétés en camelCase
+      if (key === 'invoiceNumber') columnName = 'invoicenumber';
+      else if (key === 'patientId') columnName = 'patientid';
+      else if (key === 'therapistId') columnName = 'therapistid';
+      else if (key === 'appointmentId') columnName = 'appointmentid';
+      else if (key === 'taxRate') columnName = 'taxrate';
+      else if (key === 'totalAmount') columnName = 'totalamount';
+      else if (key === 'issueDate') columnName = 'issuedate';
+      else if (key === 'dueDate') columnName = 'duedate';
+      else if (key === 'paymentMethod') columnName = 'paymentmethod';
+      
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
       paramIndex++;
