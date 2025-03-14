@@ -81,9 +81,23 @@ export default function AppointmentList() {
     setLocation("/schedule");
   };
 
-  const handleCancelAppointment = (id: number) => {
-    if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous ?")) {
-      deleteMutation.mutate(id);
+  const handleCancelAppointment = (id: number, isRecurringChild: boolean = false) => {
+    if (isRecurringChild) {
+      if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous spécifique ?")) {
+        deleteMutation.mutate(id);
+      }
+    } else {
+      // Vérifier si c'est un rendez-vous parent avec des enfants
+      const appointment = appointments?.find(a => a.id === id);
+      if (appointment?.relatedAppointments && appointment.relatedAppointments.length > 0) {
+        if (confirm(`Attention : Ce rendez-vous a ${appointment.relatedAppointments.length} rendez-vous liés. Voulez-vous annuler uniquement ce rendez-vous, ou souhaitez-vous annuler toute la série ?`)) {
+          deleteMutation.mutate(id);
+        }
+      } else {
+        if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous ?")) {
+          deleteMutation.mutate(id);
+        }
+      }
     }
   };
 
@@ -497,7 +511,9 @@ export default function AppointmentList() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
-                                        <span className="material-icons text-blue-500 mr-1 text-sm">event</span>
+                                        <span className="material-icons text-blue-500 mr-1 text-sm">
+                                          {isRecurringParent ? "event_repeat" : "event"}
+                                        </span>
                                         <div className="text-sm text-gray-900">{appointment.date}</div>
                                       </div>
                                     </td>
@@ -585,7 +601,7 @@ export default function AppointmentList() {
                                                       <div className="text-xs text-gray-500">{related.date} - {related.time}</div>
                                                     </div>
                                                     <button
-                                                      onClick={() => handleCancelAppointment(related.id)}
+                                                      onClick={() => handleCancelAppointment(related.id, true)}
                                                       className="text-xs text-red-600 hover:text-red-900"
                                                     >
                                                       Annuler
