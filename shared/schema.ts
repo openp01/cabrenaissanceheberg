@@ -321,6 +321,7 @@ export const signatures = pgTable("admin_signature", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().default("Christian"),
   signatureData: text("signature_data").notNull(),
+  paidStampData: text("paid_stamp_data"),  // Tampon PAYÉ (optionnel)
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -328,6 +329,7 @@ export const signatures = pgTable("admin_signature", {
 export const insertSignatureSchema = createInsertSchema(signatures).pick({
   name: true,
   signatureData: true,
+  paidStampData: true,
 });
 
 export type InsertSignature = z.infer<typeof insertSignatureSchema>;
