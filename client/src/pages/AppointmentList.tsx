@@ -22,6 +22,7 @@ export default function AppointmentList() {
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("date"); // "date", "therapist", "type"
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [expandedAppointments, setExpandedAppointments] = useState<string[]>([]);
 
   // Fetch appointments
   const { data: appointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
@@ -529,16 +530,6 @@ export default function AppointmentList() {
                                       </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                      {isRecurringParent && (
-                                        <button
-                                          onClick={() => {
-                                            // Logique d'expansion à implémenter
-                                          }}
-                                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                                        >
-                                          <span className="material-icons text-sm">expand_more</span>
-                                        </button>
-                                      )}
                                       {selectMode ? (
                                         <button 
                                           onClick={() => toggleAppointmentSelection(appointment.id)}
@@ -547,13 +538,20 @@ export default function AppointmentList() {
                                           {selectedAppointments.includes(appointment.id) ? "Désélectionner" : "Sélectionner"}
                                         </button>
                                       ) : (
-                                        <button 
-                                          onClick={() => handleCancelAppointment(appointment.id)}
-                                          className="text-red-600 hover:text-red-900 ml-3"
-                                          disabled={deleteMutation.isPending}
-                                        >
-                                          Annuler
-                                        </button>
+                                        <div className="flex items-center justify-end">
+                                          {isRecurringParent && (
+                                            <span className="mr-3 px-2 py-1 bg-blue-50 text-blue-800 text-xs rounded-full">
+                                              {appointment.relatedAppointments?.length || 0} liés
+                                            </span>
+                                          )}
+                                          <button 
+                                            onClick={() => handleCancelAppointment(appointment.id)}
+                                            className="text-red-600 hover:text-red-900"
+                                            disabled={deleteMutation.isPending}
+                                          >
+                                            Annuler
+                                          </button>
+                                        </div>
                                       )}
                                     </td>
                                   </tr>
@@ -561,11 +559,25 @@ export default function AppointmentList() {
                                   {isRecurringParent && (
                                     <tr>
                                       <td colSpan={selectMode ? 8 : 7} className="p-0">
-                                        <Accordion type="single" collapsible className="border-0">
+                                        <Accordion 
+                                          type="single" 
+                                          collapsible 
+                                          className="border-0"
+                                          value={expandedAppointments.includes(`appointment-${appointment.id}`) ? `appointment-${appointment.id}` : ""}
+                                          onValueChange={(value) => {
+                                            if (value) {
+                                              setExpandedAppointments([...expandedAppointments, value]);
+                                            } else {
+                                              setExpandedAppointments(expandedAppointments.filter(id => id !== `appointment-${appointment.id}`));
+                                            }
+                                          }}
+                                        >
                                           <AccordionItem value={`appointment-${appointment.id}`} className="border-0">
+                                            <AccordionTrigger className="py-2 px-6 text-sm font-medium bg-gray-50 hover:bg-gray-100 hover:no-underline text-gray-800">
+                                              {expandedAppointments.includes(`appointment-${appointment.id}`) ? 'Masquer' : 'Afficher'} les rendez-vous liés ({appointment.relatedAppointments?.length || 0})
+                                            </AccordionTrigger>
                                             <AccordionContent className="px-6 py-2 bg-gray-50">
-                                              <div className="text-sm font-medium text-gray-800 mb-2">Rendez-vous liés:</div>
-                                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
                                                 {appointment.relatedAppointments?.map((related) => (
                                                   <div key={related.id} className="p-2 bg-white rounded border border-gray-200 flex justify-between items-center">
                                                     <div>
