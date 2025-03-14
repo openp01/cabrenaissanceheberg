@@ -1815,6 +1815,7 @@ export class PgStorage implements IStorage {
         name: row.name,
         signatureData: row.signature_data,
         paidStampData: row.paid_stamp_data || null,
+        permanentStampData: row.permanent_stamp_data || null,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       };

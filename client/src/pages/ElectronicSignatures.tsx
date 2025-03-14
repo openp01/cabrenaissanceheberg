@@ -26,9 +26,12 @@ export default function ElectronicSignatures() {
   const queryClient = useQueryClient();
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [paidStampData, setPaidStampData] = useState<string | null>(null);
+  const [permanentStampData, setPermanentStampData] = useState<string | null>(null);
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [isPaidStampDialogOpen, setIsPaidStampDialogOpen] = useState(false);
+  const [isPermanentStampDialogOpen, setIsPermanentStampDialogOpen] = useState(false);
   const stampFileInputRef = useRef<HTMLInputElement>(null);
+  const permanentStampFileInputRef = useRef<HTMLInputElement>(null);
   
   // Récupération de la signature administrative
   const { 
@@ -94,6 +97,12 @@ export default function ElectronicSignatures() {
     setIsPaidStampDialogOpen(true);
   };
   
+  // Ouvrir le dialogue du tampon permanent
+  const openPermanentStampDialog = () => {
+    setPermanentStampData(adminSignature?.permanentStampData || null);
+    setIsPermanentStampDialogOpen(true);
+  };
+  
   // Gérer l'importation d'un fichier pour le tampon PAYÉ
   const handleStampFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -114,6 +123,31 @@ export default function ElectronicSignatures() {
     reader.onload = (event) => {
       if (event.target?.result) {
         setPaidStampData(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Gérer l'importation d'un fichier pour le tampon permanent
+  const handlePermanentStampFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Vérifier que c'est une image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Format non supporté",
+        description: "Veuillez sélectionner un fichier image (PNG, JPG, GIF, SVG).",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Lire le fichier et le convertir en base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setPermanentStampData(event.target.result as string);
       }
     };
     reader.readAsDataURL(file);
@@ -143,7 +177,27 @@ export default function ElectronicSignatures() {
     // Mettre à jour la signature avec le tampon PAYÉ
     saveSignatureMutation.mutate({
       signatureData: adminSignature.signatureData,
-      paidStampData
+      paidStampData,
+      permanentStampData: adminSignature.permanentStampData
+    });
+  };
+  
+  // Sauvegarder le tampon permanent
+  const handleSavePermanentStamp = () => {
+    if (!adminSignature?.signatureData) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez d'abord créer une signature avant d'ajouter un tampon permanent.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Mettre à jour la signature avec le tampon permanent
+    saveSignatureMutation.mutate({
+      signatureData: adminSignature.signatureData,
+      paidStampData: adminSignature.paidStampData,
+      permanentStampData
     });
   };
   
@@ -188,9 +242,10 @@ export default function ElectronicSignatures() {
         
         <CardContent>
           <Tabs defaultValue="signature" className="max-w-lg mx-auto">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="signature">Signature</TabsTrigger>
               <TabsTrigger value="stamp">Tampon "PAYÉ"</TabsTrigger>
+              <TabsTrigger value="permanentStamp">Tampon Permanent</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signature" className="mt-4">
@@ -259,6 +314,42 @@ export default function ElectronicSignatures() {
                     disabled={!adminSignature}
                   >
                     {adminSignature?.paidStampData ? 'Modifier le tampon' : 'Ajouter un tampon'}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="permanentStamp" className="mt-4">
+              <Card className="overflow-hidden">
+                <CardHeader className="p-4">
+                  <CardTitle className="text-lg">Tampon permanent du cabinet</CardTitle>
+                  <CardDescription>Ce tampon apparaîtra sur toutes les factures du cabinet</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="p-4 pt-0">
+                  {adminSignature?.permanentStampData ? (
+                    <div className="border rounded-md p-2 bg-gray-50 h-[150px] flex items-center justify-center">
+                      <img 
+                        src={adminSignature.permanentStampData} 
+                        alt="Tampon permanent du cabinet"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="border border-dashed rounded-md p-2 bg-gray-50 h-[150px] flex flex-col items-center justify-center text-gray-400">
+                      <FileImage className="h-8 w-8 mb-2" />
+                      Aucun tampon permanent enregistré
+                    </div>
+                  )}
+                </CardContent>
+                
+                <CardFooter className="p-4 pt-0 flex justify-center">
+                  <Button
+                    variant="default"
+                    onClick={() => openPermanentStampDialog()}
+                    disabled={!adminSignature}
+                  >
+                    {adminSignature?.permanentStampData ? 'Modifier le tampon' : 'Ajouter un tampon'}
                   </Button>
                 </CardFooter>
               </Card>
@@ -352,6 +443,63 @@ export default function ElectronicSignatures() {
             <Button 
               onClick={handleSavePaidStamp}
               disabled={!paidStampData || saveSignatureMutation.isPending}
+            >
+              {saveSignatureMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              <Save className="mr-2 h-4 w-4" />
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue d'importation du tampon permanent */}
+      <Dialog open={isPermanentStampDialogOpen} onOpenChange={setIsPermanentStampDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {adminSignature?.permanentStampData ? "Modifier le tampon permanent" : "Ajouter un tampon permanent"}
+            </DialogTitle>
+            <DialogDescription>
+              Importez une image pour le tampon qui apparaîtra sur toutes les factures du cabinet
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="permanent-stamp-file">Importer une image</Label>
+              <Input
+                id="permanent-stamp-file"
+                type="file"
+                accept="image/*"
+                onChange={handlePermanentStampFileChange}
+                ref={permanentStampFileInputRef}
+                className="cursor-pointer"
+              />
+              <p className="text-sm text-muted-foreground">
+                Formats acceptés: PNG, JPG, GIF, SVG. Idéalement avec un fond transparent.
+              </p>
+            </div>
+            
+            {permanentStampData && (
+              <div className="mt-4 border rounded-md p-2 bg-gray-50 flex items-center justify-center">
+                <img 
+                  src={permanentStampData} 
+                  alt="Aperçu du tampon permanent" 
+                  className="max-h-[150px] max-w-full object-contain"
+                />
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="sm:justify-end">
+            <DialogClose asChild>
+              <Button variant="outline">Annuler</Button>
+            </DialogClose>
+            <Button 
+              onClick={handleSavePermanentStamp}
+              disabled={!permanentStampData || saveSignatureMutation.isPending}
             >
               {saveSignatureMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

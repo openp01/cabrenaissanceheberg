@@ -209,6 +209,24 @@ export async function generateInvoicePDF(
     }
   }
   
+  // Ajouter le tampon permanent du cabinet sur toutes les factures s'il est disponible
+  if (adminSignature && adminSignature.permanentStampData) {
+    try {
+      // Afficher le tampon permanent en bas à droite de la facture
+      const permanentStampWidth = 150; // taille du tampon
+      const permanentStampX = doc.page.width - permanentStampWidth - 50; // position x (50 pour la marge)
+      const permanentStampY = doc.page.height - 200; // position y (200 du bas pour laisser de l'espace pour le pied de page)
+      
+      doc.image(adminSignature.permanentStampData, permanentStampX, permanentStampY, { 
+        width: permanentStampWidth,
+        opacity: 0.8 // Légèrement transparent
+      });
+      
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du tampon permanent:", error);
+    }
+  }
+  
   // Ajouter le tampon "PAYÉ" si le statut de la facture est "paid" et qu'un tampon est disponible
   if (invoice.status === 'paid' && adminSignature && adminSignature.paidStampData) {
     try {
