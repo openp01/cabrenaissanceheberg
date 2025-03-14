@@ -722,8 +722,8 @@ export class PgStorage implements IStorage {
         let invoiceStatus = invoice.status;
         
         if (appointmentUpdate.status === 'Annulé' || appointmentUpdate.status === 'canceled') {
-          invoiceStatus = 'En suspens';
-          console.log(`Facture ${invoice.id} mise en suspens suite à l'annulation du rendez-vous`);
+          invoiceStatus = 'Annulé';
+          console.log(`Facture ${invoice.id} mise à Annulé suite à l'annulation du rendez-vous`);
         } else if (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') {
           invoiceStatus = 'En attente';
           console.log(`Facture ${invoice.id} mise en attente suite à la confirmation du rendez-vous`);
@@ -760,11 +760,11 @@ export class PgStorage implements IStorage {
       const isChildAppointment = appointment.parentAppointmentId !== null;
       
       // Vérifier s'il existe des factures liées à ce rendez-vous
-      const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
+      const appointmentInvoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
       // Si des factures existent, vérifier s'il y a des paiements associés
-      if (invoiceResult.rows.length > 0) {
-        for (const row of invoiceResult.rows) {
+      if (appointmentInvoiceResult.rows.length > 0) {
+        for (const row of appointmentInvoiceResult.rows) {
           const paymentResult = await pool.query(
             'SELECT id FROM therapist_payments WHERE invoiceId = $1',
             [row.id]
@@ -856,12 +856,13 @@ export class PgStorage implements IStorage {
           
           // Mettre à jour la facture
           await pool.query(
-            'UPDATE invoices SET amount = $1, totalAmount = $2, notes = $3 WHERE id = $4',
+            'UPDATE invoices SET amount = $1, totalAmount = $2, notes = $3, status = $5 WHERE id = $4',
             [
               newAmount, 
               newTotalAmount, 
               `${currentInvoice.notes || ""} (Mis à jour après annulation d'un rendez-vous le ${new Date().toLocaleDateString()})`,
-              currentInvoice.id
+              currentInvoice.id,
+              'Annulé' // Marquer la facture comme annulée
             ]
           );
           
@@ -991,6 +992,24 @@ export class PgStorage implements IStorage {
           id
         ]
       );
+      
+      // Mettre à jour la facture associée à ce rendez-vous principal
+      const mainInvoiceResult = await pool.query('SELECT * FROM invoices WHERE appointmentId = $1', [id]);
+      if (mainInvoiceResult.rows.length > 0) {
+        // Marquer toutes les factures associées comme annulées
+        for (const invoice of mainInvoiceResult.rows) {
+          await pool.query(
+            'UPDATE invoices SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4',
+            [
+              'Annulé',  // Statut "Annulé" pour la facture
+              'Facture annulée le ' + new Date().toLocaleDateString(),
+              '\n\nFacture annulée le ' + new Date().toLocaleDateString(),
+              invoice.id
+            ]
+          );
+          console.log(`Facture ${invoice.id} marquée comme Annulé suite à l'annulation du rendez-vous ${id}`);
+        }
+      }
       
       return { 
         success: result.rows.length > 0, 
