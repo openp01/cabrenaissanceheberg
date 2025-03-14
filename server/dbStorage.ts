@@ -1712,6 +1712,7 @@ export class PgStorage implements IStorage {
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL DEFAULT 'Christian',
             signature_data TEXT NOT NULL,
+            paid_stamp_data TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMP NOT NULL DEFAULT NOW()
           );
@@ -1729,6 +1730,7 @@ export class PgStorage implements IStorage {
         id: row.id,
         name: row.name,
         signatureData: row.signature_data,
+        paidStampData: row.paid_stamp_data || null,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       }));
@@ -1749,6 +1751,7 @@ export class PgStorage implements IStorage {
         id: row.id,
         name: row.name,
         signatureData: row.signature_data,
+        paidStampData: row.paid_stamp_data || null,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       };
@@ -1772,8 +1775,8 @@ export class PgStorage implements IStorage {
       
       const now = new Date();
       const result = await pool.query(
-        'INSERT INTO admin_signature (name, signature_data, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING *',
-        [signature.name || "Christian", signature.signatureData, now, now]
+        'INSERT INTO admin_signature (name, signature_data, paid_stamp_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [signature.name || "Christian", signature.signatureData, signature.paidStampData || null, now, now]
       );
       
       const row = result.rows[0];
@@ -1781,6 +1784,7 @@ export class PgStorage implements IStorage {
         id: row.id,
         name: row.name,
         signatureData: row.signature_data,
+        paidStampData: row.paid_stamp_data || null,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       };
@@ -1794,8 +1798,8 @@ export class PgStorage implements IStorage {
     try {
       const now = new Date();
       const result = await pool.query(
-        'UPDATE admin_signature SET name = $1, signature_data = $2, updated_at = $3 WHERE id = $4 RETURNING *',
-        [signature.name || "Christian", signature.signatureData, now, id]
+        'UPDATE admin_signature SET name = $1, signature_data = $2, paid_stamp_data = $3, updated_at = $4 WHERE id = $5 RETURNING *',
+        [signature.name || "Christian", signature.signatureData, signature.paidStampData || null, now, id]
       );
       
       if (result.rows.length === 0) {
@@ -1807,6 +1811,7 @@ export class PgStorage implements IStorage {
         id: row.id,
         name: row.name,
         signatureData: row.signature_data,
+        paidStampData: row.paid_stamp_data || null,
         createdAt: row.created_at,
         updatedAt: row.updated_at
       };
