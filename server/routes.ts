@@ -367,9 +367,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log(`Tentative de suppression du rendez-vous ${id}`);
-      const success = await storage.deleteAppointment(id);
-      if (!success) {
-        return res.status(404).json({ error: "Rendez-vous non trouvé" });
+      const result = await storage.deleteAppointment(id);
+      
+      if (!result.success) {
+        console.log(`Impossible de supprimer le rendez-vous ${id}: ${result.message}`);
+        return res.status(400).json({ error: result.message || "Impossible de supprimer ce rendez-vous" });
       }
       
       console.log(`Rendez-vous ${id} supprimé avec succès`);
@@ -397,11 +399,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Traiter chaque rendez-vous individuellement pour une meilleure gestion des erreurs
       for (const id of ids) {
         try {
-          const success = await storage.deleteAppointment(id);
-          if (success) {
+          const result = await storage.deleteAppointment(id);
+          if (result.success) {
             results.push({ id, success: true });
           } else {
-            failures.push({ id, reason: "Rendez-vous non trouvé" });
+            failures.push({ id, reason: result.message || "Échec de la suppression" });
           }
         } catch (error) {
           console.error(`Erreur lors de la suppression du rendez-vous ${id}:`, error);
