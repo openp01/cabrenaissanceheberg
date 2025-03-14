@@ -74,6 +74,7 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
             return Promise.resolve(null); // Ignorer ce thérapeute
           }
           
+          // Nous devons gérer chaque thérapeute indépendamment pour les rendez-vous récurrents
           const appointmentData = {
             patientId: patient.id,
             therapistId: therapist.id,
@@ -81,8 +82,8 @@ export default function AppointmentConfirmation({ formData }: AppointmentConfirm
             time: appointmentTime,
             status: "confirmed",
             isRecurring: isRecurring || false,
-            recurringFrequency: recurringFrequency,
-            recurringCount: recurringCount,
+            recurringFrequency: isRecurring ? recurringFrequency : undefined,
+            recurringCount: isRecurring ? recurringCount : undefined,
           };
           
           return apiRequest("/api/appointments", "POST", appointmentData);

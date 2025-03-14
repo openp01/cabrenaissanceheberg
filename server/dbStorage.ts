@@ -563,14 +563,18 @@ export class PgStorage implements IStorage {
     
     // Vérifier la disponibilité pour toutes les dates calculées (sauf la première qui a déjà été vérifiée)
     for (let i = 1; i < recurringDates.length; i++) {
-      const isAvailable = await this.checkAvailability(
+      const { available, conflictInfo } = await this.checkAvailability(
         baseAppointment.therapistId,
         recurringDates[i].date,
         recurringDates[i].time
       );
       
-      if (!isAvailable) {
-        throw new Error(`Le créneau du ${recurringDates[i].date} à ${recurringDates[i].time} est déjà réservé`);
+      if (!available) {
+        // Fournir des informations plus détaillées sur le conflit
+        const errorMessage = conflictInfo 
+          ? `Le créneau du ${recurringDates[i].date} à ${recurringDates[i].time} est déjà réservé pour le patient ${conflictInfo.patientName}` 
+          : `Le créneau du ${recurringDates[i].date} à ${recurringDates[i].time} est déjà réservé`;
+        throw new Error(errorMessage);
       }
     }
     
