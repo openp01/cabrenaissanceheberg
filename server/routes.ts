@@ -139,11 +139,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Vérifier la disponibilité pour chaque créneau
       for (const slot of slots) {
-        const isAvailable = await storage.checkAvailability(therapistId, slot.date, slot.time);
-        if (!isAvailable) {
-          return res.status(409).json({ 
-            error: `Le créneau du ${slot.date} à ${slot.time} est déjà réservé` 
-          });
+        const availabilityResult = await storage.checkAvailability(therapistId, slot.date, slot.time);
+        if (!availabilityResult.available) {
+          let errorMessage = `Le créneau du ${slot.date} à ${slot.time} est déjà réservé`;
+          
+          if (availabilityResult.conflictInfo) {
+            errorMessage = `Le créneau du ${slot.date} à ${slot.time} est déjà réservé pour ${availabilityResult.conflictInfo.patientName}`;
+          }
+          
+          return res.status(409).json({ error: errorMessage });
         }
       }
       
@@ -419,9 +423,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Paramètres invalides" });
       }
       
-      const isAvailable = await storage.checkAvailability(therapistId, date, time);
-      res.json({ available: isAvailable });
+      const availabilityResult = await storage.checkAvailability(therapistId, date, time);
+      
+      if (!availabilityResult.available && availabilityResult.conflictInfo) {
+        res.json({
+          available: false,
+          conflictInfo: {
+            message: `Ce créneau est déjà réservé pour ${availabilityResult.conflictInfo.patientName}`,
+            patientId: availabilityResult.conflictInfo.patientId,
+            patientName: availabilityResult.conflictInfo.patientName
+          }
+        });
+      } else {
+        res.json({ available: availabilityResult.available });
+      }
     } catch (error) {
+      console.error("Erreur lors de la vérification de disponibilité:", error);
       res.status(500).json({ error: "Erreur lors de la vérification de disponibilité" });
     }
   });

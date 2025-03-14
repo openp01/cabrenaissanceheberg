@@ -860,13 +860,29 @@ export class PgStorage implements IStorage {
     }
   }
 
-  async checkAvailability(therapistId: number, date: string, time: string): Promise<boolean> {
-    const result = await pool.query(
-      'SELECT COUNT(*) FROM appointments WHERE therapistId = $1 AND date = $2 AND time = $3',
+  async checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
+    // Vérifier d'abord s'il y a un conflit et obtenir les informations du patient si nécessaire
+    const conflictResult = await pool.query(
+      `SELECT a.id, a.patientId, CONCAT(p.firstName, ' ', p.lastName) as patientName
+       FROM appointments a
+       JOIN patients p ON a.patientId = p.id
+       WHERE a.therapistId = $1 AND a.date = $2 AND a.time = $3`,
       [therapistId, date, time]
     );
-    const count = parseInt(result.rows[0].count);
-    return count === 0; // Disponible si aucun rendez-vous n'existe à cette date et heure
+    
+    if (conflictResult.rows.length === 0) {
+      return { available: true };
+    }
+    
+    // Il y a un conflit, retourner les informations sur le patient
+    const conflict = conflictResult.rows[0];
+    return { 
+      available: false,
+      conflictInfo: {
+        patientName: conflict.patientname, // en minuscules car PostgreSQL normalise les noms de colonnes
+        patientId: conflict.patientid
+      }
+    };
   }
 
   // Méthodes pour les factures

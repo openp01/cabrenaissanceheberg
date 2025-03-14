@@ -34,7 +34,7 @@ export interface IStorage {
   createRecurringAppointments(baseAppointment: InsertAppointment, frequency: string, count: number): Promise<Appointment[]>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number): Promise<{ success: boolean; message?: string }>;
-  checkAvailability(therapistId: number, date: string, time: string): Promise<boolean>;
+  checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }>;
   
   // Invoice methods
   getInvoices(): Promise<InvoiceWithDetails[]>;
@@ -535,7 +535,7 @@ export class MemStorage implements IStorage {
     return { success: deleted };
   }
 
-  async checkAvailability(therapistId: number, date: string, time: string): Promise<boolean> {
+  async checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
     const appointments = Array.from(this.appointmentsData.values());
     
     // Check if there's already an appointment at the same time
@@ -545,7 +545,24 @@ export class MemStorage implements IStorage {
              app.time === time
     );
     
-    return !conflict;
+    if (!conflict) {
+      return { available: true };
+    }
+    
+    // Si on a un conflit, récupérer les informations du patient
+    const patient = await this.getPatient(conflict.patientId);
+    
+    if (patient) {
+      return {
+        available: false,
+        conflictInfo: {
+          patientName: `${patient.firstName} ${patient.lastName}`,
+          patientId: patient.id
+        }
+      };
+    }
+    
+    return { available: false };
   }
   
   // Invoice methods
