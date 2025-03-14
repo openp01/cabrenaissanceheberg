@@ -1775,8 +1775,8 @@ export class PgStorage implements IStorage {
       
       const now = new Date();
       const result = await pool.query(
-        'INSERT INTO admin_signature (name, signature_data, paid_stamp_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [signature.name || "Christian", signature.signatureData, signature.paidStampData || null, now, now]
+        'INSERT INTO admin_signature (name, signature_data, paid_stamp_data, permanent_stamp_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [signature.name || "Christian", signature.signatureData, signature.paidStampData || null, signature.permanentStampData || null, now, now]
       );
       
       const row = result.rows[0];
