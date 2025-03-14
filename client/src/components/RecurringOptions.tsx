@@ -25,19 +25,13 @@ export default function RecurringOptions({
   
   // Adapter le nombre de séances selon la fréquence
   useEffect(() => {
-    if (recurringFrequency === "Annuel" && recurringCount > 5) {
-      // Si la fréquence est annuelle et le nombre de séances est supérieur à 5, 
-      // on ajuste automatiquement à 5 (car 5 ans est déjà un engagement long)
-      onCountChange(5);
-    }
+    // Plus besoin de vérifier la fréquence annuelle car elle a été supprimée
+    // Mais on garde l'effet au cas où d'autres ajustements sont nécessaires plus tard
   }, [recurringFrequency, recurringCount, onCountChange]);
   
   // Fonction pour générer le label des séances selon la fréquence
   const getSessionLabel = (count: number): string => {
-    if (recurringFrequency === "Annuel") {
-      if (count === 1) return "1 séance (cette année)";
-      return `${count} séances (${count} ans)`;
-    } else if (recurringFrequency === "Mensuel") {
+    if (recurringFrequency === "Mensuel") {
       if (count === 1) return "1 séance (ce mois)";
       return `${count} séances (${count} mois)`;
     } else {
@@ -80,7 +74,6 @@ export default function RecurringOptions({
                   <SelectItem value="Hebdomadaire">Hebdomadaire</SelectItem>
                   <SelectItem value="Bimensuel">Bimensuel</SelectItem>
                   <SelectItem value="Mensuel">Mensuel</SelectItem>
-                  <SelectItem value="Annuel">Annuel</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -96,16 +89,7 @@ export default function RecurringOptions({
                   <SelectValue placeholder="Sélectionner le nombre de séances" />
                 </SelectTrigger>
                 <SelectContent>
-                  {recurringFrequency === "Annuel" ? (
-                    // Options pour la fréquence annuelle (limité à 5 ans)
-                    <>
-                      <SelectItem value="1">{getSessionLabel(1)}</SelectItem>
-                      <SelectItem value="2">{getSessionLabel(2)}</SelectItem>
-                      <SelectItem value="3">{getSessionLabel(3)}</SelectItem>
-                      <SelectItem value="4">{getSessionLabel(4)}</SelectItem>
-                      <SelectItem value="5">{getSessionLabel(5)}</SelectItem>
-                    </>
-                  ) : recurringFrequency === "Mensuel" ? (
+                  {recurringFrequency === "Mensuel" ? (
                     // Options pour la fréquence mensuelle (jusqu'à 24 mois)
                     <>
                       <SelectItem value="1">{getSessionLabel(1)}</SelectItem>

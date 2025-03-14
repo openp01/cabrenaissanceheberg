@@ -352,11 +352,6 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
           nextDate = new Date(baseDate);
           nextDate.setMonth(baseDate.getMonth() + i);
           break;
-        case 'Annuel':
-          // Une fois par an à la même date de l'année
-          nextDate = new Date(baseDate);
-          nextDate.setFullYear(baseDate.getFullYear() + i);
-          break;
         default:
           nextDate = addDays(new Date(baseDate), i * 7);
       }
