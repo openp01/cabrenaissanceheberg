@@ -45,10 +45,9 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   // Week days in French
   const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
   
-  // Requête pour vérifier la disponibilité des créneaux
-  const { data: appointments } = useQuery<any[]>({
-    queryKey: ['/api/appointments'],
-  });
+  // État pour stocker les disponibilités calculées des créneaux
+  const [slotsAvailability, setSlotsAvailability] = useState<{[key: string]: boolean}>({});
+  const [checkingAvailability, setCheckingAvailability] = useState<boolean>(false);
   
   // Initialiser les horaires des thérapeutes sélectionnés
   useEffect(() => {
@@ -178,45 +177,50 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     }
   };
   
-  // Vérifie si un créneau est disponible
-  const isTimeSlotAvailable = (date: Date, time: string) => {
-    // Si pas de rendez-vous dans la base
-    if (!appointments) return true;
-    
-    const formattedDate = format(date, 'dd/MM/yyyy');
-    
-    // En mode multi-thérapeutes
-    if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0) {
-      // On vérifie pour le thérapeute actuellement sélectionné
-      const currentTherapist = selectedTherapists[currentTherapistIndex];
-      
-      if (!currentTherapist) return true;
-      
-      return !appointments.some((app: any) => 
-        app.therapistId === currentTherapist.id && 
-        app.date === formattedDate && 
-        app.time === time
-      );
-    } 
-    // En mode thérapeute unique
-    else if (formData.therapist) {
-      return !appointments.some((app: any) => 
-        app.therapistId === formData.therapist?.id && 
-        app.date === formattedDate && 
-        app.time === time
-      );
+  // État pour stocker les informations de conflit
+  const [conflictInfo, setConflictInfo] = useState<{ patientId: number; patientName: string; message: string } | undefined>(undefined);
+  
+  // Vérifie si un créneau est disponible en utilisant l'API
+  const isTimeSlotAvailable = async (date: Date, time: string): Promise<boolean> => {
+    // Si aucun thérapeute n'est sélectionné, on considère que c'est disponible
+    if ((isMultipleTherapists && (!selectedTherapists || selectedTherapists.length === 0)) ||
+        (!isMultipleTherapists && !formData.therapist)) {
+      return true;
     }
     
-    // Si aucun thérapeute n'est sélectionné
-    return true;
+    try {
+      const formattedDate = format(date, 'dd/MM/yyyy');
+      const therapistId = isMultipleTherapists 
+        ? selectedTherapists[currentTherapistIndex].id 
+        : formData.therapist!.id;
+      
+      // Appeler l'API pour vérifier la disponibilité
+      const response = await apiRequest(`/api/availability?therapistId=${therapistId}&date=${formattedDate}&time=${time}`);
+      
+      // Si on a des infos de conflit, les stocker
+      if (!response.available && response.conflictInfo) {
+        setConflictInfo(response.conflictInfo);
+      } else {
+        setConflictInfo(undefined);
+      }
+      
+      return response.available;
+    } catch (error) {
+      console.error("Erreur lors de la vérification de disponibilité:", error);
+      setConflictInfo(undefined);
+      return false;
+    }
   };
   
-  const handleTimeSelect = (time: string) => {
+  const handleTimeSelect = async (time: string) => {
     if (!selectedDate) return;
     
-    // Vérifier la disponibilité
-    if (!isTimeSlotAvailable(selectedDate, time)) {
-      // Déterminer le nom du thérapeute concerné par le message
+    // Vérifier la disponibilité de manière asynchrone
+    const isAvailable = await isTimeSlotAvailable(selectedDate, time);
+    
+    // Si le créneau n'est pas disponible
+    if (!isAvailable) {
+      // Déterminer le nom du thérapeute concerné
       let therapistName = "";
       
       if (isMultipleTherapists && selectedTherapists && selectedTherapists.length > 0) {
@@ -225,14 +229,20 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
         therapistName = formData.therapist.name;
       }
       
-      toast({
-        title: "Créneau non disponible",
-        description: `Ce créneau horaire est déjà réservé pour ${therapistName}.`,
-        variant: "destructive"
-      });
+      // Si on n'a pas d'infos de conflit précises, afficher un message générique
+      if (!conflictInfo) {
+        toast({
+          title: "Créneau non disponible",
+          description: `Ce créneau horaire est déjà réservé pour ${therapistName}.`,
+          variant: "destructive"
+        });
+      }
+      
       return;
     }
     
+    // Comme le créneau est disponible, effacer les infos de conflit
+    setConflictInfo(undefined);
     setSelectedTime(time);
     
     // Si le mode créneaux multiples est activé, ajouter ce créneau à la liste
@@ -497,25 +507,65 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
           <h4 className="text-md font-medium text-gray-900 mb-4">
             Horaires disponibles pour {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
           </h4>
+          
+          {/* Afficher les informations de conflit s'il y en a */}
+          {conflictInfo && (
+            <div className="mb-4">
+              <ConflictDisplay conflictInfo={conflictInfo} onClose={() => setConflictInfo(undefined)} showViewPatientLink={true} />
+            </div>
+          )}
+          
+          {/* Chargement des disponibilités */}
+          {checkingAvailability && (
+            <div className="flex justify-center items-center my-6 py-4">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2"></div>
+              <span className="text-gray-600">Vérification des disponibilités...</span>
+            </div>
+          )}
+          
+          {/* Vérifier les disponibilités pour la date sélectionnée */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6">
             {timeSlots.map((time, index) => {
-              const isAvailable = selectedDate ? isTimeSlotAvailable(selectedDate, time) : true;
+              // Vérifier si nous avons déjà calculé la disponibilité pour ce créneau
+              const slotKey = `${format(selectedDate, 'yyyy-MM-dd')}_${time}`;
+              const isAvailable = slotsAvailability[slotKey];
+              const isPending = isAvailable === undefined;
+              
+              // Si nous n'avons pas encore calculé la disponibilité, démarrer un calcul asynchrone
+              if (isPending && !checkingAvailability) {
+                setCheckingAvailability(true);
+                isTimeSlotAvailable(selectedDate, time).then(available => {
+                  setSlotsAvailability(prev => ({
+                    ...prev,
+                    [slotKey]: available
+                  }));
+                  setCheckingAvailability(false);
+                });
+              }
+              
               return (
                 <button 
                   key={index}
                   className={`py-3 px-4 rounded-md text-center text-sm relative transition-all
                     ${selectedTime === time 
                       ? 'bg-primary text-white border-primary border-2 shadow-md transform scale-105' 
-                      : isAvailable 
+                      : isAvailable === true
                         ? 'bg-green-50 border-2 border-green-300 text-green-800 hover:bg-green-100 hover:border-green-500 hover:shadow-sm hover:transform hover:scale-102' 
-                        : 'bg-red-50 border border-red-200 text-red-600 opacity-70 cursor-not-allowed'
+                        : isAvailable === false
+                          ? 'bg-red-50 border border-red-200 text-red-600 opacity-70 cursor-not-allowed'
+                          : 'bg-gray-50 border border-gray-300 text-gray-500'
                     }
                   `}
                   onClick={() => isAvailable && handleTimeSelect(time)}
-                  disabled={!isAvailable}
+                  disabled={!isAvailable || isPending}
                 >
                   <div className="flex items-center justify-center">
-                    {isAvailable ? (
+                    {isPending ? (
+                      <>
+                        <span className="w-3 h-3 bg-gray-300 rounded-full mr-2 animate-pulse"></span>
+                        <span>{time}</span>
+                      </>
+                    ) : isAvailable ? (
                       <>
                         <span className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
                         <span className="font-medium">{time}</span>
@@ -528,7 +578,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
                       </>
                     )}
                   </div>
-                  {!isAvailable && (
+                  {isAvailable === false && (
                     <span className="absolute -top-1 -right-1 text-xs bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
                       ✕
                     </span>
