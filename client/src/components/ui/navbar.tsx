@@ -59,23 +59,25 @@ export function Navbar() {
 
       {/* Navigation principale - affichée si l'utilisateur est connecté */}
       {user && (
-        <div className="hidden md:flex items-center space-x-4">
+        <div className="flex items-center space-x-4 ml-4">
           <Link href="/appointments">
             <Button
-              variant={isActive("/appointments") ? "default" : "ghost"}
-              className="flex items-center"
+              variant={isActive("/appointments") ? "default" : "secondary"}
+              className="flex items-center font-bold"
+              size="lg"
             >
-              <Calendar className="mr-2 h-4 w-4" />
+              <Calendar className="mr-2 h-5 w-5" />
               Rendez-vous
             </Button>
           </Link>
           
           <Link href="/schedule">
             <Button
-              variant={isActive("/schedule") ? "default" : "ghost"}
-              className="flex items-center"
+              variant={isActive("/schedule") ? "default" : "secondary"}
+              className="flex items-center font-bold"
+              size="lg"
             >
-              <ClipboardList className="mr-2 h-4 w-4" />
+              <ClipboardList className="mr-2 h-5 w-5" />
               Planning
             </Button>
           </Link>
@@ -85,20 +87,22 @@ export function Navbar() {
             <>
               <Link href="/invoices">
                 <Button
-                  variant={isActive("/invoices") ? "default" : "ghost"}
-                  className="flex items-center"
+                  variant={isActive("/invoices") ? "default" : "secondary"}
+                  className="flex items-center font-bold"
+                  size="lg"
                 >
-                  <CreditCard className="mr-2 h-4 w-4" />
+                  <CreditCard className="mr-2 h-5 w-5" />
                   Factures
                 </Button>
               </Link>
 
               <Link href="/payments">
                 <Button
-                  variant={isActive("/payments") ? "default" : "ghost"}
-                  className="flex items-center"
+                  variant={isActive("/payments") ? "default" : "secondary"}
+                  className="flex items-center font-bold"
+                  size="lg"
                 >
-                  <CreditCard className="mr-2 h-4 w-4" />
+                  <CreditCard className="mr-2 h-5 w-5" />
                   Paiements
                 </Button>
               </Link>
@@ -108,11 +112,12 @@ export function Navbar() {
           {/* Lien vers le profil utilisateur */}
           <Link href="/profile">
             <Button
-              variant={isActive("/profile") ? "default" : "ghost"}
-              className="flex items-center"
+              variant={isActive("/profile") ? "default" : "primary"}
+              className="flex items-center font-bold"
+              size="lg"
             >
-              <Settings className="mr-2 h-4 w-4" />
-              Mon profil
+              <Settings className="mr-2 h-5 w-5" />
+              Profil
             </Button>
           </Link>
           
@@ -120,11 +125,12 @@ export function Navbar() {
           {user.role === UserRole.ADMIN && (
             <Link href="/admin/users">
               <Button
-                variant={isActive("/admin/users") ? "default" : "ghost"}
-                className="flex items-center"
+                variant={isActive("/admin/users") ? "default" : "primary"}
+                className="flex items-center font-bold"
+                size="lg"
               >
-                <Users className="mr-2 h-4 w-4" />
-                Gestion utilisateurs
+                <Users className="mr-2 h-5 w-5" />
+                Utilisateurs
               </Button>
             </Link>
           )}
