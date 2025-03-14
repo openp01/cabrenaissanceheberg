@@ -209,6 +209,31 @@ export async function generateInvoicePDF(
     }
   }
   
+  // Ajouter le tampon "PAYÉ" si le statut de la facture est "paid" et qu'un tampon est disponible
+  if (invoice.status === 'paid' && adminSignature && adminSignature.paidStampData) {
+    try {
+      // Afficher le tampon en diagonale sur la facture avec une rotation de 30 degrés
+      doc.save(); // Sauvegarder l'état actuel
+      
+      // Positionner au centre de la page et appliquer une rotation
+      const centerX = doc.page.width / 2;
+      const centerY = doc.page.height / 2;
+      
+      // Translater au centre, pivoter, puis translater en arrière
+      doc.translate(centerX, centerY)
+         .rotate(30, { origin: [0, 0] })
+         .opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
+      
+      // Dessiner le tampon avec une taille appropriée
+      doc.image(adminSignature.paidStampData, -100, -100, { width: 200 });
+      
+      // Restaurer l'état original
+      doc.restore();
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du tampon PAYÉ:", error);
+    }
+  }
+  
   // Pied de page en bas de la page
   const footerTop = doc.page.height - 100;
   doc.font('Helvetica').fontSize(10);
