@@ -34,7 +34,7 @@ export interface IStorage {
   createRecurringAppointments(baseAppointment: InsertAppointment, frequency: string, count: number): Promise<Appointment[]>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number): Promise<{ success: boolean; message?: string }>;
-  checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }>;
+  checkAvailability(therapistId: number, date: string, time: string, excludeAppointmentId?: number): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }>;
   
   // Invoice methods
   getInvoices(): Promise<InvoiceWithDetails[]>;
@@ -535,14 +535,15 @@ export class MemStorage implements IStorage {
     return { success: deleted };
   }
 
-  async checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
+  async checkAvailability(therapistId: number, date: string, time: string, excludeAppointmentId?: number): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
     const appointments = Array.from(this.appointmentsData.values());
     
-    // Check if there's already an appointment at the same time
+    // Check if there's already an appointment at the same time, excluding the appointment being updated if any
     const conflict = appointments.find(
       app => app.therapistId === therapistId && 
              app.date === date && 
-             app.time === time
+             app.time === time &&
+             (excludeAppointmentId === undefined || app.id !== excludeAppointmentId)
     );
     
     if (!conflict) {

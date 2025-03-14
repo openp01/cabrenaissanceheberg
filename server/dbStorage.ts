@@ -864,15 +864,23 @@ export class PgStorage implements IStorage {
     }
   }
 
-  async checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
+  async checkAvailability(therapistId: number, date: string, time: string, excludeAppointmentId?: number): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
     // Vérifier d'abord s'il y a un conflit et obtenir les informations du patient si nécessaire
-    const conflictResult = await pool.query(
-      `SELECT a.id, a.patientId, CONCAT(p.firstName, ' ', p.lastName) as patientName
-       FROM appointments a
-       JOIN patients p ON a.patientId = p.id
-       WHERE a.therapistId = $1 AND a.date = $2 AND a.time = $3`,
-      [therapistId, date, time]
-    );
+    let query = `
+      SELECT a.id, a.patientId, CONCAT(p.firstName, ' ', p.lastName) as patientName
+      FROM appointments a
+      JOIN patients p ON a.patientId = p.id
+      WHERE a.therapistId = $1 AND a.date = $2 AND a.time = $3`;
+    
+    const params = [therapistId, date, time];
+    
+    // Si un ID de rendez-vous à exclure est fourni, l'ajouter à la condition
+    if (excludeAppointmentId !== undefined) {
+      query += ` AND a.id != $4`;
+      params.push(excludeAppointmentId);
+    }
+    
+    const conflictResult = await pool.query(query, params);
     
     if (conflictResult.rows.length === 0) {
       return { available: true };
