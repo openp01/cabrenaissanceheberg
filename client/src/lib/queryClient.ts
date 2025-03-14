@@ -24,6 +24,14 @@ export async function apiRequest<T = any>(
   console.log(`Response from ${url}:`, res.status, res.statusText);
   
   await throwIfResNotOk(res);
+  
+  // Si le statut est 204 (No Content), on retourne simplement un objet vide
+  if (res.status === 204) {
+    console.log(`No content response from ${url}`);
+    return {} as T;
+  }
+  
+  // Sinon, on parse le JSON comme d'habitude
   const responseData = await res.json();
   console.log(`Data from ${url}:`, responseData);
   return responseData;
@@ -49,6 +57,13 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
+    
+    // Si le statut est 204 (No Content), on retourne simplement un objet vide
+    if (res.status === 204) {
+      console.log(`No content response from query ${queryKey[0]}`);
+      return {} as T;
+    }
+    
     const data = await res.json();
     console.log(`Data from query ${queryKey[0]}:`, data);
     return data;
