@@ -443,8 +443,8 @@ export class PgStorage implements IStorage {
   async createAppointment(appointment: InsertAppointment, skipInvoiceGeneration: boolean = false): Promise<Appointment> {
     const result = await pool.query(
       `INSERT INTO appointments (
-        patientId, therapistId, date, time, duration, type, notes, status,
-        isRecurring, recurringFrequency, recurringCount, parentAppointmentId
+        patient_id, therapist_id, date, time, duration, type, notes, status,
+        is_recurring, recurring_frequency, recurring_count, parent_appointment_id
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         appointment.patientId,
@@ -768,7 +768,7 @@ export class PgStorage implements IStorage {
       let childAppointments: Appointment[] = [];
       if (isParentAppointment) {
         const result = await pool.query(
-          'SELECT * FROM appointments WHERE parentAppointmentId = $1',
+          'SELECT * FROM appointments WHERE parent_appointment_id = $1',
           [id]
         );
         
