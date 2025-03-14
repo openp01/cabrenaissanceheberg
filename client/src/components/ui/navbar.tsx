@@ -104,6 +104,30 @@ export function Navbar() {
               </Link>
             </>
           )}
+          
+          {/* Lien vers le profil utilisateur */}
+          <Link href="/profile">
+            <Button
+              variant={isActive("/profile") ? "default" : "ghost"}
+              className="flex items-center"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Mon profil
+            </Button>
+          </Link>
+          
+          {/* Lien vers la gestion des utilisateurs (admin uniquement) */}
+          {user.role === UserRole.ADMIN && (
+            <Link href="/admin/users">
+              <Button
+                variant={isActive("/admin/users") ? "default" : "ghost"}
+                className="flex items-center"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Gestion utilisateurs
+              </Button>
+            </Link>
+          )}
         </div>
       )}
 
