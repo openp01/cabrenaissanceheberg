@@ -443,8 +443,8 @@ export class PgStorage implements IStorage {
   async createAppointment(appointment: InsertAppointment, skipInvoiceGeneration: boolean = false): Promise<Appointment> {
     const result = await pool.query(
       `INSERT INTO appointments (
-        patient_id, therapist_id, date, time, duration, type, notes, status,
-        is_recurring, recurring_frequency, recurring_count, parent_appointment_id
+        patientId, therapistId, date, time, duration, type, notes, status,
+        isRecurring, recurringFrequency, recurringCount, parentAppointmentId
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         appointment.patientId,
@@ -644,26 +644,10 @@ export class PgStorage implements IStorage {
     const updates: string[] = [];
     let paramIndex = 1;
     
-    // Map de conversion des noms de champs JavaScript en noms de colonnes PostgreSQL
-    const columnMapping: Record<string, string> = {
-      patientId: "patient_id",
-      therapistId: "therapist_id",
-      date: "date",
-      time: "time",
-      duration: "duration",
-      type: "type",
-      notes: "notes",
-      status: "status",
-      isRecurring: "is_recurring",
-      recurringFrequency: "recurring_frequency",
-      recurringCount: "recurring_count",
-      parentAppointmentId: "parent_appointment_id"
-    };
-    
     // Parcourir les champs à mettre à jour
     for (const [key, value] of Object.entries(appointmentUpdate)) {
-      // Utiliser le mapping pour obtenir le nom de colonne correct
-      const columnName = columnMapping[key as keyof typeof columnMapping] || key;
+      // Convertir camelCase en snake_case pour les noms de colonnes
+      const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
       paramIndex++;
@@ -768,7 +752,7 @@ export class PgStorage implements IStorage {
       let childAppointments: Appointment[] = [];
       if (isParentAppointment) {
         const result = await pool.query(
-          'SELECT * FROM appointments WHERE parent_appointment_id = $1',
+          'SELECT * FROM appointments WHERE parentAppointmentId = $1',
           [id]
         );
         
@@ -880,23 +864,15 @@ export class PgStorage implements IStorage {
     }
   }
 
-  async checkAvailability(therapistId: number, date: string, time: string, excludeAppointmentId?: number): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
+  async checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
     // Vérifier d'abord s'il y a un conflit et obtenir les informations du patient si nécessaire
-    let query = `
-      SELECT a.id, a.patientId, CONCAT(p.firstName, ' ', p.lastName) as patientName
-      FROM appointments a
-      JOIN patients p ON a.patientId = p.id
-      WHERE a.therapistId = $1 AND a.date = $2 AND a.time = $3`;
-    
-    const params = [therapistId, date, time];
-    
-    // Si un ID de rendez-vous à exclure est fourni, l'ajouter à la condition
-    if (excludeAppointmentId !== undefined) {
-      query += ` AND a.id != $4`;
-      params.push(excludeAppointmentId);
-    }
-    
-    const conflictResult = await pool.query(query, params);
+    const conflictResult = await pool.query(
+      `SELECT a.id, a.patientId, CONCAT(p.firstName, ' ', p.lastName) as patientName
+       FROM appointments a
+       JOIN patients p ON a.patientId = p.id
+       WHERE a.therapistId = $1 AND a.date = $2 AND a.time = $3`,
+      [therapistId, date, time]
+    );
     
     if (conflictResult.rows.length === 0) {
       return { available: true };
