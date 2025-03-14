@@ -874,7 +874,8 @@ export class PgStorage implements IStorage {
           isRecurring: row.isrecurring,
           recurringFrequency: row.recurringfrequency,
           recurringCount: row.recurringcount,
-          parentAppointmentId: row.parentappointmentid
+          parentAppointmentId: row.parentappointmentid,
+          createdAt: row.createdat || new Date()
         }));
       }
       
@@ -1024,6 +1025,8 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
+        templateId: row.templateid || null,
+        signatureUrl: row.signatureurl || null,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1088,6 +1091,8 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
+        templateId: row.templateid || null,
+        signatureUrl: row.signatureurl || null,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
