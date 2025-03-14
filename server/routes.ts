@@ -277,14 +277,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = appointmentFormSchema.parse(req.body);
       
       // Check availability for first appointment
-      const isAvailable = await storage.checkAvailability(
+      const availabilityResult = await storage.checkAvailability(
         validatedData.therapistId,
         validatedData.date,
         validatedData.time
       );
       
-      if (!isAvailable) {
-        return res.status(409).json({ error: "Ce créneau horaire est déjà réservé" });
+      if (!availabilityResult.available) {
+        let errorMessage = "Ce créneau horaire est déjà réservé";
+        
+        if (availabilityResult.conflictInfo) {
+          errorMessage = `Ce créneau est déjà réservé pour ${availabilityResult.conflictInfo.patientName}`;
+        }
+        
+        return res.status(409).json({ 
+          error: errorMessage,
+          conflictInfo: availabilityResult.conflictInfo
+        });
       }
       
       // Handle recurring appointments
