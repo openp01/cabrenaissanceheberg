@@ -1057,7 +1057,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid || null,
+      signatureUrl: row.signatureurl || null
     };
   }
 
@@ -1134,6 +1136,8 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
+        templateId: row.templateid || null,
+        signatureUrl: row.signatureurl || null,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1150,8 +1154,9 @@ export class PgStorage implements IStorage {
       `INSERT INTO invoices (
         invoiceNumber, patientId, therapistId, appointmentId,
         amount, taxRate, totalAmount, status,
-        issueDate, dueDate, paymentMethod, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        issueDate, dueDate, paymentMethod, notes,
+        templateId, signatureUrl
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
       [
         insertInvoice.invoiceNumber,
         insertInvoice.patientId,
@@ -1164,7 +1169,9 @@ export class PgStorage implements IStorage {
         insertInvoice.issueDate,
         insertInvoice.dueDate,
         insertInvoice.paymentMethod,
-        insertInvoice.notes
+        insertInvoice.notes,
+        insertInvoice.templateId || null,
+        insertInvoice.signatureUrl || null
       ]
     );
     
@@ -1182,7 +1189,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid || null,
+      signatureUrl: row.signatureurl || null
     };
   }
 
@@ -1214,7 +1223,9 @@ export class PgStorage implements IStorage {
         'issuedate': 'issuedate',
         'duedate': 'duedate',
         'paymentmethod': 'paymentmethod',
-        'notes': 'notes'
+        'notes': 'notes',
+        'templateid': 'templateid',
+        'signatureurl': 'signatureurl'
       };
       
       // Vérifier les cas particuliers pour les propriétés en camelCase
@@ -1227,6 +1238,8 @@ export class PgStorage implements IStorage {
       else if (key === 'issueDate') columnName = 'issuedate';
       else if (key === 'dueDate') columnName = 'duedate';
       else if (key === 'paymentMethod') columnName = 'paymentmethod';
+      else if (key === 'templateId') columnName = 'templateid';
+      else if (key === 'signatureUrl') columnName = 'signatureurl';
       
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
@@ -1257,7 +1270,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid || null,
+      signatureUrl: row.signatureurl || null
     };
     
     // Si la facture vient d'être marquée comme payée, créer automatiquement un paiement au thérapeute
@@ -1293,7 +1308,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid || null,
+      signatureUrl: row.signatureurl || null
     };
   }
 

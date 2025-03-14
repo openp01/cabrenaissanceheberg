@@ -188,6 +188,8 @@ export const insertInvoiceSchema = createInsertSchema(invoices).pick({
   dueDate: true,
   paymentMethod: true,
   notes: true,
+  templateId: true,
+  signatureUrl: true,
 });
 
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
