@@ -142,14 +142,27 @@ export async function generateInvoicePDF(
   doc.font('Helvetica').fontSize(12);
   doc.text(descriptionText, tableLeft + 10, tableTop + 35);
   
-  // Affichage des notes d'assurance sous le motif de consultation
-  // Mais seulement si elles ne contiennent pas "Facture groupée" (qui est un type de note système)
-  if (invoice.notes && !invoice.notes.includes('Facture groupée')) {
-    doc.font('Helvetica-Oblique').fontSize(10);
-    doc.fillColor('#1e3a8a'); // Couleur bleue pour différencier des autres textes
-    doc.text(`Note assurance: ${invoice.notes}`, tableLeft + 15, tableTop + 55);
-    doc.fillColor('#000'); // Remettre la couleur par défaut
-    doc.font('Helvetica').fontSize(12);
+  // Affichage des notes spéciales sous le motif de consultation
+  if (invoice.notes) {
+    // Pour les factures groupées avec notes supplémentaires (format: "Facture groupée - Notes supplémentaires")
+    if (invoice.notes.includes('Facture groupée') && invoice.notes.includes(' - ')) {
+      const additionalNotes = invoice.notes.split(' - ').slice(1).join(' - ');
+      if (additionalNotes.trim()) {
+        doc.font('Helvetica-Oblique').fontSize(10);
+        doc.fillColor('#1e3a8a'); // Couleur bleue pour différencier des autres textes
+        doc.text(`Information supplémentaire: ${additionalNotes}`, tableLeft + 15, tableTop + 55);
+        doc.fillColor('#000'); // Remettre la couleur par défaut
+        doc.font('Helvetica').fontSize(12);
+      }
+    }
+    // Pour les notes d'assurance normales (qui ne contiennent pas "Facture groupée")
+    else if (!invoice.notes.includes('Facture groupée')) {
+      doc.font('Helvetica-Oblique').fontSize(10);
+      doc.fillColor('#1e3a8a'); // Couleur bleue pour différencier des autres textes
+      doc.text(`Note assurance: ${invoice.notes}`, tableLeft + 15, tableTop + 55);
+      doc.fillColor('#000'); // Remettre la couleur par défaut
+      doc.font('Helvetica').fontSize(12);
+    }
   }
   doc.text(formatCurrency(invoice.amount), tableRight - 110, tableTop + 35, { width: 100, align: 'right' });
   

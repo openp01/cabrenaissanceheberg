@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -29,8 +30,38 @@ export default function InvoiceNotesDialog({
 }: InvoiceNotesDialogProps) {
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState(currentNotes);
+  const [isGroupedInvoice, setIsGroupedInvoice] = useState(
+    currentNotes?.includes("Facture groupée") || false
+  );
+  const [additionalNotes, setAdditionalNotes] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Extraction des notes supplémentaires des factures groupées
+  useEffect(() => {
+    if (currentNotes && currentNotes.includes("Facture groupée")) {
+      const parts = currentNotes.split(" - ");
+      if (parts.length > 1) {
+        // Si le format est "Facture groupée - Notes supplémentaires"
+        setAdditionalNotes(parts.slice(1).join(" - ").trim());
+      } else {
+        setAdditionalNotes("");
+      }
+    } else {
+      setAdditionalNotes("");
+      setNotes(currentNotes);
+    }
+  }, [currentNotes]);
+
+  // Combine les notes selon si c'est une facture groupée ou non
+  const prepareNotes = () => {
+    if (isGroupedInvoice) {
+      return additionalNotes 
+        ? `Facture groupée - ${additionalNotes}`
+        : "Facture groupée";
+    }
+    return notes;
+  };
 
   // Mutation pour mettre à jour les notes
   const updateInvoiceNotes = useMutation({
@@ -47,7 +78,7 @@ export default function InvoiceNotesDialog({
       
       toast({
         title: "Notes mises à jour",
-        description: "Les notes pour l'assurance ont été mises à jour avec succès.",
+        description: "Les notes pour la facture ont été mises à jour avec succès.",
         variant: "default",
       });
       
@@ -65,7 +96,7 @@ export default function InvoiceNotesDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateInvoiceNotes.mutate(notes);
+    updateInvoiceNotes.mutate(prepareNotes());
   };
 
   return (
@@ -82,7 +113,7 @@ export default function InvoiceNotesDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Notes pour l'assurance</DialogTitle>
+          <DialogTitle>Notes pour la facture</DialogTitle>
           <DialogDescription>
             Ajouter ou modifier les notes pour la facture {invoiceNumber}.
             Ces notes apparaîtront sur la facture, sous le motif de consultation.
@@ -90,16 +121,45 @@ export default function InvoiceNotesDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notes pour l'assurance</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Informations particulières pour l'assurance"
-                className="h-32"
+            <div className="flex items-center space-x-2 pb-2">
+              <Checkbox 
+                id="isGroupedInvoice" 
+                checked={isGroupedInvoice}
+                onCheckedChange={(checked) => {
+                  setIsGroupedInvoice(checked === true);
+                }}
               />
+              <Label htmlFor="isGroupedInvoice" className="font-medium">
+                Il s'agit d'une facture groupée
+              </Label>
             </div>
+
+            {isGroupedInvoice ? (
+              <div className="grid gap-2">
+                <Label htmlFor="additionalNotes">Notes supplémentaires pour facture groupée</Label>
+                <Textarea
+                  id="additionalNotes"
+                  value={additionalNotes}
+                  onChange={(e) => setAdditionalNotes(e.target.value)}
+                  placeholder="Informations supplémentaires pour cette facture groupée"
+                  className="h-32"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ces notes seront ajoutées après la mention "Facture groupée".
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <Label htmlFor="notes">Notes pour l'assurance</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Informations particulières pour l'assurance"
+                  className="h-32"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button 
