@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import RecurringOptions from "./RecurringOptions";
 import MultipleTimeSlotsOptions from "./MultipleTimeSlotsOptions";
+import ConflictDisplay from "./ConflictDisplay";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DateTimeSelectionProps {
   formData: BookingFormData;
