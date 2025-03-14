@@ -8,10 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeButton } from "@/components/ui/home-button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth, useIsAdmin, useIsAdminStaff, useIsTherapist } from "@/hooks/use-auth";
 
 export default function AppointmentList() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdminOrStaff = useIsAdminStaff();
+  const isTherapistUser = useIsTherapist();
   const [selectedAppointments, setSelectedAppointments] = useState<number[]>([]);
   const [selectMode, setSelectMode] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>("date"); // "date", "therapist", "type"
@@ -214,7 +218,19 @@ export default function AppointmentList() {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <HomeButton />
-              <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+                {isTherapistUser && (
+                  <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">
+                    Vue Thérapeute
+                  </span>
+                )}
+                {isAdminOrStaff && (
+                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                    {user?.role === 'admin' ? 'Administrateur' : 'Secrétariat'}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex space-x-2">
               <button 
@@ -242,7 +258,11 @@ export default function AppointmentList() {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-gray-900">Mes rendez-vous</h2>
+                <h2 className="text-lg font-medium text-gray-900">
+                  {isTherapistUser 
+                    ? "Mes rendez-vous" 
+                    : "Tous les rendez-vous"}
+                </h2>
                 <div className="flex space-x-2">
                   {selectMode && selectedAppointments.length > 0 && (
                     <button 
@@ -298,22 +318,25 @@ export default function AppointmentList() {
                       )}
                     </button>
                     
-                    <button 
-                      onClick={() => {
-                        setSortBy("therapist");
-                        setSortOrder(sortOrder === "asc" && sortBy === "therapist" ? "desc" : "asc");
-                      }}
-                      className={`px-3 py-1 rounded-md text-sm flex items-center ${
-                        sortBy === "therapist" ? "bg-indigo-100 text-indigo-800" : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      Thérapeute
-                      {sortBy === "therapist" && (
-                        <span className="material-icons ml-1 text-sm">
-                          {sortOrder === "asc" ? "arrow_upward" : "arrow_downward"}
-                        </span>
-                      )}
-                    </button>
+                    {/* Afficher le filtre de thérapeute uniquement pour les administrateurs et le secrétariat */}
+                    {isAdminOrStaff && (
+                      <button 
+                        onClick={() => {
+                          setSortBy("therapist");
+                          setSortOrder(sortOrder === "asc" && sortBy === "therapist" ? "desc" : "asc");
+                        }}
+                        className={`px-3 py-1 rounded-md text-sm flex items-center ${
+                          sortBy === "therapist" ? "bg-indigo-100 text-indigo-800" : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        Thérapeute
+                        {sortBy === "therapist" && (
+                          <span className="material-icons ml-1 text-sm">
+                            {sortOrder === "asc" ? "arrow_upward" : "arrow_downward"}
+                          </span>
+                        )}
+                      </button>
+                    )}
                     
                     <button 
                       onClick={() => {
