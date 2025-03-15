@@ -424,7 +424,7 @@ export class MemStorage implements IStorage {
     // Générer un numéro de facture unique
     const invoiceNumber = `F-${today.getFullYear()}-${String(this.invoiceCurrentId).padStart(4, '0')}`;
     
-    // Prix standard pour une séance d'orthophonie (à adapter selon les besoins)
+    // Prix standard pour une séance thérapeutique (à adapter selon les besoins)
     const sessionPrice = "50.00";
     
     // Créer la facture
@@ -440,7 +440,7 @@ export class MemStorage implements IStorage {
       issueDate,
       dueDate,
       paymentMethod: null,
-      notes: `Séance d'orthophonie du ${appointment.date} à ${appointment.time}`
+      notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`
     };
     
     return this.createInvoice(invoice);
