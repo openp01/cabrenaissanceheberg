@@ -539,6 +539,17 @@ export class PgStorage implements IStorage {
     // Prix standard pour une séance thérapeutique
     const sessionPrice = "50.00";
     
+    // Récupérer les informations du patient et du thérapeute pour l'affichage
+    const patientResult = await pool.query('SELECT firstName, lastName FROM patients WHERE id = $1', [appointment.patientId]);
+    const therapistResult = await pool.query('SELECT name FROM therapists WHERE id = $1', [appointment.therapistId]);
+    
+    const patientName = patientResult.rows.length > 0 
+      ? `${patientResult.rows[0].firstname} ${patientResult.rows[0].lastname}` 
+      : 'Patient inconnu';
+    const therapistName = therapistResult.rows.length > 0 
+      ? therapistResult.rows[0].name 
+      : 'Thérapeute inconnu';
+    
     // Créer la facture
     const invoice: InsertInvoice = {
       invoiceNumber,
@@ -555,7 +566,21 @@ export class PgStorage implements IStorage {
       notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`
     };
     
-    return await this.createInvoice(invoice);
+    // Enregistrer la facture dans la base de données
+    const newInvoice = await this.createInvoice(invoice);
+    
+    // Afficher clairement les informations de la nouvelle facture
+    console.log(`✅ NOUVELLE FACTURE CRÉÉE ✅`);
+    console.log(`-----------------------------`);
+    console.log(`Numéro: ${invoiceNumber}`);
+    console.log(`Patient: ${patientName}`);
+    console.log(`Thérapeute: ${therapistName}`);
+    console.log(`Montant: ${sessionPrice}€`);
+    console.log(`Date: ${appointment.date} à ${appointment.time}`);
+    console.log(`Statut: En attente`);
+    console.log(`-----------------------------`);
+    
+    return newInvoice;
   }
 
   async createRecurringAppointments(
@@ -826,10 +851,13 @@ export class PgStorage implements IStorage {
         return { success: false, message: "Rendez-vous non trouvé" };
       }
       
+      console.log(`Tentative de suppression du rendez-vous ${id}`);
+      
       // Vérifier s'il existe des factures liées à ce rendez-vous
       const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
       // Vérifier si des paiements sont associés à ces factures
+      let hasPayments = false;
       if (invoiceResult.rows.length > 0) {
         for (const row of invoiceResult.rows) {
           const paymentResult = await pool.query(
@@ -838,7 +866,8 @@ export class PgStorage implements IStorage {
           );
           
           if (paymentResult.rows.length > 0) {
-            console.log(`Impossible de supprimer le rendez-vous ${id} car il a des paiements associés`);
+            hasPayments = true;
+            console.log(`Impossible de supprimer le rendez-vous ${id} car il a des paiements associés à la facture ${row.id}`);
             return { 
               success: false, 
               message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
