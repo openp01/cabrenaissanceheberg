@@ -715,30 +715,72 @@ export class PgStorage implements IStorage {
     if (appointmentUpdate.status && oldAppointment.status !== appointmentUpdate.status) {
       console.log(`Statut du rendez-vous ${id} modifié: ${oldAppointment.status} -> ${appointmentUpdate.status}`);
       
-      const invoice = await this.getInvoiceForAppointment(id);
+      // Vérifier si c'est un rendez-vous issu d'une récurrence
+      const isRecurringChild = updatedAppointment.parentAppointmentId !== null;
+      
+      // Récupérer la facture liée au rendez-vous (ou au parent si c'est un rendez-vous récurrent)
+      let invoice;
+      if (isRecurringChild) {
+        // Pour un rendez-vous récurrent enfant, récupérer la facture du parent
+        invoice = await this.getInvoiceForAppointment(updatedAppointment.parentAppointmentId);
+      } else {
+        // Pour un rendez-vous normal ou parent, récupérer sa propre facture
+        invoice = await this.getInvoiceForAppointment(id);
+      }
       
       if (invoice) {
-        // Mettre à jour le statut de la facture en fonction du statut du rendez-vous
-        let invoiceStatus = invoice.status;
-        
-        if (appointmentUpdate.status === 'Annulé' || appointmentUpdate.status === 'canceled') {
-          invoiceStatus = 'En suspens';
-          console.log(`Facture ${invoice.id} mise en suspens suite à l'annulation du rendez-vous`);
-        } else if (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') {
-          invoiceStatus = 'En attente';
-          console.log(`Facture ${invoice.id} mise en attente suite à la confirmation du rendez-vous`);
-        } else if (appointmentUpdate.status === 'Terminé' || appointmentUpdate.status === 'completed') {
-          invoiceStatus = 'À payer';
-          console.log(`Facture ${invoice.id} mise à payer suite à la complétion du rendez-vous`);
+        // Vérifier si la facture est déjà payée (on ne peut pas modifier une facture payée)
+        if (invoice.status === 'Payée') {
+          console.log(`Facture ${invoice.id} déjà payée, pas de modification du statut`);
+        } else {
+          // Mettre à jour le statut de la facture en fonction du statut du rendez-vous
+          let invoiceStatus = invoice.status;
+          let newAmount = invoice.amount;
+          
+          // Si c'est un rendez-vous enfant annulé, ajuster le montant de la facture
+          if (isRecurringChild && (appointmentUpdate.status === 'cancelled' || appointmentUpdate.status === 'Annulé')) {
+            // Récupérer le coût par séance (montant total / nombre de séances)
+            const parentAppointment = await this.getAppointment(updatedAppointment.parentAppointmentId);
+            if (parentAppointment && parentAppointment.recurringCount) {
+              const costPerSession = invoice.amount / parentAppointment.recurringCount;
+              newAmount = invoice.amount - costPerSession;
+              console.log(`Ajustement du montant de la facture ${invoice.id}: ${invoice.amount} -> ${newAmount} (annulation d'une séance)`);
+            }
+          }
+          
+          if (appointmentUpdate.status === 'cancelled' || appointmentUpdate.status === 'Annulé') {
+            if (!isRecurringChild) { // Si c'est le parent qui est annulé
+              invoiceStatus = 'Annulée';
+              console.log(`Facture ${invoice.id} annulée suite à l'annulation du rendez-vous`);
+            }
+          } else if (appointmentUpdate.status === 'pending' || appointmentUpdate.status === 'En attente') {
+            if (!isRecurringChild) { // Si c'est le parent qui est mis en attente
+              invoiceStatus = 'En attente';
+              console.log(`Facture ${invoice.id} mise en attente suite à la mise en attente du rendez-vous`);
+            }
+          } else if (appointmentUpdate.status === 'completed' || appointmentUpdate.status === 'Terminé') {
+            if (!isRecurringChild) { // Si c'est le parent qui est terminé
+              invoiceStatus = 'À payer';
+              console.log(`Facture ${invoice.id} mise à payer suite à la complétion du rendez-vous`);
+            }
+          }
+          
+          // Mettre à jour la facture
+          if (isRecurringChild && (appointmentUpdate.status === 'cancelled' || appointmentUpdate.status === 'Annulé')) {
+            // Si c'est un enfant annulé, mettre à jour uniquement le montant
+            await this.updateInvoice(invoice.id, { amount: newAmount });
+          } else if (!isRecurringChild) {
+            // Si c'est un parent, mettre à jour le statut
+            await this.updateInvoice(invoice.id, { status: invoiceStatus });
+          }
         }
-        
-        await this.updateInvoice(invoice.id, { status: invoiceStatus });
       } else if (
-        (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') &&
+        (appointmentUpdate.status === 'confirmed' || appointmentUpdate.status === 'Confirmé' || 
+         appointmentUpdate.status === 'pending' || appointmentUpdate.status === 'En attente') &&
         !updatedAppointment.parentAppointmentId // Ne pas générer de facture pour les rendez-vous récurrents enfants
       ) {
-        // Si le statut passe à Confirmé et qu'il n'y a pas de facture, en créer une
-        console.log(`Création d'une facture pour le rendez-vous ${id} qui vient d'être confirmé`);
+        // Si le statut passe à Confirmé/En attente et qu'il n'y a pas de facture, en créer une
+        console.log(`Création d'une facture pour le rendez-vous ${id} avec le statut ${appointmentUpdate.status}`);
         await this.generateInvoiceForAppointment(updatedAppointment);
       }
     }
