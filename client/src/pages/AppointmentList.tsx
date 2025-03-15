@@ -109,7 +109,51 @@ export default function AppointmentList() {
   };
   
   // Fonction pour changer le statut d'un rendez-vous
+  // Mutation pour la mise à jour automatique des statuts
+  const statusChangeMutation = useMutation({
+    mutationFn: async ({ appointmentId, status }: { appointmentId: number, status: string }) => {
+      return await apiRequest(`/api/appointments/${appointmentId}`, "PUT", { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la mise à jour automatique du statut:", error);
+    }
+  });
+
+  // Vérifier et mettre à jour automatiquement les statuts des rendez-vous passés
+  React.useEffect(() => {
+    if (appointments) {
+      const now = new Date();
+      const appointmentsToUpdate = appointments.filter(appointment => {
+        // Vérifie si le rendez-vous est "En attente" et si sa date/heure est déjà passée
+        if (appointment.status !== "pending") return false;
+        
+        const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+        return appointmentDateTime < now;
+      });
+      
+      // Mise à jour automatique des statuts pour les rendez-vous passés
+      appointmentsToUpdate.forEach(appointment => {
+        statusChangeMutation.mutate({ 
+          appointmentId: appointment.id, 
+          status: "completed"
+        });
+      });
+    }
+  }, [appointments]);
+
   const handleStatusChange = (id: number, status: string) => {
+    // Récupère l'appointment concerné
+    const appointment = appointments?.find(a => a.id === id);
+    if (!appointment) return;
+    
+    // Vérifier si le rendez-vous est lié à une récurrence
+    const isRecurringChild = appointment.parentAppointmentId !== null;
+    const isRecurringParent = appointment.isRecurring && appointment.relatedAppointments && appointment.relatedAppointments.length > 0;
+    
+    // Procéder avec la mise à jour du statut
     updateStatusMutation.mutate({ id, status });
   };
 
@@ -566,9 +610,8 @@ export default function AppointmentList() {
                                           className={`text-xs font-semibold px-2 py-1 rounded-full border-0 ${getStatusBadgeClass(appointment.status)}`}
                                         >
                                           <option value="pending" className="bg-white text-yellow-800">En attente</option>
-                                          <option value="confirmed" className="bg-white text-green-800">Confirmé</option>
-                                          <option value="cancelled" className="bg-white text-red-800">Annulé</option>
                                           <option value="completed" className="bg-white text-blue-800">Terminé</option>
+                                          <option value="cancelled" className="bg-white text-red-800">Annulé</option>
                                         </select>
                                       )}
                                     </td>
@@ -587,13 +630,6 @@ export default function AppointmentList() {
                                               {appointment.relatedAppointments?.length || 0} liés
                                             </span>
                                           )}
-                                          <button 
-                                            onClick={() => handleCancelAppointment(appointment.id)}
-                                            className="text-red-600 hover:text-red-900"
-                                            disabled={deleteMutation.isPending}
-                                          >
-                                            Annuler
-                                          </button>
                                         </div>
                                       )}
                                     </td>
@@ -627,12 +663,14 @@ export default function AppointmentList() {
                                                       <div className="font-medium">{related.therapistName}</div>
                                                       <div className="text-xs text-gray-500">{related.date} - {related.time}</div>
                                                     </div>
-                                                    <button
-                                                      onClick={() => handleCancelAppointment(related.id)}
-                                                      className="text-xs text-red-600 hover:text-red-900"
+                                                    <select
+                                                      onChange={(e) => handleStatusChange(related.id, e.target.value)}
+                                                      className="text-xs font-semibold px-2 py-1 rounded-full border"
                                                     >
-                                                      Annuler
-                                                    </button>
+                                                      <option value="pending" className="bg-white text-yellow-800">En attente</option>
+                                                      <option value="completed" className="bg-white text-blue-800">Terminé</option>
+                                                      <option value="cancelled" className="bg-white text-red-800">Annulé</option>
+                                                    </select>
                                                   </div>
                                                 ))}
                                               </div>
