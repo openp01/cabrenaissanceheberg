@@ -434,7 +434,7 @@ export async function generateTherapistPaymentsPDF(
   
   // Pied de page
   doc.fontSize(10).text(
-    'Document généré automatiquement par le système de gestion du cabinet d\'orthophonie.',
+    'Document généré automatiquement par le système de gestion du Cabinet Paramédical de la Renaissance.',
     50,
     doc.page.height - 30,
     { align: 'center' }
@@ -594,7 +594,7 @@ export async function generateExpensesPDF(
   
   // Pied de page
   doc.fontSize(10).text(
-    'Document généré automatiquement par le système de gestion du cabinet d\'orthophonie.',
+    'Document généré automatiquement par le système de gestion du Cabinet Paramédical de la Renaissance.',
     50,
     doc.page.height - 30,
     { align: 'center' }
