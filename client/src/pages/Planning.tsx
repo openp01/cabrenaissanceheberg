@@ -426,12 +426,17 @@ export default function Planning() {
   const [newAppointmentTherapistId, setNewAppointmentTherapistId] = useState<number | null>(null);
   
   const handleNewAppointment = (date?: Date, therapistId?: number) => {
+    console.log("Planning - handleNewAppointment:", { date, therapistId });
+    
     // Stockez les valeurs pour le formulaire
-    if (date) setNewAppointmentDate(date);
-    if (therapistId) setNewAppointmentTherapistId(therapistId);
+    setNewAppointmentDate(date || null);
+    setNewAppointmentTherapistId(therapistId || null);
     
     // Ouvrez le dialogue
     setShowNewAppointmentDialog(true);
+    
+    // Debug
+    console.log("Dialog should be open now:", { showNewAppointmentDialog: true });
   };
 
   const handleEditAppointment = (id: number) => {
@@ -636,6 +641,19 @@ export default function Planning() {
   };
   
   // Composant pour les rendez-vous dans la vue calendrier
+  // Fonction pour déterminer la couleur du rendez-vous en fonction du statut
+  const getAppointmentStatusColor = (status: string) => {
+    switch(status) {
+      case "completed":
+        return "bg-green-600"; // Vert pour les rendez-vous terminés
+      case "cancelled":
+        return "bg-red-600"; // Rouge pour les rendez-vous annulés
+      case "pending":
+      default:
+        return "bg-primary"; // Couleur primaire pour les rendez-vous en attente
+    }
+  };
+
   const CalendarAppointment: React.FC<DraggableAppointmentProps> = ({ 
     appointment, 
     onStatusChange,
@@ -643,8 +661,11 @@ export default function Planning() {
     onEditAppointment,
     className 
   }) => {
+    // Déterminer la couleur en fonction du statut
+    const statusColor = getAppointmentStatusColor(appointment.status);
+    
     return (
-      <div className={`bg-primary text-white p-1 rounded text-center overflow-hidden ${className}`}>
+      <div className={`${statusColor} text-white p-1 rounded text-center overflow-hidden ${className}`}>
         <div className="flex items-center justify-between">
           <span className="font-medium truncate">{appointment.patientName}</span>
           <DropdownMenu>

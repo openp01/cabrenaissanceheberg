@@ -29,6 +29,9 @@ export default function AppointmentModal({
   initialTherapistId 
 }: AppointmentModalProps) {
   const { toast } = useToast();
+  
+  // Debug logs
+  console.log("AppointmentModal - Props:", { open, initialDate, initialTime, initialTherapistId });
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
