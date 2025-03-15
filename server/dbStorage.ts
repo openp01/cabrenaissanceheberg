@@ -762,12 +762,27 @@ export class PgStorage implements IStorage {
           
           // Si c'est un rendez-vous enfant annulé, ajuster le montant de la facture
           if (isRecurringChild && appointmentUpdate.status === 'cancelled') {
-            // Récupérer le coût par séance (montant total / nombre de séances)
+            // Récupérer le coût par séance (montant total initial / nombre de séances)
             const parentAppointment = await this.getAppointment(updatedAppointment.parentAppointmentId);
             if (parentAppointment && parentAppointment.recurringCount) {
-              const costPerSession = invoice.amount / parentAppointment.recurringCount;
-              newAmount = invoice.amount - costPerSession;
-              console.log(`Ajustement du montant de la facture ${invoice.id}: ${invoice.amount} -> ${newAmount} (annulation d'une séance)`);
+              // Utiliser le montant total (pas le montant actuel) pour un calcul simple et cohérent
+              const costPerSession = invoice.totalAmount / parentAppointment.recurringCount;
+              // Arrondir à 2 décimales pour éviter les problèmes de précision
+              const roundedCostPerSession = Math.round(costPerSession * 100) / 100;
+              
+              // Calculer le nombre de séances annulées pour ce rendez-vous récurrent
+              const cancelledSessionsResult = await pool.query(
+                'SELECT COUNT(*) as cancelled_count FROM appointments WHERE parentAppointmentId = $1 AND status = $2',
+                [parentAppointment.id, 'cancelled']
+              );
+              const cancelledSessionsCount = parseInt(cancelledSessionsResult.rows[0].cancelled_count) + 1; // +1 pour inclure celle qu'on annule maintenant
+              
+              // Calculer le nouveau montant en déduisant le coût des séances annulées
+              newAmount = invoice.totalAmount - (roundedCostPerSession * cancelledSessionsCount);
+              // Arrondir le résultat à 2 décimales
+              newAmount = Math.round(newAmount * 100) / 100;
+              
+              console.log(`Ajustement du montant de la facture ${invoice.id}: ${invoice.totalAmount} initial, ${cancelledSessionsCount} séances annulées à ${roundedCostPerSession}€ chacune, nouveau montant: ${newAmount}€`);
               
               // Créer un enregistrement pour le changement de statut du rendez-vous enfant
               await pool.query(
@@ -797,10 +812,31 @@ export class PgStorage implements IStorage {
           // Mettre à jour la facture
           if (isRecurringChild && appointmentUpdate.status === 'cancelled') {
             // Si c'est un enfant annulé, mettre à jour le montant et le montant total (pour que ce soit cohérent)
+            // Même si la facture est payée, nous mettons à jour les montants pour un affichage correct
             await this.updateInvoice(invoice.id, { 
               amount: newAmount,
               totalAmount: newAmount 
             });
+            
+            // Mettre également à jour le montant du paiement si la facture est déjà payée
+            if (invoice.status === 'Payée' || invoice.status === 'paid') {
+              // Vérifier s'il existe un paiement pour cette facture
+              const paymentResult = await pool.query(
+                'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+                [invoice.id]
+              );
+              
+              if (paymentResult.rows.length > 0) {
+                const paymentId = paymentResult.rows[0].id;
+                console.log(`Mise à jour du montant du paiement ${paymentId} associé à la facture ${invoice.id}: ${invoice.amount} -> ${newAmount}`);
+                
+                // Mettre à jour le montant du paiement pour qu'il corresponde au nouveau montant de la facture
+                await pool.query(
+                  'UPDATE therapist_payments SET amount = $1 WHERE id = $2',
+                  [newAmount, paymentId]
+                );
+              }
+            }
           } else if (!isRecurringChild) {
             // Si c'est un parent, mettre à jour le statut
             await this.updateInvoice(invoice.id, { status: invoiceStatus });
