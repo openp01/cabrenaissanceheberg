@@ -13,6 +13,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
 import { Calendar, ClipboardList, CreditCard, LogOut, User, Menu, Settings, Users } from "lucide-react";
 
+// Styles personnalisés pour l'application
+const CABINET_GREEN = {
+  light: "#3fb549",
+  pale: "#8cd392",
+  dark: "#266d2c",
+  black: "#0d240f",
+  white: "#ffffff",
+};
+
 export function Navbar() {
   const { user, logoutMutation } = useAuth();
   const [location, setLocation] = useLocation();
@@ -49,11 +58,14 @@ export function Navbar() {
   return (
     <nav className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200">
       {/* Logo et titre */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-3">
         <Link href="/">
-          <span className="text-xl font-bold text-primary cursor-pointer">
-            Centre d'Orthophonie
-          </span>
+          <div className="flex items-center space-x-3 cursor-pointer">
+            <img src="/images/logo-icon.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-10 w-auto" />
+            <span className="text-xl font-bold text-primary">
+              Cabinet Paramédical de la Renaissance
+            </span>
+          </div>
         </Link>
       </div>
 
@@ -63,7 +75,7 @@ export function Navbar() {
           <Link href="/appointments">
             <Button
               variant={isActive("/appointments") ? "default" : "secondary"}
-              className="flex items-center font-bold"
+              className={`flex items-center font-bold ${isActive("/appointments") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <Calendar className="mr-2 h-5 w-5" />
@@ -74,7 +86,7 @@ export function Navbar() {
           <Link href="/schedule">
             <Button
               variant={isActive("/schedule") ? "default" : "secondary"}
-              className="flex items-center font-bold"
+              className={`flex items-center font-bold ${isActive("/schedule") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <ClipboardList className="mr-2 h-5 w-5" />
@@ -88,7 +100,7 @@ export function Navbar() {
               <Link href="/invoices">
                 <Button
                   variant={isActive("/invoices") ? "default" : "secondary"}
-                  className="flex items-center font-bold"
+                  className={`flex items-center font-bold ${isActive("/invoices") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
                   size="lg"
                 >
                   <CreditCard className="mr-2 h-5 w-5" />
@@ -99,7 +111,7 @@ export function Navbar() {
               <Link href="/payments">
                 <Button
                   variant={isActive("/payments") ? "default" : "secondary"}
-                  className="flex items-center font-bold"
+                  className={`flex items-center font-bold ${isActive("/payments") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
                   size="lg"
                 >
                   <CreditCard className="mr-2 h-5 w-5" />
@@ -113,7 +125,7 @@ export function Navbar() {
           <Link href="/profile">
             <Button
               variant={isActive("/profile") ? "default" : "secondary"}
-              className="flex items-center font-bold bg-blue-600 text-white hover:bg-blue-700"
+              className={`flex items-center font-bold ${isActive("/profile") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <Settings className="mr-2 h-5 w-5" />
@@ -126,7 +138,7 @@ export function Navbar() {
             <Link href="/admin/users">
               <Button
                 variant={isActive("/admin/users") ? "default" : "secondary"}
-                className="flex items-center font-bold bg-blue-600 text-white hover:bg-blue-700"
+                className={`flex items-center font-bold ${isActive("/admin/users") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
                 size="lg"
               >
                 <Users className="mr-2 h-5 w-5" />
