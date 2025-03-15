@@ -793,9 +793,9 @@ export class PgStorage implements IStorage {
           let invoiceStatus = invoice.status;
           let newAmount = invoice.amount;
           
-          // Si c'est un rendez-vous enfant annulé, ajuster le montant de la facture
-          if (isRecurringChild && appointmentUpdate.status === 'cancelled') {
-            // Récupérer le coût par séance (montant total initial / nombre de séances)
+          // Si c'est un rendez-vous enfant, ajuster le montant de la facture, à la baisse si annulé ou à la hausse si réactivé
+          if (isRecurringChild && (appointmentUpdate.status === 'cancelled' || oldAppointment.status === 'cancelled')) {
+            // Récupérer le rendez-vous parent
             const parentAppointment = await this.getAppointment(updatedAppointment.parentAppointmentId);
             if (parentAppointment && parentAppointment.recurringCount) {
               // Prix fixe par séance (toujours 50€)
@@ -806,7 +806,7 @@ export class PgStorage implements IStorage {
                 'SELECT COUNT(*) as cancelled_count FROM appointments WHERE parentAppointmentId = $1 AND status = $2',
                 [parentAppointment.id, 'cancelled']
               );
-              // Le rendez-vous en cours d'annulation est déjà comptabilisé car son statut a été mis à jour précédemment
+              // Le statut du rendez-vous en cours est déjà mis à jour, donc il est déjà comptabilisé correctement
               const cancelledSessionsCount = parseInt(cancelledSessionsResult.rows[0].cancelled_count);
               
               // Calculer le nombre de séances restantes (non annulées)
@@ -818,7 +818,13 @@ export class PgStorage implements IStorage {
               // Arrondir le résultat à 2 décimales pour éviter les problèmes de précision
               newAmount = Math.round(newAmount * 100) / 100;
               
-              console.log(`Ajustement du montant de la facture ${invoice.id}:`);
+              // Log détaillé différent selon si on annule ou réactive
+              if (appointmentUpdate.status === 'cancelled') {
+                console.log(`Ajustement à la baisse du montant de la facture ${invoice.id}:`);
+              } else if (oldAppointment.status === 'cancelled') {
+                console.log(`Ajustement à la hausse du montant de la facture ${invoice.id}:`);
+              }
+              
               console.log(`- Nombre total de séances: ${parentAppointment.recurringCount}`);
               console.log(`- Nombre de séances annulées: ${cancelledSessionsCount}`);
               console.log(`- Nombre de séances restantes: ${remainingSessions}`);
@@ -828,7 +834,7 @@ export class PgStorage implements IStorage {
               // Créer un enregistrement pour le changement de statut du rendez-vous enfant
               await pool.query(
                 'INSERT INTO appointment_status_changes (appointment_id, old_status, new_status) VALUES ($1, $2, $3)',
-                [id, oldAppointment.status, 'cancelled']
+                [id, oldAppointment.status, appointmentUpdate.status]
               );
             }
           }
@@ -851,8 +857,8 @@ export class PgStorage implements IStorage {
           }
           
           // Mettre à jour la facture
-          if (isRecurringChild && appointmentUpdate.status === 'cancelled') {
-            // Si c'est un enfant annulé, mettre à jour le montant et le montant total (pour que ce soit cohérent)
+          if (isRecurringChild && (appointmentUpdate.status === 'cancelled' || oldAppointment.status === 'cancelled')) {
+            // Si c'est un enfant qui est annulé ou réactivé, mettre à jour le montant et le montant total
             // Même si la facture est payée, nous mettons à jour les montants pour un affichage correct
             await this.updateInvoice(invoice.id, { 
               amount: newAmount,
