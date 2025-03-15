@@ -736,7 +736,8 @@ export class PgStorage implements IStorage {
       isRecurring: row.isrecurring,
       recurringFrequency: row.recurringfrequency,
       recurringCount: row.recurringcount,
-      parentAppointmentId: row.parentappointmentid
+      parentAppointmentId: row.parentappointmentid,
+      createdAt: row.createdat || new Date()
     };
     
     // Si le statut a changé, gérer les mises à jour additionnelles
@@ -793,8 +794,8 @@ export class PgStorage implements IStorage {
             // Récupérer le coût par séance (montant total / nombre de séances)
             const parentAppointment = await this.getAppointment(updatedAppointment.parentAppointmentId);
             if (parentAppointment && parentAppointment.recurringCount) {
-              const costPerSession = invoice.amount / parentAppointment.recurringCount;
-              newAmount = invoice.amount - costPerSession;
+              const costPerSession = parseFloat(invoice.amount) / parentAppointment.recurringCount;
+              newAmount = (parseFloat(invoice.amount) - costPerSession).toString();
               console.log(`Ajustement du montant de la facture ${invoice.id}: ${invoice.amount} -> ${newAmount} (annulation d'une séance)`);
               
               // Créer un enregistrement pour le changement de statut du rendez-vous enfant
@@ -903,7 +904,8 @@ export class PgStorage implements IStorage {
           isRecurring: row.isrecurring,
           recurringFrequency: row.recurringfrequency,
           recurringCount: row.recurringcount,
-          parentAppointmentId: row.parentappointmentid
+          parentAppointmentId: row.parentappointmentid,
+          createdAt: row.createdat || new Date()
         }));
       }
       
