@@ -23,10 +23,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-[#f8fff9] to-[#e3f5e5]">
       {/* Date affichée en haut de la page */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2 text-right">
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[#266d2c]">
           {new Date().toLocaleDateString('fr-FR', { 
             weekday: 'long', 
             day: 'numeric', 
@@ -36,13 +36,14 @@ export default function Home() {
         </div>
       </div>
       
-      {/* Titre principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-indigo-500 bg-clip-text text-transparent text-center">
-          Centre d'Orthophonie
+      {/* Titre principal et logo */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-6 flex flex-col items-center">
+        <img src="/images/logo-full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-32 w-auto mb-4" />
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent text-center">
+          Cabinet Paramédical de la Renaissance
         </h1>
         <p className="text-gray-600 mt-1 text-center">
-          Système de gestion pour le secrétariat
+          Système de gestion administratif
         </p>
       </div>
 
@@ -65,12 +66,12 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Rendez-vous Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <CardHeader className="bg-gradient-to-r from-[#3fb549] to-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Rendez-vous</CardTitle>
-                    <CalendarDays className="h-8 w-8 text-blue-100" />
+                    <CalendarDays className="h-8 w-8 text-white opacity-80" />
                   </div>
-                  <CardDescription className="text-blue-100">
+                  <CardDescription className="text-white opacity-90">
                     Gérer les rendez-vous des patients
                   </CardDescription>
                 </CardHeader>
@@ -103,13 +104,13 @@ export default function Home() {
               
               {/* Emploi du temps Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <CardHeader className="bg-gradient-to-r from-[#8cd392] to-[#3fb549] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Emploi du temps</CardTitle>
-                    <Clock className="h-8 w-8 text-green-100" />
+                    <Clock className="h-8 w-8 text-white opacity-80" />
                   </div>
-                  <CardDescription className="text-green-100">
-                    Planning des orthophonistes
+                  <CardDescription className="text-white opacity-90">
+                    Planning des thérapeutes
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -133,12 +134,12 @@ export default function Home() {
               
               {/* Factures Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                <CardHeader className="bg-gradient-to-r from-[#266d2c] to-[#0d240f] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Factures</CardTitle>
-                    <FileText className="h-8 w-8 text-purple-100" />
+                    <FileText className="h-8 w-8 text-white opacity-80" />
                   </div>
-                  <CardDescription className="text-purple-100">
+                  <CardDescription className="text-white opacity-90">
                     Gestion des factures clients
                   </CardDescription>
                 </CardHeader>
@@ -163,12 +164,12 @@ export default function Home() {
               
               {/* Dépenses Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+                <CardHeader className="bg-gradient-to-r from-[#3fb549] to-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Dépenses</CardTitle>
-                    <WalletIcon className="h-8 w-8 text-amber-100" />
+                    <WalletIcon className="h-8 w-8 text-white opacity-80" />
                   </div>
-                  <CardDescription className="text-amber-100">
+                  <CardDescription className="text-white opacity-90">
                     Suivi des dépenses du cabinet
                   </CardDescription>
                 </CardHeader>
@@ -201,12 +202,12 @@ export default function Home() {
               
               {/* Paiements Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
+                <CardHeader className="bg-gradient-to-r from-[#8cd392] to-[#3fb549] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Paiements</CardTitle>
-                    <CreditCard className="h-8 w-8 text-teal-100" />
+                    <CreditCard className="h-8 w-8 text-white opacity-80" />
                   </div>
-                  <CardDescription className="text-teal-100">
+                  <CardDescription className="text-white opacity-90">
                     Suivi des paiements aux thérapeutes
                   </CardDescription>
                 </CardHeader>
@@ -231,12 +232,12 @@ export default function Home() {
               
               {/* Carte des modèles de factures */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                <CardHeader className="bg-gradient-to-r from-[#266d2c] to-[#3fb549] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Modèles de factures</CardTitle>
-                    <ScrollText className="h-8 w-8 text-indigo-100" />
+                    <ScrollText className="h-8 w-8 text-white opacity-80" />
                   </div>
-                  <CardDescription className="text-indigo-100">
+                  <CardDescription className="text-white opacity-90">
                     Personnalisation des modèles
                   </CardDescription>
                 </CardHeader>
@@ -262,12 +263,12 @@ export default function Home() {
               {/* Signatures Électroniques - visible uniquement pour les administrateurs */}
               {isAdmin && (
                 <Card className="overflow-hidden transition-all hover:shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-rose-500 to-rose-600 text-white">
+                  <CardHeader className="bg-gradient-to-r from-[#0d240f] to-[#266d2c] text-white">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-xl">Signatures Électroniques</CardTitle>
-                      <Pen className="h-8 w-8 text-rose-100" />
+                      <Pen className="h-8 w-8 text-white opacity-80" />
                     </div>
-                    <CardDescription className="text-rose-100">
+                    <CardDescription className="text-white opacity-90">
                       Administration des signatures
                     </CardDescription>
                   </CardHeader>
@@ -292,8 +293,8 @@ export default function Home() {
               )}
             </div>
             
-            <div className="mt-16 text-center text-sm text-gray-500">
-              <p>© 2025 Centre d'Orthophonie - Système de gestion</p>
+            <div className="mt-16 text-center text-sm text-[#266d2c]">
+              <p>© 2025 Cabinet Paramédical de la Renaissance - Tous droits réservés</p>
             </div>
           </>
         )}
