@@ -286,7 +286,8 @@ export default function AppointmentList() {
           id: child.id,
           therapistName: child.therapistName,
           date: child.date,
-          time: child.time
+          time: child.time,
+          status: child.status
         }));
       }
     });
@@ -664,8 +665,9 @@ export default function AppointmentList() {
                                                       <div className="text-xs text-gray-500">{related.date} - {related.time}</div>
                                                     </div>
                                                     <select
+                                                      value={related.status || "pending"}
                                                       onChange={(e) => handleStatusChange(related.id, e.target.value)}
-                                                      className="text-xs font-semibold px-2 py-1 rounded-full border"
+                                                      className={`text-xs font-semibold px-2 py-1 rounded-full border-0 ${getStatusBadgeClass(related.status || "pending")}`}
                                                     >
                                                       <option value="pending" className="bg-white text-yellow-800">En attente</option>
                                                       <option value="completed" className="bg-white text-blue-800">Terminé</option>
