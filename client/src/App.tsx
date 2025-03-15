@@ -39,6 +39,11 @@ function Router() {
       
       {/* Routes pour le personnel administratif uniquement */}
       <ProtectedRoute 
+        path="/booking" 
+        component={Planning} 
+        roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
+      <ProtectedRoute 
         path="/invoices" 
         component={Invoices} 
         roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
