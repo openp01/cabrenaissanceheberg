@@ -128,11 +128,22 @@ export default function TherapistSchedule() {
     
     const formattedDate = format(date, 'dd/MM/yyyy');
     
-    return appointments.some(app => 
-      app.therapistId === therapistId && 
-      app.date === formattedDate && 
-      app.time === time
-    );
+    // Log pour débogage
+    console.log("Vérification RDV pour: ", { date: formattedDate, time, therapistId });
+    
+    const scheduled = appointments.some(app => {
+      const match = app.therapistId === therapistId && 
+                    app.date === formattedDate && 
+                    app.time === time;
+      
+      if (match) {
+        console.log("RDV trouvé:", app.id, "pour thérapeute:", app.therapistId);
+      }
+      
+      return match;
+    });
+    
+    return scheduled;
   };
 
   const getAppointmentDetails = (date: Date, time: string, therapistId: number) => {

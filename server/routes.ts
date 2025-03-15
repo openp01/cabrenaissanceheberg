@@ -120,16 +120,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Appointment routes
   app.get("/api/appointments", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Log des informations utilisateur pour débogage
+      console.log("GET /api/appointments - User Info:", { 
+        id: req.user?.id, 
+        role: req.user?.role, 
+        therapistId: req.user?.therapistId 
+      });
+
       // Si l'utilisateur est un thérapeute, renvoyer uniquement ses rendez-vous
       if (req.user && req.user.role === UserRole.THERAPIST && req.user.therapistId) {
+        console.log(`Récupération des RDV pour le thérapeute ID:${req.user.therapistId}`);
         const appointments = await storage.getAppointmentsForTherapist(req.user.therapistId);
         return res.json(appointments);
       }
       
       // Sinon (admin ou secrétariat), renvoyer tous les rendez-vous
+      console.log("Récupération de tous les RDV (admin ou secrétariat)");
       const appointments = await storage.getAppointments();
       res.json(appointments);
     } catch (error) {
+      console.error("Erreur lors de la récupération des rendez-vous:", error);
       res.status(500).json({ error: "Erreur lors de la récupération des rendez-vous" });
     }
   });
