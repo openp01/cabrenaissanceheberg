@@ -28,6 +28,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeButton } from "@/components/ui/home-button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   format, 
   startOfWeek, 
@@ -412,14 +419,18 @@ export default function Planning() {
     deleteMultipleMutation.mutate(appointmentIds);
   };
 
-  // Navigation
+  // Gestionnaire pour ouvrir le dialogue de création de rendez-vous
+  const [showNewAppointmentDialog, setShowNewAppointmentDialog] = useState(false);
+  const [newAppointmentDate, setNewAppointmentDate] = useState<Date | null>(null);
+  const [newAppointmentTherapistId, setNewAppointmentTherapistId] = useState<number | null>(null);
+  
   const handleNewAppointment = (date?: Date, therapistId?: number) => {
-    if (date && therapistId) {
-      const formattedDate = format(date, 'dd/MM/yyyy');
-      setLocation(`/booking?date=${formattedDate}&therapistId=${therapistId}`);
-    } else {
-      setLocation("/booking");
-    }
+    // Stockez les valeurs pour le formulaire
+    if (date) setNewAppointmentDate(date);
+    if (therapistId) setNewAppointmentTherapistId(therapistId);
+    
+    // Ouvrez le dialogue
+    setShowNewAppointmentDialog(true);
   };
 
   const handleEditAppointment = (id: number) => {
@@ -1356,6 +1367,55 @@ export default function Planning() {
           </div>
         </div>
       </main>
+      {/* Dialog pour créer un nouveau rendez-vous */}
+      <Dialog open={showNewAppointmentDialog} onOpenChange={setShowNewAppointmentDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Créer un nouveau rendez-vous</DialogTitle>
+            <DialogDescription>
+              Entrez les détails pour créer un nouveau rendez-vous.
+              {newAppointmentDate && (
+                <span className="block mt-1 text-primary">
+                  Date pré-sélectionnée: {format(newAppointmentDate, 'dd/MM/yyyy')}
+                </span>
+              )}
+              {newAppointmentTherapistId && therapists && (
+                <span className="block mt-1 text-primary">
+                  Thérapeute pré-sélectionné: {therapists.find(t => t.id === newAppointmentTherapistId)?.name}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+            <p>Pour créer un rendez-vous, utilisez le planning unifié qui vous offre toutes les options :</p>
+            <ul className="list-disc pl-5 mt-2 mb-4 text-sm">
+              <li>Choix du patient et du thérapeute</li>
+              <li>Sélection de date et d'heure</li>
+              <li>Options pour les rendez-vous récurrents</li>
+              <li>Possibilité de réserver plusieurs créneaux</li>
+            </ul>
+            <div className="flex justify-end mt-4">
+              <Button 
+                onClick={() => {
+                  // Ferme le dialogue
+                  setShowNewAppointmentDialog(false);
+                  
+                  // Redirect vers le formulaire complet de booking
+                  if (newAppointmentDate && newAppointmentTherapistId) {
+                    const formattedDate = format(newAppointmentDate, 'dd/MM/yyyy');
+                    // Utilisez la navigation de wouter
+                    setLocation(`/booking?date=${formattedDate}&therapistId=${newAppointmentTherapistId}`);
+                  } else {
+                    setLocation("/booking");
+                  }
+                }}
+              >
+                Continuer vers le formulaire complet
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DndProvider>
   );
 }
