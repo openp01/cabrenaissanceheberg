@@ -806,7 +806,7 @@ export class PgStorage implements IStorage {
                 'SELECT COUNT(*) as cancelled_count FROM appointments WHERE parentAppointmentId = $1 AND status = $2',
                 [parentAppointment.id, 'cancelled']
               );
-              const cancelledSessionsCount = parseInt(cancelledSessionsResult.rows[0].cancelled_count) + 1; // +1 pour inclure celle qu'on annule maintenant
+              const cancelledSessionsCount = parseInt(cancelledSessionsResult.rows[0].cancelled_count) + 1; // +1 pour inclure le rendez-vous qu'on est en train d'annuler
               
               // Calculer le nombre de séances restantes (non annulées)
               const remainingSessions = parentAppointment.recurringCount - cancelledSessionsCount;
