@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
@@ -34,10 +34,19 @@ export default function TherapistSchedule() {
   // Week days in French
   const weekDaysFull = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
-  // Fetch therapists
-  const { data: therapists, isLoading: isLoadingTherapists } = useQuery<Therapist[]>({
+  // Fetch therapists - pour un thérapeute, on filtre pour n'afficher que lui-même
+  const { data: allTherapists, isLoading: isLoadingTherapists } = useQuery<Therapist[]>({
     queryKey: ['/api/therapists'],
   });
+  
+  // Filtrer la liste des thérapeutes en fonction du rôle utilisateur
+  const therapists = useMemo(() => {
+    if (user && user.role === UserRole.THERAPIST && user.therapistId && allTherapists) {
+      // Pour un thérapeute, ne renvoyer que sa propre information
+      return allTherapists.filter(therapist => therapist.id === user.therapistId);
+    }
+    return allTherapists;
+  }, [allTherapists, user]);
 
   // Fetch appointments
   const { data: appointments, isLoading: isLoadingAppointments } = useQuery<AppointmentWithDetails[]>({
@@ -190,7 +199,7 @@ export default function TherapistSchedule() {
                           <SelectValue placeholder="Sélectionner un thérapeute" />
                         </SelectTrigger>
                         <SelectContent>
-                          {therapists?.map((therapist) => (
+                          {therapists?.map((therapist: Therapist) => (
                             <SelectItem key={therapist.id} value={therapist.id.toString()}>
                               {therapist.name}
                             </SelectItem>
