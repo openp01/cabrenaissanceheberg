@@ -384,7 +384,8 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid,
       patientName: row.patientname,
-      therapistName: row.therapistname
+      therapistName: row.therapistname,
+      createdAt: row.createdat || new Date() // Ajout du champ createAt
     }));
   }
 
@@ -407,7 +408,8 @@ export class PgStorage implements IStorage {
       isRecurring: row.isrecurring,
       recurringFrequency: row.recurringfrequency,
       recurringCount: row.recurringcount,
-      parentAppointmentId: row.parentappointmentid
+      parentAppointmentId: row.parentappointmentid,
+      createdAt: row.createdat || new Date()
     };
   }
 
@@ -507,7 +509,8 @@ export class PgStorage implements IStorage {
       isRecurring: row.isrecurring,
       recurringFrequency: row.recurringfrequency,
       recurringCount: row.recurringcount,
-      parentAppointmentId: row.parentappointmentid
+      parentAppointmentId: row.parentappointmentid,
+      createdAt: row.createdat || new Date()
     };
     
     // Générer automatiquement une facture si le rendez-vous est confirmé
