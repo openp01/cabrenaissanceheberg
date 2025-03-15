@@ -93,7 +93,7 @@ export default function Home() {
                   </Button>
                   <Button 
                     className="w-full" 
-                    onClick={() => handleNavigation("/appointments")}
+                    onClick={() => handleNavigation("/planning")}
                     variant="outline"
                   >
                     <List className="h-4 w-4 mr-2" />
@@ -123,7 +123,7 @@ export default function Home() {
                 <CardFooter>
                   <Button 
                     className="w-full" 
-                    onClick={() => handleNavigation("/schedule")}
+                    onClick={() => handleNavigation("/planning")}
                     variant="default"
                   >
                     <Clock className="h-4 w-4 mr-2" />
