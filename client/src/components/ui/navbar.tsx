@@ -61,7 +61,7 @@ export function Navbar() {
       <div className="flex items-center space-x-3">
         <Link href="/">
           <div className="flex items-center space-x-3 cursor-pointer">
-            <img src="/images/logo-picto.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-10 w-auto" />
+            <img src="/images/LaR_PICTO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-10 w-auto" />
             <span className="text-xl font-bold text-primary">
               Cabinet Paramédical de la Renaissance
             </span>
