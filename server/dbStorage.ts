@@ -798,10 +798,8 @@ export class PgStorage implements IStorage {
             // Récupérer le coût par séance (montant total initial / nombre de séances)
             const parentAppointment = await this.getAppointment(updatedAppointment.parentAppointmentId);
             if (parentAppointment && parentAppointment.recurringCount) {
-              // Utiliser le montant total (pas le montant actuel) pour un calcul simple et cohérent
-              const costPerSession = invoice.totalAmount / parentAppointment.recurringCount;
-              // Arrondir à 2 décimales pour éviter les problèmes de précision
-              const roundedCostPerSession = Math.round(costPerSession * 100) / 100;
+              // Prix fixe par séance (toujours 50€)
+              const fixedSessionPrice = 50;
               
               // Calculer le nombre de séances annulées pour ce rendez-vous récurrent
               const cancelledSessionsResult = await pool.query(
@@ -810,12 +808,23 @@ export class PgStorage implements IStorage {
               );
               const cancelledSessionsCount = parseInt(cancelledSessionsResult.rows[0].cancelled_count) + 1; // +1 pour inclure celle qu'on annule maintenant
               
-              // Calculer le nouveau montant en déduisant le coût des séances annulées
-              newAmount = invoice.totalAmount - (roundedCostPerSession * cancelledSessionsCount);
-              // Arrondir le résultat à 2 décimales
+              // Calculer le nombre de séances restantes (non annulées)
+              const remainingSessions = parentAppointment.recurringCount - cancelledSessionsCount;
+              
+              // Calculer le nouveau montant en fonction du nombre de séances restantes
+              newAmount = fixedSessionPrice * remainingSessions;
+              
+              // Arrondir le résultat à 2 décimales pour éviter les problèmes de précision
               newAmount = Math.round(newAmount * 100) / 100;
               
-              console.log(`Ajustement du montant de la facture ${invoice.id}: ${invoice.totalAmount} initial, ${cancelledSessionsCount} séances annulées à ${roundedCostPerSession}€ chacune, nouveau montant: ${newAmount}€`);
+              console.log(`Ajustement du montant de la facture ${invoice.id}:`);
+              console.log(`- Nombre total de séances: ${parentAppointment.recurringCount}`);
+              console.log(`- Nombre de séances annulées: ${cancelledSessionsCount}`);
+              console.log(`- Nombre de séances restantes: ${remainingSessions}`);
+              console.log(`- Prix par séance: ${fixedSessionPrice}€`);
+              console.log(`- Nouveau montant total: ${newAmount}€`);
+              
+              // Log détaillé du calcul pour le débogage
               
               // Créer un enregistrement pour le changement de statut du rendez-vous enfant
               await pool.query(
