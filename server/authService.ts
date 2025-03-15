@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { db } from "./db";
+import * as schema from "@shared/schema";
 import { users, User, InsertUser, UserRole } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -19,6 +20,24 @@ export class AuthService {
     const existingUser = await this.getUserByUsername(userData.username);
     if (existingUser) {
       throw new Error("Un utilisateur avec ce nom d'utilisateur existe déjà");
+    }
+    
+    // Si un therapistId est fourni, vérifier que le thérapeute existe
+    if (userData.therapistId) {
+      try {
+        // Vérifier si le thérapeute existe
+        const [therapist] = await db
+          .select()
+          .from(schema.therapists)
+          .where(eq(schema.therapists.id, userData.therapistId));
+
+        if (!therapist) {
+          throw new Error(`Aucun thérapeute trouvé avec l'ID ${userData.therapistId}`);
+        }
+      } catch (error) {
+        console.error(`Erreur lors de la vérification du thérapeute ID ${userData.therapistId}:`, error);
+        throw new Error(`Le thérapeute avec l'ID ${userData.therapistId} n'existe pas ou n'est pas accessible`);
+      }
     }
     
     // Hasher le mot de passe
