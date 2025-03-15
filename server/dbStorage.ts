@@ -796,8 +796,11 @@ export class PgStorage implements IStorage {
           
           // Mettre à jour la facture
           if (isRecurringChild && appointmentUpdate.status === 'cancelled') {
-            // Si c'est un enfant annulé, mettre à jour uniquement le montant
-            await this.updateInvoice(invoice.id, { amount: newAmount });
+            // Si c'est un enfant annulé, mettre à jour le montant et le montant total (pour que ce soit cohérent)
+            await this.updateInvoice(invoice.id, { 
+              amount: newAmount,
+              totalAmount: newAmount 
+            });
           } else if (!isRecurringChild) {
             // Si c'est un parent, mettre à jour le statut
             await this.updateInvoice(invoice.id, { status: invoiceStatus });
