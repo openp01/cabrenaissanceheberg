@@ -7,11 +7,12 @@ import {
   startOfMonth, endOfMonth, getMonth, getYear 
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Appointment, AppointmentWithDetails, Therapist } from "@shared/schema";
+import { Appointment, AppointmentWithDetails, Therapist, UserRole } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function TherapistSchedule() {
   const [location, setLocation] = useLocation();
@@ -20,6 +21,9 @@ export default function TherapistSchedule() {
   const [weekDates, setWeekDates] = useState<Date[]>([]);
   const [monthDates, setMonthDates] = useState<Date[]>([]);
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
+  
+  // Obtenir les informations de l'utilisateur connecté
+  const { user } = useAuth();
   
   // Time slots
   const timeSlots = [
@@ -42,11 +46,15 @@ export default function TherapistSchedule() {
   });
 
   useEffect(() => {
-    // Set default therapist if available
-    if (therapists && therapists.length > 0 && !selectedTherapist) {
+    // Si l'utilisateur est un thérapeute, on sélectionne automatiquement son ID
+    if (user && user.role === UserRole.THERAPIST && user.therapistId) {
+      setSelectedTherapist(user.therapistId);
+    }
+    // Sinon, on sélectionne le premier thérapeute disponible
+    else if (therapists && therapists.length > 0 && !selectedTherapist) {
       setSelectedTherapist(therapists[0].id);
     }
-  }, [therapists]);
+  }, [therapists, user]);
 
   useEffect(() => {
     // Mettre à jour les dates de la semaine
@@ -163,29 +171,35 @@ export default function TherapistSchedule() {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
               <div className="flex justify-between items-center flex-wrap">
-                <h2 className="text-lg font-medium text-gray-900">Emploi du temps des thérapeutes</h2>
-                {/* Therapist selector */}
-                <div className="w-64 mt-2 sm:mt-0">
-                  {isLoadingTherapists ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <Select
-                      value={selectedTherapist?.toString() || ""}
-                      onValueChange={handleTherapistChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un thérapeute" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {therapists?.map((therapist) => (
-                          <SelectItem key={therapist.id} value={therapist.id.toString()}>
-                            {therapist.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
+                <h2 className="text-lg font-medium text-gray-900">
+                  {user?.role === UserRole.THERAPIST 
+                    ? "Mon emploi du temps" 
+                    : "Emploi du temps des thérapeutes"}
+                </h2>
+                {/* Therapist selector - visible only for admin and secretary */}
+                {user?.role !== UserRole.THERAPIST && (
+                  <div className="w-64 mt-2 sm:mt-0">
+                    {isLoadingTherapists ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Select
+                        value={selectedTherapist?.toString() || ""}
+                        onValueChange={handleTherapistChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un thérapeute" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {therapists?.map((therapist) => (
+                            <SelectItem key={therapist.id} value={therapist.id.toString()}>
+                              {therapist.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
