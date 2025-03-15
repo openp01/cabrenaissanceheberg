@@ -1055,6 +1055,8 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
+        templateId: row.templateid,
+        signatureUrl: row.signatureurl,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1085,7 +1087,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid,
+      signatureUrl: row.signatureurl
     };
   }
 
@@ -1119,6 +1123,8 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
+        templateId: row.templateid,
+        signatureUrl: row.signatureurl,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1160,6 +1166,8 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
+        templateId: row.templateid,
+        signatureUrl: row.signatureurl,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1172,12 +1180,14 @@ export class PgStorage implements IStorage {
   }
 
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
+    // La requête inclut maintenant les colonnes templateId et signatureUrl
     const result = await pool.query(
       `INSERT INTO invoices (
         invoiceNumber, patientId, therapistId, appointmentId,
         amount, taxRate, totalAmount, status,
-        issueDate, dueDate, paymentMethod, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        issueDate, dueDate, paymentMethod, notes,
+        templateId, signatureUrl
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
       [
         insertInvoice.invoiceNumber,
         insertInvoice.patientId,
@@ -1190,7 +1200,9 @@ export class PgStorage implements IStorage {
         insertInvoice.issueDate,
         insertInvoice.dueDate,
         insertInvoice.paymentMethod,
-        insertInvoice.notes
+        insertInvoice.notes,
+        insertInvoice.templateId || null,
+        insertInvoice.signatureUrl || null
       ]
     );
     
@@ -1208,7 +1220,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid,
+      signatureUrl: row.signatureurl
     };
   }
 
@@ -1283,7 +1297,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid,
+      signatureUrl: row.signatureurl
     };
     
     // Si la facture vient d'être marquée comme payée, créer automatiquement un paiement au thérapeute
@@ -1319,7 +1335,9 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes
+      notes: row.notes,
+      templateId: row.templateid,
+      signatureUrl: row.signatureurl
     };
   }
 
