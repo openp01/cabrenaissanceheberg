@@ -432,11 +432,12 @@ export default function Planning() {
     setNewAppointmentDate(date || null);
     setNewAppointmentTherapistId(therapistId || null);
     
-    // Ouvrez le dialogue
-    setShowNewAppointmentDialog(true);
-    
-    // Debug
-    console.log("Dialog should be open now:", { showNewAppointmentDialog: true });
+    // Définissez un petit délai pour être sûr que les états sont mis à jour
+    setTimeout(() => {
+      // Ouvrez le dialogue
+      setShowNewAppointmentDialog(true);
+      console.log("Dialog should be open now:", { showNewAppointmentDialog: true });
+    }, 50);
   };
 
   const handleEditAppointment = (id: number) => {
@@ -710,9 +711,13 @@ export default function Planning() {
   return (
     <DndProvider backend={HTML5Backend}>
       {/* Modal de création de rendez-vous */}
+      {/* Modal toujours affiché pour éviter les problèmes de rendu conditionnel */}
       <AppointmentModal 
         open={showNewAppointmentDialog}
-        onOpenChange={setShowNewAppointmentDialog}
+        onOpenChange={(open) => {
+          console.log("Setting modal visibility to:", open);
+          setShowNewAppointmentDialog(open);
+        }}
         initialDate={newAppointmentDate || undefined}
         initialTime={newAppointmentDate ? format(newAppointmentDate, 'HH:mm') : undefined}
         initialTherapistId={newAppointmentTherapistId || undefined}
