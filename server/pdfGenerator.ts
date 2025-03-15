@@ -183,7 +183,11 @@ export async function generateInvoicePDF(
   doc.fillColor('#000');
   doc.font('Helvetica-Bold').fontSize(14);
   doc.text('TOTAL', tableLeft + 10, taxLineY + 20);
-  doc.text(formatCurrency(invoice.totalAmount), tableRight - 110, taxLineY + 20, { width: 100, align: 'right' });
+  // Utiliser le montant réel (amount) au lieu du montant total (totalAmount) pour les factures qui ont été ajustées
+  const displayAmount = invoice.status === 'paid' || invoice.notes?.includes('Facture groupée') 
+    ? invoice.amount 
+    : invoice.totalAmount;
+  doc.text(formatCurrency(displayAmount), tableRight - 110, taxLineY + 20, { width: 100, align: 'right' });
   
   // Espace pour signature
   const signatureY = taxLineY + 60;
