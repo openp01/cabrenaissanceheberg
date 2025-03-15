@@ -385,9 +385,29 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
           nextDate = addDays(new Date(baseDate), i * 14);
           break;
         case 'Mensuel':
-          // Une fois par mois à la même date du mois
+          // Une fois par mois au même jour de la semaine
           nextDate = new Date(baseDate);
           nextDate.setMonth(baseDate.getMonth() + i);
+          
+          // Obtenir le jour de la semaine de la date de base (0-6, 0 = dimanche)
+          const baseDayOfWeek = baseDate.getDay();
+          // Obtenir le jour de la semaine de la date calculée
+          const nextDayOfWeek = nextDate.getDay();
+          
+          // Ajuster pour obtenir le même jour de la semaine
+          if (baseDayOfWeek !== nextDayOfWeek) {
+            // Calculer la différence pour obtenir le même jour de la semaine
+            const daysToAdd = (baseDayOfWeek - nextDayOfWeek + 7) % 7;
+            // Si cela nous fait passer au mois suivant, reculer d'une semaine
+            const tempDate = new Date(nextDate);
+            tempDate.setDate(nextDate.getDate() + daysToAdd);
+            if (tempDate.getMonth() !== nextDate.getMonth()) {
+              // Reculer d'une semaine pour rester dans le même mois
+              nextDate.setDate(nextDate.getDate() + daysToAdd - 7);
+            } else {
+              nextDate.setDate(nextDate.getDate() + daysToAdd);
+            }
+          }
           break;
         default:
           nextDate = addDays(new Date(baseDate), i * 7);
