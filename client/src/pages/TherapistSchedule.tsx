@@ -114,8 +114,7 @@ export default function TherapistSchedule() {
     return appointments.some(app => 
       app.therapistId === therapistId && 
       app.date === formattedDate && 
-      app.time === time &&
-      app.status !== "cancelled" // Ne pas afficher les rendez-vous annulés
+      app.time === time
     );
   };
 
@@ -127,8 +126,7 @@ export default function TherapistSchedule() {
     return appointments.find(app => 
       app.therapistId === therapistId && 
       app.date === formattedDate && 
-      app.time === time &&
-      app.status !== "cancelled" // Ne pas afficher les rendez-vous annulés
+      app.time === time
     );
   };
 
@@ -359,8 +357,7 @@ export default function TherapistSchedule() {
                                 if (!selectedTherapist) return false;
                                 const appDate = parse(app.date, 'dd/MM/yyyy', new Date());
                                 return app.therapistId === selectedTherapist && 
-                                       isSameDay(appDate, date) &&
-                                       app.status !== "cancelled"; // Ne pas afficher les rendez-vous annulés
+                                       isSameDay(appDate, date);
                               });
                               
                               return (

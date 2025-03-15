@@ -188,8 +188,6 @@ export const insertInvoiceSchema = createInsertSchema(invoices).pick({
   dueDate: true,
   paymentMethod: true,
   notes: true,
-  templateId: true,
-  signatureUrl: true,
 });
 
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
@@ -201,8 +199,6 @@ export interface InvoiceWithDetails extends Invoice {
   therapistName: string;
   appointmentDate: string;
   appointmentTime: string;
-  templateId: number | null;
-  signatureUrl: string | null;
 }
 
 // Modèle pour les dépenses du cabinet

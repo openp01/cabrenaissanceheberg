@@ -217,13 +217,10 @@ export async function generateInvoicePDF(
       const permanentStampX = doc.page.width - permanentStampWidth - 50; // position x (50 pour la marge)
       const permanentStampY = doc.page.height - 200; // position y (200 du bas pour laisser de l'espace pour le pied de page)
       
-      // Appliquer la transparence à l'image
-      doc.save(); // Sauvegarder l'état actuel
-      doc.opacity(0.8); // Légèrement transparent
       doc.image(adminSignature.permanentStampData, permanentStampX, permanentStampY, { 
-        width: permanentStampWidth
+        width: permanentStampWidth,
+        opacity: 0.8 // Légèrement transparent
       });
-      doc.restore(); // Restaurer l'état précédent
       
     } catch (error) {
       console.error("Erreur lors de l'ajout du tampon permanent:", error);
@@ -242,10 +239,8 @@ export async function generateInvoicePDF(
       
       // Translater au centre, pivoter, puis translater en arrière
       doc.translate(centerX, centerY)
-         .rotate(30, { origin: [0, 0] });
-      
-      // Appliquer l'opacité
-      doc.opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
+         .rotate(30, { origin: [0, 0] })
+         .opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
       
       // Dessiner le tampon avec une taille appropriée
       doc.image(adminSignature.paidStampData, -100, -100, { width: 200 });

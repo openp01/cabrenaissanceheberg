@@ -722,8 +722,8 @@ export class PgStorage implements IStorage {
         let invoiceStatus = invoice.status;
         
         if (appointmentUpdate.status === 'Annulé' || appointmentUpdate.status === 'canceled') {
-          invoiceStatus = 'Annulé';
-          console.log(`Facture ${invoice.id} mise à Annulé suite à l'annulation du rendez-vous`);
+          invoiceStatus = 'En suspens';
+          console.log(`Facture ${invoice.id} mise en suspens suite à l'annulation du rendez-vous`);
         } else if (appointmentUpdate.status === 'Confirmé' || appointmentUpdate.status === 'confirmed') {
           invoiceStatus = 'En attente';
           console.log(`Facture ${invoice.id} mise en attente suite à la confirmation du rendez-vous`);
@@ -755,156 +755,39 @@ export class PgStorage implements IStorage {
         return { success: false, message: "Rendez-vous non trouvé" };
       }
       
-      // Déterminer si c'est un rendez-vous parent ou enfant
-      const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
-      const isChildAppointment = appointment.parentAppointmentId !== null;
-      
       // Vérifier s'il existe des factures liées à ce rendez-vous
-      const appointmentInvoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
+      const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
-      // Si des factures existent, vérifier s'il y a des paiements associés
-      if (appointmentInvoiceResult.rows.length > 0) {
-        for (const row of appointmentInvoiceResult.rows) {
+      // Vérifier si des paiements sont associés à ces factures
+      if (invoiceResult.rows.length > 0) {
+        for (const row of invoiceResult.rows) {
           const paymentResult = await pool.query(
             'SELECT id FROM therapist_payments WHERE invoiceId = $1',
             [row.id]
           );
           
           if (paymentResult.rows.length > 0) {
-            console.log(`Le rendez-vous ${id} a des paiements associés, marquage comme "cancelled" au lieu de suppression`);
-            
-            // Marquer le rendez-vous comme annulé au lieu de le supprimer
-            const updateResult = await pool.query(
-              'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4 RETURNING id',
-              [
-                'cancelled', 
-                'Annulé le ' + new Date().toLocaleDateString(),
-                '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-                id
-              ]
-            );
-            
+            console.log(`Impossible de supprimer le rendez-vous ${id} car il a des paiements associés`);
             return { 
-              success: updateResult.rows.length > 0, 
-              message: "Le rendez-vous a été marqué comme annulé" 
+              success: false, 
+              message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
             };
           }
         }
       }
       
-      // CAS SPÉCIAL: Traitement d'un rendez-vous enfant individuel
-      if (isChildAppointment) {
-        console.log(`Traitement du rendez-vous enfant ${id} avec parent ${appointment.parentAppointmentId}`);
-        
-        // Récupérer le rendez-vous parent
-        const parentAppointment = await this.getAppointment(appointment.parentAppointmentId as number);
-        if (!parentAppointment) {
-          return { success: false, message: "Rendez-vous parent non trouvé" };
-        }
-        
-        // Vérifier s'il existe une facture pour le rendez-vous parent
-        const parentInvoiceResult = await pool.query(
-          'SELECT * FROM invoices WHERE appointmentId = $1',
-          [parentAppointment.id]
-        );
-        
-        // S'il y a une facture parent et qu'elle a des paiements, marquer comme annulé au lieu de supprimer
-        if (parentInvoiceResult.rows.length > 0) {
-          for (const invoice of parentInvoiceResult.rows) {
-            const paymentResult = await pool.query(
-              'SELECT id FROM therapist_payments WHERE invoiceId = $1',
-              [invoice.id]
-            );
-            
-            if (paymentResult.rows.length > 0) {
-              console.log(`Le rendez-vous enfant ${id} a un parent avec des paiements, marquage comme "cancelled"`);
-              
-              // Marquer le rendez-vous comme annulé au lieu de le supprimer
-              const updateResult = await pool.query(
-                'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4 RETURNING id',
-                [
-                  'cancelled',
-                  'Annulé le ' + new Date().toLocaleDateString(),
-                  '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-                  id
-                ]
-              );
-              
-              return { 
-                success: updateResult.rows.length > 0, 
-                message: "Le rendez-vous a été marqué comme annulé" 
-              };
-            }
-          }
-          
-          // Si aucun paiement n'est trouvé, nous pouvons procéder à la modification de la facture
-          // 1. Récupérer tous les rendez-vous enfants restants
-          const remainingChildrenResult = await pool.query(
-            'SELECT * FROM appointments WHERE parentAppointmentId = $1 AND id != $2',
-            [parentAppointment.id, id]
-          );
-          
-          // 2. Mettre à jour la facture existante pour refléter le rendez-vous supprimé
-          // Calculer le nouveau montant total basé sur les rendez-vous restants
-          const remainingCount = (remainingChildrenResult.rowCount || 0) + 1; // +1 pour le parent
-          const currentInvoice = parentInvoiceResult.rows[0];
-          
-          // Calculer le nouveau montant (montant unitaire * nombre restant)
-          const unitAmount = parseFloat(currentInvoice.amount) / (remainingCount + 1); // +1 car on va enlever un rdv
-          const newAmount = (unitAmount * remainingCount).toFixed(2);
-          const newTotalAmount = (parseFloat(newAmount) * (1 + parseFloat(currentInvoice.taxrate) / 100)).toFixed(2);
-          
-          // Mettre à jour la facture
-          await pool.query(
-            'UPDATE invoices SET amount = $1, totalAmount = $2, notes = $3, status = $5 WHERE id = $4',
-            [
-              newAmount, 
-              newTotalAmount, 
-              `${currentInvoice.notes || ""} (Mis à jour après annulation d'un rendez-vous le ${new Date().toLocaleDateString()})`,
-              currentInvoice.id,
-              'Annulé' // Marquer la facture comme annulée
-            ]
-          );
-          
-          // 3. Marquer le rendez-vous enfant comme annulé
-          const updateResult = await pool.query(
-            'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4 RETURNING id',
-            [
-              'cancelled',
-              'Annulé le ' + new Date().toLocaleDateString(),
-              '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-              id
-            ]
-          );
-          
-          return { success: updateResult.rows.length > 0, message: "Le rendez-vous a été marqué comme annulé" };
-        }
-        
-        // S'il n'y a pas de facture parent, on peut marquer comme annulé
-        const updateResult = await pool.query(
-          'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4 RETURNING id',
-          [
-            'cancelled',
-            'Annulé le ' + new Date().toLocaleDateString(),
-            '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-            id
-          ]
-        );
-        
-        return { success: updateResult.rows.length > 0, message: "Le rendez-vous a été marqué comme annulé" };
-      }
+      // Vérifier si ce rendez-vous est récurrent et s'il est le premier d'une série
+      const isParentAppointment = appointment.isRecurring && !appointment.parentAppointmentId;
       
-      // TRAITEMENT STANDARD POUR LES RENDEZ-VOUS NON-ENFANTS
-      
-      // Si c'est un rendez-vous parent, traiter tous les rendez-vous enfants
+      // Si c'est un rendez-vous parent, récupérer tous les rendez-vous enfants
+      let childAppointments: Appointment[] = [];
       if (isParentAppointment) {
-        // Récupérer tous les rendez-vous enfants
         const result = await pool.query(
           'SELECT * FROM appointments WHERE parentAppointmentId = $1',
           [id]
         );
         
-        const childAppointments = result.rows.map(row => ({
+        childAppointments = result.rows.map(row => ({
           id: row.id,
           patientId: row.patientid,
           therapistId: row.therapistid,
@@ -917,112 +800,94 @@ export class PgStorage implements IStorage {
           isRecurring: row.isrecurring,
           recurringFrequency: row.recurringfrequency,
           recurringCount: row.recurringcount,
-          parentAppointmentId: row.parentappointmentid,
-          createdAt: row.createdat || new Date()
+          parentAppointmentId: row.parentappointmentid
         }));
+      }
+      
+      // Traiter les enfants d'abord si c'est un rendez-vous parent
+      if (isParentAppointment && childAppointments.length > 0) {
+        console.log(`Traitement de ${childAppointments.length} rendez-vous récurrents liés au rendez-vous parent ${id}`);
         
-        if (childAppointments.length > 0) {
-          console.log(`Traitement de ${childAppointments.length} rendez-vous récurrents liés au rendez-vous parent ${id}`);
-          
-          // Traiter chaque rendez-vous enfant
-          for (const childAppointment of childAppointments) {
-            try {
-              // Vérifier s'il existe une facture pour ce rendez-vous enfant
-              const childInvoiceResult = await pool.query(
-                'SELECT id FROM invoices WHERE appointmentId = $1',
-                [childAppointment.id]
-              );
-              
-              // Si des factures existent, vérifier s'il y a des paiements
-              if (childInvoiceResult.rows.length > 0) {
-                let hasPayments = false;
-                for (const row of childInvoiceResult.rows) {
-                  const paymentResult = await pool.query(
-                    'SELECT id FROM therapist_payments WHERE invoiceId = $1',
-                    [row.id]
-                  );
-                  
-                  if (paymentResult.rows.length > 0) {
-                    hasPayments = true;
-                    break;
-                  }
-                }
+        for (const childAppointment of childAppointments) {
+          try {
+            // Vérifier s'il existe une facture pour ce rendez-vous enfant
+            const childInvoiceResult = await pool.query(
+              'SELECT id FROM invoices WHERE appointmentId = $1',
+              [childAppointment.id]
+            );
+            
+            if (childInvoiceResult.rows.length > 0) {
+              // Vérifier s'il existe des paiements pour ces factures
+              let hasPayments = false;
+              for (const row of childInvoiceResult.rows) {
+                const paymentResult = await pool.query(
+                  'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+                  [row.id]
+                );
                 
-                // Si le rendez-vous enfant a des paiements, le marquer comme annulé
-                if (hasPayments) {
-                  console.log(`Le rendez-vous enfant ${childAppointment.id} a des paiements, marquage comme "cancelled"`);
-                  await pool.query(
-                    'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4',
-                    [
-                      'cancelled',
-                      'Annulé le ' + new Date().toLocaleDateString(),
-                      '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-                      childAppointment.id
-                    ]
-                  );
-                  continue;
+                if (paymentResult.rows.length > 0) {
+                  hasPayments = true;
+                  console.log(`Le rendez-vous enfant ${childAppointment.id} a des paiements associés et ne peut pas être supprimé`);
+                  break;
                 }
               }
               
-              // Si le rendez-vous enfant n'a pas de paiements, on peut le marquer comme annulé
-              await pool.query(
-                'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4',
-                [
-                  'cancelled',
-                  'Annulé le ' + new Date().toLocaleDateString(),
-                  '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-                  childAppointment.id
-                ]
-              );
-            } catch (err) {
-              console.error(`Erreur lors de l'annulation du rendez-vous enfant ${childAppointment.id}:`, err);
-              // Continuer avec les autres rendez-vous enfants malgré l'erreur
+              if (hasPayments) {
+                // Continuer avec les autres rendez-vous enfants
+                continue;
+              }
+              
+              // Supprimer les factures qui n'ont pas de paiements
+              for (const row of childInvoiceResult.rows) {
+                console.log(`Suppression de la facture ${row.id} liée au rendez-vous enfant ${childAppointment.id}`);
+                await pool.query('DELETE FROM invoices WHERE id = $1', [row.id]);
+              }
             }
+            
+            // Supprimer le rendez-vous enfant
+            await pool.query('DELETE FROM appointments WHERE id = $1', [childAppointment.id]);
+          } catch (err) {
+            console.error(`Erreur lors de la suppression du rendez-vous enfant ${childAppointment.id}:`, err);
+            // Continuer avec les autres rendez-vous enfants malgré l'erreur
           }
         }
       }
       
-      // Marquer le rendez-vous principal comme annulé
-      const result = await pool.query(
-        'UPDATE appointments SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4 RETURNING id',
-        [
-          'cancelled',
-          'Annulé le ' + new Date().toLocaleDateString(),
-          '\n\nAnnulé le ' + new Date().toLocaleDateString(),
-          id
-        ]
-      );
+      // Vérifier à nouveau s'il existe des factures liées à ce rendez-vous
+      const finalInvoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
-      // Mettre à jour la facture associée à ce rendez-vous principal
-      const mainInvoiceResult = await pool.query('SELECT * FROM invoices WHERE appointmentId = $1', [id]);
-      if (mainInvoiceResult.rows.length > 0) {
-        // Marquer toutes les factures associées comme annulées
-        for (const invoice of mainInvoiceResult.rows) {
-          await pool.query(
-            'UPDATE invoices SET status = $1, notes = CASE WHEN notes IS NULL THEN $2 ELSE notes || $3 END WHERE id = $4',
-            [
-              'Annulé',  // Statut "Annulé" pour la facture
-              'Facture annulée le ' + new Date().toLocaleDateString(),
-              '\n\nFacture annulée le ' + new Date().toLocaleDateString(),
-              invoice.id
-            ]
+      // Si des factures existent, les supprimer
+      if (finalInvoiceResult.rows.length > 0) {
+        for (const row of finalInvoiceResult.rows) {
+          // Vérifier à nouveau s'il n'y a pas de paiements associés (par sécurité)
+          const paymentCheckResult = await pool.query(
+            'SELECT id FROM therapist_payments WHERE invoiceId = $1',
+            [row.id]
           );
-          console.log(`Facture ${invoice.id} marquée comme Annulé suite à l'annulation du rendez-vous ${id}`);
+          
+          if (paymentCheckResult.rows.length > 0) {
+            return { 
+              success: false, 
+              message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
+            };
+          }
+          
+          console.log(`Suppression de la facture ${row.id} liée au rendez-vous ${id}`);
+          await pool.query('DELETE FROM invoices WHERE id = $1', [row.id]);
         }
       }
       
-      return { 
-        success: result.rows.length > 0, 
-        message: "Le rendez-vous a été marqué comme annulé" 
-      };
+      // Supprimer le rendez-vous principal
+      const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
+      return { success: result.rows.length > 0 };
     } catch (error) {
-      console.error("Erreur lors de l'annulation du rendez-vous:", error);
+      console.error("Erreur lors de la suppression du rendez-vous:", error);
       
-      // Gérer les erreurs spécifiques de contraintes de clé étrangère
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23503') {
+      // Vérifier si l'erreur est liée à une contrainte de clé étrangère concernant les paiements
+      if (error.code === '23503' && error.constraint === 'therapist_payments_invoiceid_fkey') {
         return {
           success: false,
-          message: "Impossible d'annuler ce rendez-vous en raison d'une contrainte de base de données. Veuillez contacter l'administrateur."
+          message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute"
         };
       }
       
@@ -1085,8 +950,6 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
-        templateId: row.templateid || null,
-        signatureUrl: row.signatureurl || null,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1117,9 +980,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid || null,
-      signatureUrl: row.signatureurl || null
+      notes: row.notes
     };
   }
 
@@ -1153,8 +1014,6 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
-        templateId: row.templateid || null,
-        signatureUrl: row.signatureurl || null,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1196,8 +1055,6 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
-        templateId: row.templateid || null,
-        signatureUrl: row.signatureurl || null,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1214,9 +1071,8 @@ export class PgStorage implements IStorage {
       `INSERT INTO invoices (
         invoiceNumber, patientId, therapistId, appointmentId,
         amount, taxRate, totalAmount, status,
-        issueDate, dueDate, paymentMethod, notes,
-        templateId, signatureUrl
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        issueDate, dueDate, paymentMethod, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         insertInvoice.invoiceNumber,
         insertInvoice.patientId,
@@ -1229,9 +1085,7 @@ export class PgStorage implements IStorage {
         insertInvoice.issueDate,
         insertInvoice.dueDate,
         insertInvoice.paymentMethod,
-        insertInvoice.notes,
-        insertInvoice.templateId || null,
-        insertInvoice.signatureUrl || null
+        insertInvoice.notes
       ]
     );
     
@@ -1249,9 +1103,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid || null,
-      signatureUrl: row.signatureurl || null
+      notes: row.notes
     };
   }
 
@@ -1283,9 +1135,7 @@ export class PgStorage implements IStorage {
         'issuedate': 'issuedate',
         'duedate': 'duedate',
         'paymentmethod': 'paymentmethod',
-        'notes': 'notes',
-        'templateid': 'templateid',
-        'signatureurl': 'signatureurl'
+        'notes': 'notes'
       };
       
       // Vérifier les cas particuliers pour les propriétés en camelCase
@@ -1298,8 +1148,6 @@ export class PgStorage implements IStorage {
       else if (key === 'issueDate') columnName = 'issuedate';
       else if (key === 'dueDate') columnName = 'duedate';
       else if (key === 'paymentMethod') columnName = 'paymentmethod';
-      else if (key === 'templateId') columnName = 'templateid';
-      else if (key === 'signatureUrl') columnName = 'signatureurl';
       
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
@@ -1330,9 +1178,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid || null,
-      signatureUrl: row.signatureurl || null
+      notes: row.notes
     };
     
     // Si la facture vient d'être marquée comme payée, créer automatiquement un paiement au thérapeute
@@ -1368,9 +1214,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid || null,
-      signatureUrl: row.signatureurl || null
+      notes: row.notes
     };
   }
 
