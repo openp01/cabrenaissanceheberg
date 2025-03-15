@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeButton } from "@/components/ui/home-button";
 import { Checkbox } from "@/components/ui/checkbox";
+import AppointmentModal from "@/components/AppointmentModal";
 import {
   Dialog,
   DialogContent,
@@ -687,6 +688,15 @@ export default function Planning() {
 
   return (
     <DndProvider backend={HTML5Backend}>
+      {/* Modal de création de rendez-vous */}
+      <AppointmentModal 
+        open={showNewAppointmentDialog}
+        onOpenChange={setShowNewAppointmentDialog}
+        initialDate={newAppointmentDate || undefined}
+        initialTime={newAppointmentDate ? format(newAppointmentDate, 'HH:mm') : undefined}
+        initialTherapistId={newAppointmentTherapistId || undefined}
+      />
+      
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
