@@ -657,7 +657,9 @@ export class MemStorage implements IStorage {
       issueDate: insertInvoice.issueDate,
       dueDate: insertInvoice.dueDate,
       paymentMethod: insertInvoice.paymentMethod || null,
-      notes: insertInvoice.notes || null
+      notes: insertInvoice.notes || null,
+      templateId: insertInvoice.templateId || null,
+      signatureUrl: insertInvoice.signatureUrl || null
     };
     this.invoicesData.set(id, invoice);
     return invoice;

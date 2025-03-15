@@ -1268,7 +1268,9 @@ export class PgStorage implements IStorage {
         'issuedate': 'issuedate',
         'duedate': 'duedate',
         'paymentmethod': 'paymentmethod',
-        'notes': 'notes'
+        'notes': 'notes',
+        'templateid': 'templateid',
+        'signatureurl': 'signatureurl'
       };
       
       // Vérifier les cas particuliers pour les propriétés en camelCase
@@ -1281,6 +1283,8 @@ export class PgStorage implements IStorage {
       else if (key === 'issueDate') columnName = 'issuedate';
       else if (key === 'dueDate') columnName = 'duedate';
       else if (key === 'paymentMethod') columnName = 'paymentmethod';
+      else if (key === 'templateId') columnName = 'templateid';
+      else if (key === 'signatureUrl') columnName = 'signatureurl';
       
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
