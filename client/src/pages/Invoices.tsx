@@ -225,10 +225,10 @@ export default function Invoices() {
                 onValueChange={setSelectedTherapist}
               >
                 <SelectTrigger id="therapist-filter" className="w-[250px]">
-                  <SelectValue placeholder="Tous les orthophonistes" />
+                  <SelectValue placeholder="Tous les thérapeutes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les orthophonistes</SelectItem>
+                  <SelectItem value="all">Tous les thérapeutes</SelectItem>
                   {therapists?.map((therapist: Therapist) => (
                     <SelectItem key={therapist.id} value={therapist.id.toString()}>
                       {therapist.name}
@@ -246,7 +246,7 @@ export default function Invoices() {
                 <TableHead className="w-[100px]">N° Facture</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Patient</TableHead>
-                <TableHead>Orthophoniste</TableHead>
+                <TableHead>Thérapeute</TableHead>
                 <TableHead>Montant</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
