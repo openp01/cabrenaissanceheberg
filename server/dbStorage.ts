@@ -553,6 +553,18 @@ export class PgStorage implements IStorage {
       ? therapistResult.rows[0].name 
       : 'Thérapeute inconnu';
     
+    // Récupérer le modèle de facture par défaut, s'il existe
+    const templateResult = await pool.query(
+      'SELECT id FROM invoice_templates WHERE is_default = true LIMIT 1'
+    );
+    const defaultTemplateId = templateResult.rows.length > 0 ? templateResult.rows[0].id : null;
+    
+    // Récupérer la signature administrative par défaut, s'il en existe une
+    const signatureResult = await pool.query(
+      'SELECT signature_data FROM admin_signature ORDER BY id DESC LIMIT 1'
+    );
+    const defaultSignatureUrl = signatureResult.rows.length > 0 ? signatureResult.rows[0].signature_data : null;
+    
     // Créer la facture
     const invoice: InsertInvoice = {
       invoiceNumber,
@@ -566,7 +578,9 @@ export class PgStorage implements IStorage {
       issueDate,
       dueDate,
       paymentMethod: null,
-      notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`
+      notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`,
+      templateId: defaultTemplateId,
+      signatureUrl: defaultSignatureUrl
     };
     
     // Enregistrer la facture dans la base de données
