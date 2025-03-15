@@ -571,21 +571,54 @@ export class PgStorage implements IStorage {
     // Ajouter la date de base
     recurringDates.push({ date: baseAppointment.date, time: baseAppointment.time });
     
+    // Convertir la date de base en objet Date
+    const [day, month, year] = baseAppointment.date.split('/').map(n => parseInt(n));
+    const baseDate = new Date(year, month - 1, day);
+    
+    // Récupérer le jour de la semaine de la date de base (0 = dimanche, 1 = lundi, etc.)
+    const baseDayOfWeek = baseDate.getDay();
+    
     // Calculer les dates suivantes
     for (let i = 1; i < count; i++) {
-      let nextDate = new Date();
-      const [day, month, year] = baseAppointment.date.split('/').map(n => parseInt(n));
-      nextDate = new Date(year, month - 1, day);
+      let nextDate = new Date(baseDate);
       
       // Calculer la date du prochain rendez-vous en fonction de la fréquence
       if (frequency === 'weekly' || frequency === 'Hebdomadaire') {
+        // Pour hebdomadaire : ajouter 7 jours, ce qui garantit le même jour de la semaine
         nextDate.setDate(nextDate.getDate() + (7 * i));
       } else if (frequency === 'biweekly' || frequency === 'Bimensuel') {
+        // Pour bimensuel : ajouter 14 jours, ce qui garantit le même jour de la semaine
         nextDate.setDate(nextDate.getDate() + (14 * i));
       } else if (frequency === 'monthly' || frequency === 'Mensuel') {
+        // Pour mensuel : ajouter un mois et s'assurer que c'est bien le même jour de la semaine
         nextDate.setMonth(nextDate.getMonth() + i);
+        
+        // Trouver le même jour de la semaine dans le mois
+        const currentDayOfWeek = nextDate.getDay();
+        if (currentDayOfWeek !== baseDayOfWeek) {
+          // Calculer la différence de jours pour obtenir le même jour de la semaine
+          const daysToAdd = (baseDayOfWeek - currentDayOfWeek + 7) % 7;
+          // Si on avance trop dans le mois suivant, reculer d'une semaine
+          const newDay = nextDate.getDate() + daysToAdd;
+          const tempDate = new Date(nextDate);
+          tempDate.setDate(newDay);
+          if (tempDate.getMonth() !== nextDate.getMonth()) {
+            nextDate.setDate(newDay - 7);
+          } else {
+            nextDate.setDate(newDay);
+          }
+        }
       } else if (frequency === 'Annuel') {
+        // Pour annuel : ajouter un an et s'assurer que c'est bien le même jour de la semaine
         nextDate.setFullYear(nextDate.getFullYear() + i);
+        
+        // Trouver le même jour de la semaine dans l'année
+        const currentDayOfWeek = nextDate.getDay();
+        if (currentDayOfWeek !== baseDayOfWeek) {
+          // Calculer la différence de jours pour obtenir le même jour de la semaine
+          const daysToAdd = (baseDayOfWeek - currentDayOfWeek + 7) % 7;
+          nextDate.setDate(nextDate.getDate() + daysToAdd);
+        }
       }
       
       const newDate = format(nextDate, 'dd/MM/yyyy');
