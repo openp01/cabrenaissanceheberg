@@ -59,7 +59,7 @@ export default function AppointmentModal({
       duration: 60,
       type: "Consultation standard",
       notes: "",
-      status: "En attente"
+      status: "pending"
     }
   });
 
