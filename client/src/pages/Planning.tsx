@@ -413,8 +413,13 @@ export default function Planning() {
   };
 
   // Navigation
-  const handleNewAppointment = () => {
-    setLocation("/booking");
+  const handleNewAppointment = (date?: Date, therapistId?: number) => {
+    if (date && therapistId) {
+      const formattedDate = format(date, 'dd/MM/yyyy');
+      setLocation(`/booking?date=${formattedDate}&therapistId=${therapistId}`);
+    } else {
+      setLocation("/booking");
+    }
   };
 
   const handleEditAppointment = (id: number) => {
@@ -693,7 +698,7 @@ export default function Planning() {
             </div>
             <div className="flex space-x-2">
               <Button 
-                onClick={handleNewAppointment}
+                onClick={() => handleNewAppointment()}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <span className="material-icons mr-2 text-sm">add</span>
@@ -990,8 +995,7 @@ export default function Planning() {
                                           className="text-xs text-gray-400 cursor-pointer hover:text-primary"
                                           onClick={() => {
                                             // Redirect to booking page with pre-filled date and therapist
-                                            const formattedDate = format(date, 'dd/MM/yyyy');
-                                            handleNewAppointment();
+                                            handleNewAppointment(date, selectedTherapist);
                                           }}
                                         >
                                           + Ajouter
