@@ -153,6 +153,7 @@ export interface AppointmentWithDetails {
     therapistName: string;
     date: string;
     time: string;
+    status: string;
   }>;
 }
 
