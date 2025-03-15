@@ -72,13 +72,24 @@ export function Navbar() {
       {/* Navigation principale - affichée si l'utilisateur est connecté */}
       {user && (
         <div className="flex items-center space-x-4 ml-4">
-          <Link href="/planning">
+          <Link href="/appointments">
             <Button
-              variant={isActive("/planning") ? "default" : "secondary"}
-              className={`flex items-center font-bold ${isActive("/planning") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+              variant={isActive("/appointments") ? "default" : "secondary"}
+              className={`flex items-center font-bold ${isActive("/appointments") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <Calendar className="mr-2 h-5 w-5" />
+              Rendez-vous
+            </Button>
+          </Link>
+          
+          <Link href="/schedule">
+            <Button
+              variant={isActive("/schedule") ? "default" : "secondary"}
+              className={`flex items-center font-bold ${isActive("/schedule") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+              size="lg"
+            >
+              <ClipboardList className="mr-2 h-5 w-5" />
               Planning
             </Button>
           </Link>
@@ -204,8 +215,12 @@ export function Navbar() {
             <DropdownMenuContent align="end" className="w-52">
               {user ? (
                 <>
-                  <DropdownMenuItem onClick={() => setLocation("/planning")}>
+                  <DropdownMenuItem onClick={() => setLocation("/appointments")}>
                     <Calendar className="mr-2 h-4 w-4" />
+                    Rendez-vous
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/schedule")}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
                     Planning
                   </DropdownMenuItem>
                   

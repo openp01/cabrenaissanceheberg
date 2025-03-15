@@ -2,7 +2,8 @@ import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { Navbar } from "@/components/ui/navbar"; // Importation de la barre de navigation
 import Home from "./pages/Home";
-import Planning from "./pages/Planning";
+import AppointmentList from "./pages/AppointmentList";
+import TherapistSchedule from "./pages/TherapistSchedule";
 import Invoices from "./pages/Invoices";
 import InvoiceTemplates from "./pages/InvoiceTemplates";
 import ElectronicSignatures from "./pages/ElectronicSignatures";
@@ -29,11 +30,12 @@ function Router() {
       
       {/* Routes protégées - requiert authentification */}
       <ProtectedRoute path="/" component={Home} />
+      <ProtectedRoute path="/appointments" component={AppointmentList} />
       
       {/* Route pour les thérapeutes et le personnel administratif */}
       <ProtectedRoute 
-        path="/planning" 
-        component={Planning} 
+        path="/schedule" 
+        component={TherapistSchedule} 
         roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
       />
       

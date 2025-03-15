@@ -384,8 +384,7 @@ export class PgStorage implements IStorage {
       recurringCount: row.recurringcount,
       parentAppointmentId: row.parentappointmentid,
       patientName: row.patientname,
-      therapistName: row.therapistname,
-      createdAt: row.createdat || new Date() // Ajout du champ createAt
+      therapistName: row.therapistname
     }));
   }
 
@@ -408,8 +407,7 @@ export class PgStorage implements IStorage {
       isRecurring: row.isrecurring,
       recurringFrequency: row.recurringfrequency,
       recurringCount: row.recurringcount,
-      parentAppointmentId: row.parentappointmentid,
-      createdAt: row.createdat || new Date()
+      parentAppointmentId: row.parentappointmentid
     };
   }
 
@@ -509,8 +507,7 @@ export class PgStorage implements IStorage {
       isRecurring: row.isrecurring,
       recurringFrequency: row.recurringfrequency,
       recurringCount: row.recurringcount,
-      parentAppointmentId: row.parentappointmentid,
-      createdAt: row.createdat || new Date()
+      parentAppointmentId: row.parentappointmentid
     };
     
     // Générer automatiquement une facture si le rendez-vous est confirmé
@@ -542,29 +539,6 @@ export class PgStorage implements IStorage {
     // Prix standard pour une séance thérapeutique
     const sessionPrice = "50.00";
     
-    // Récupérer les informations du patient et du thérapeute pour l'affichage
-    const patientResult = await pool.query('SELECT firstName, lastName FROM patients WHERE id = $1', [appointment.patientId]);
-    const therapistResult = await pool.query('SELECT name FROM therapists WHERE id = $1', [appointment.therapistId]);
-    
-    const patientName = patientResult.rows.length > 0 
-      ? `${patientResult.rows[0].firstname} ${patientResult.rows[0].lastname}` 
-      : 'Patient inconnu';
-    const therapistName = therapistResult.rows.length > 0 
-      ? therapistResult.rows[0].name 
-      : 'Thérapeute inconnu';
-    
-    // Récupérer le modèle de facture par défaut, s'il existe
-    const templateResult = await pool.query(
-      'SELECT id FROM invoice_templates WHERE is_default = true LIMIT 1'
-    );
-    const defaultTemplateId = templateResult.rows.length > 0 ? templateResult.rows[0].id : null;
-    
-    // Récupérer la signature administrative par défaut, s'il en existe une
-    const signatureResult = await pool.query(
-      'SELECT signature_data FROM admin_signature ORDER BY id DESC LIMIT 1'
-    );
-    const defaultSignatureUrl = signatureResult.rows.length > 0 ? signatureResult.rows[0].signature_data : null;
-    
     // Créer la facture
     const invoice: InsertInvoice = {
       invoiceNumber,
@@ -578,26 +552,10 @@ export class PgStorage implements IStorage {
       issueDate,
       dueDate,
       paymentMethod: null,
-      notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`,
-      templateId: defaultTemplateId,
-      signatureUrl: defaultSignatureUrl
+      notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`
     };
     
-    // Enregistrer la facture dans la base de données
-    const newInvoice = await this.createInvoice(invoice);
-    
-    // Afficher clairement les informations de la nouvelle facture
-    console.log(`✅ NOUVELLE FACTURE CRÉÉE ✅`);
-    console.log(`-----------------------------`);
-    console.log(`Numéro: ${invoiceNumber}`);
-    console.log(`Patient: ${patientName}`);
-    console.log(`Thérapeute: ${therapistName}`);
-    console.log(`Montant: ${sessionPrice}€`);
-    console.log(`Date: ${appointment.date} à ${appointment.time}`);
-    console.log(`Statut: En attente`);
-    console.log(`-----------------------------`);
-    
-    return newInvoice;
+    return await this.createInvoice(invoice);
   }
 
   async createRecurringAppointments(
@@ -750,8 +708,7 @@ export class PgStorage implements IStorage {
       isRecurring: row.isrecurring,
       recurringFrequency: row.recurringfrequency,
       recurringCount: row.recurringcount,
-      parentAppointmentId: row.parentappointmentid,
-      createdAt: row.createdat || new Date()
+      parentAppointmentId: row.parentappointmentid
     };
     
     // Si le statut a changé, gérer les mises à jour additionnelles
@@ -808,8 +765,8 @@ export class PgStorage implements IStorage {
             // Récupérer le coût par séance (montant total / nombre de séances)
             const parentAppointment = await this.getAppointment(updatedAppointment.parentAppointmentId);
             if (parentAppointment && parentAppointment.recurringCount) {
-              const costPerSession = parseFloat(invoice.amount) / parentAppointment.recurringCount;
-              newAmount = (parseFloat(invoice.amount) - costPerSession).toString();
+              const costPerSession = invoice.amount / parentAppointment.recurringCount;
+              newAmount = invoice.amount - costPerSession;
               console.log(`Ajustement du montant de la facture ${invoice.id}: ${invoice.amount} -> ${newAmount} (annulation d'une séance)`);
               
               // Créer un enregistrement pour le changement de statut du rendez-vous enfant
@@ -869,13 +826,10 @@ export class PgStorage implements IStorage {
         return { success: false, message: "Rendez-vous non trouvé" };
       }
       
-      console.log(`Tentative de suppression du rendez-vous ${id}`);
-      
       // Vérifier s'il existe des factures liées à ce rendez-vous
       const invoiceResult = await pool.query('SELECT id FROM invoices WHERE appointmentId = $1', [id]);
       
       // Vérifier si des paiements sont associés à ces factures
-      let hasPayments = false;
       if (invoiceResult.rows.length > 0) {
         for (const row of invoiceResult.rows) {
           const paymentResult = await pool.query(
@@ -884,8 +838,7 @@ export class PgStorage implements IStorage {
           );
           
           if (paymentResult.rows.length > 0) {
-            hasPayments = true;
-            console.log(`Impossible de supprimer le rendez-vous ${id} car il a des paiements associés à la facture ${row.id}`);
+            console.log(`Impossible de supprimer le rendez-vous ${id} car il a des paiements associés`);
             return { 
               success: false, 
               message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute" 
@@ -918,8 +871,7 @@ export class PgStorage implements IStorage {
           isRecurring: row.isrecurring,
           recurringFrequency: row.recurringfrequency,
           recurringCount: row.recurringcount,
-          parentAppointmentId: row.parentappointmentid,
-          createdAt: row.createdat || new Date()
+          parentAppointmentId: row.parentappointmentid
         }));
       }
       
@@ -999,11 +951,11 @@ export class PgStorage implements IStorage {
       // Supprimer le rendez-vous principal
       const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
       return { success: result.rows.length > 0 };
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur lors de la suppression du rendez-vous:", error);
       
       // Vérifier si l'erreur est liée à une contrainte de clé étrangère concernant les paiements
-      if (error && error.code === '23503' && error.constraint === 'therapist_payments_invoiceid_fkey') {
+      if (error.code === '23503' && error.constraint === 'therapist_payments_invoiceid_fkey') {
         return {
           success: false,
           message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute"
@@ -1069,14 +1021,12 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
-        templateId: row.templateid,
-        signatureUrl: row.signatureurl,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
         appointmentTime: row.appointmenttime || 'N/A'
       }));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur lors de la récupération des factures:", error);
       return [];
     }
@@ -1101,9 +1051,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid,
-      signatureUrl: row.signatureurl
+      notes: row.notes
     };
   }
 
@@ -1137,8 +1085,6 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
-        templateId: row.templateid,
-        signatureUrl: row.signatureurl,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1180,8 +1126,6 @@ export class PgStorage implements IStorage {
         dueDate: row.duedate,
         paymentMethod: row.paymentmethod,
         notes: row.notes,
-        templateId: row.templateid,
-        signatureUrl: row.signatureurl,
         patientName: row.patientname,
         therapistName: row.therapistname,
         appointmentDate: row.appointmentdate || 'N/A',
@@ -1194,14 +1138,12 @@ export class PgStorage implements IStorage {
   }
 
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
-    // La requête inclut maintenant les colonnes templateId et signatureUrl
     const result = await pool.query(
       `INSERT INTO invoices (
         invoiceNumber, patientId, therapistId, appointmentId,
         amount, taxRate, totalAmount, status,
-        issueDate, dueDate, paymentMethod, notes,
-        templateId, signatureUrl
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+        issueDate, dueDate, paymentMethod, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         insertInvoice.invoiceNumber,
         insertInvoice.patientId,
@@ -1214,9 +1156,7 @@ export class PgStorage implements IStorage {
         insertInvoice.issueDate,
         insertInvoice.dueDate,
         insertInvoice.paymentMethod,
-        insertInvoice.notes,
-        insertInvoice.templateId || null,
-        insertInvoice.signatureUrl || null
+        insertInvoice.notes
       ]
     );
     
@@ -1234,9 +1174,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid,
-      signatureUrl: row.signatureurl
+      notes: row.notes
     };
   }
 
@@ -1268,9 +1206,7 @@ export class PgStorage implements IStorage {
         'issuedate': 'issuedate',
         'duedate': 'duedate',
         'paymentmethod': 'paymentmethod',
-        'notes': 'notes',
-        'templateid': 'templateid',
-        'signatureurl': 'signatureurl'
+        'notes': 'notes'
       };
       
       // Vérifier les cas particuliers pour les propriétés en camelCase
@@ -1283,8 +1219,6 @@ export class PgStorage implements IStorage {
       else if (key === 'issueDate') columnName = 'issuedate';
       else if (key === 'dueDate') columnName = 'duedate';
       else if (key === 'paymentMethod') columnName = 'paymentmethod';
-      else if (key === 'templateId') columnName = 'templateid';
-      else if (key === 'signatureUrl') columnName = 'signatureurl';
       
       updates.push(`${columnName} = $${paramIndex}`);
       values.push(value);
@@ -1315,9 +1249,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid,
-      signatureUrl: row.signatureurl
+      notes: row.notes
     };
     
     // Si la facture vient d'être marquée comme payée, créer automatiquement un paiement au thérapeute
@@ -1353,9 +1285,7 @@ export class PgStorage implements IStorage {
       issueDate: row.issuedate,
       dueDate: row.duedate,
       paymentMethod: row.paymentmethod,
-      notes: row.notes,
-      templateId: row.templateid,
-      signatureUrl: row.signatureurl
+      notes: row.notes
     };
   }
 

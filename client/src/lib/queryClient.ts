@@ -24,21 +24,9 @@ export async function apiRequest<T = any>(
   console.log(`Response from ${url}:`, res.status, res.statusText);
   
   await throwIfResNotOk(res);
-  
-  // Pour les méthodes DELETE ou les réponses sans contenu, ne pas essayer de parser le JSON
-  if (method === "DELETE" || res.status === 204 || res.headers.get("content-length") === "0") {
-    console.log(`No content response from ${url}`);
-    return {} as T;
-  }
-  
-  try {
-    const responseData = await res.json();
-    console.log(`Data from ${url}:`, responseData);
-    return responseData;
-  } catch (error) {
-    console.log(`Error parsing JSON from ${url}:`, error);
-    return {} as T;
-  }
+  const responseData = await res.json();
+  console.log(`Data from ${url}:`, responseData);
+  return responseData;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
