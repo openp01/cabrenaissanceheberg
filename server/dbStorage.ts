@@ -824,8 +824,6 @@ export class PgStorage implements IStorage {
               console.log(`- Prix par séance: ${fixedSessionPrice}€`);
               console.log(`- Nouveau montant total: ${newAmount}€`);
               
-              // Log détaillé du calcul pour le débogage
-              
               // Créer un enregistrement pour le changement de statut du rendez-vous enfant
               await pool.query(
                 'INSERT INTO appointment_status_changes (appointment_id, old_status, new_status) VALUES ($1, $2, $3)',
