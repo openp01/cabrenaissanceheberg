@@ -877,8 +877,8 @@ export default function Planning() {
                                             onClick={() => {
                                               // Ouvrir le formulaire de création directement avec des valeurs pré-remplies
                                               const formattedDate = format(date, 'dd/MM/yyyy');
-                                              // Nous n'avons pas de route /booking, utilisons notre nouveau planning
-                                              handleNewAppointment();
+                                              // Utilisez date et thérapeute pour créer le rendez-vous
+                                              handleNewAppointment(date, selectedTherapist || undefined);
                                             }}
                                           ></div>
                                         )}
@@ -995,7 +995,7 @@ export default function Planning() {
                                           className="text-xs text-gray-400 cursor-pointer hover:text-primary"
                                           onClick={() => {
                                             // Redirect to booking page with pre-filled date and therapist
-                                            handleNewAppointment(date, selectedTherapist);
+                                            handleNewAppointment(date, selectedTherapist || undefined);
                                           }}
                                         >
                                           + Ajouter
@@ -1343,7 +1343,7 @@ export default function Planning() {
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-gray-500 mb-4">Aucun rendez-vous trouvé</p>
-                        <Button onClick={handleNewAppointment} className="bg-primary">
+                        <Button onClick={() => handleNewAppointment()} className="bg-primary">
                           <span className="material-icons mr-2 text-sm">add</span>
                           Prendre un rendez-vous
                         </Button>
