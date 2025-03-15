@@ -427,17 +427,21 @@ export default function Planning() {
   
   const handleNewAppointment = (date?: Date, therapistId?: number) => {
     console.log("Planning - handleNewAppointment:", { date, therapistId });
+    console.log("Dialog state before:", { showNewAppointmentDialog });
     
     // Stockez les valeurs pour le formulaire
     setNewAppointmentDate(date || null);
     setNewAppointmentTherapistId(therapistId || null);
     
-    // Définissez un petit délai pour être sûr que les états sont mis à jour
+    // Ouvrez le dialogue immédiatement
+    setShowNewAppointmentDialog(true);
+    
+    console.log("Dialog state after setting:", { showNewAppointmentDialog: true });
+    
+    // Vérifiez l'état après un court délai pour confirmer
     setTimeout(() => {
-      // Ouvrez le dialogue
-      setShowNewAppointmentDialog(true);
-      console.log("Dialog should be open now:", { showNewAppointmentDialog: true });
-    }, 50);
+      console.log("Dialog state after delay:", { showNewAppointmentDialog });
+    }, 100);
   };
 
   const handleEditAppointment = (id: number) => {

@@ -34,6 +34,22 @@ export default function AppointmentModal({
   console.log("AppointmentModal - Props:", { open, initialDate, initialTime, initialTherapistId });
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // État local pour le dialog, afin d'assurer la synchronisation
+  const [dialogOpen, setDialogOpen] = useState(open);
+  
+  // Assurer la synchronisation entre l'état local et les props
+  useEffect(() => {
+    console.log("AppointmentModal - open prop changed:", open);
+    setDialogOpen(open);
+  }, [open]);
+  
+  // Fonction pour gérer les changements d'état du modal
+  const handleOpenChange = (newOpen: boolean) => {
+    console.log("AppointmentModal - handleOpenChange:", newOpen);
+    setDialogOpen(newOpen);
+    onOpenChange(newOpen);
+  };
 
   // Récupération des données nécessaires
   const { data: patients } = useQuery<Patient[]>({
@@ -97,7 +113,7 @@ export default function AppointmentModal({
         description: "Le rendez-vous a été créé avec succès.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
-      onOpenChange(false);
+      handleOpenChange(false);
       form.reset();
       setSelectedPatient(null);
       setSearchQuery("");
@@ -117,7 +133,7 @@ export default function AppointmentModal({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Ajouter un rendez-vous</DialogTitle>
@@ -250,7 +266,7 @@ export default function AppointmentModal({
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
             >
               Annuler
             </Button>
