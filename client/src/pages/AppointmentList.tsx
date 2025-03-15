@@ -35,7 +35,15 @@ export default function AppointmentList() {
     
     // Si l'utilisateur est un thérapeute, on ne montre que ses propres rendez-vous
     if (user && user.role === 'therapist' && user.therapistId) {
-      return allAppointments.filter(appointment => appointment.therapistId === user.therapistId);
+      console.log("Filtrage des rendez-vous pour le thérapeute ID:", user.therapistId);
+      return allAppointments.filter(appointment => {
+        const match = appointment.therapistId === user.therapistId;
+        // Log pour débogage
+        if (match) {
+          console.log("Rendez-vous inclus:", appointment.id, "therapistId:", appointment.therapistId);
+        }
+        return match;
+      });
     }
     
     // Sinon (pour admin et secrétariat), on montre tous les rendez-vous
