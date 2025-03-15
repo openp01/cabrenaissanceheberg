@@ -136,7 +136,7 @@ export default function TherapistSchedule() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Cabinet Paramédical de la Renaissance</h1>
             <div className="flex space-x-2">
               <button 
                 onClick={handleNewAppointment}
@@ -163,7 +163,7 @@ export default function TherapistSchedule() {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
               <div className="flex justify-between items-center flex-wrap">
-                <h2 className="text-lg font-medium text-gray-900">Emploi du temps des orthophonistes</h2>
+                <h2 className="text-lg font-medium text-gray-900">Emploi du temps des thérapeutes</h2>
                 {/* Therapist selector */}
                 <div className="w-64 mt-2 sm:mt-0">
                   {isLoadingTherapists ? (
@@ -174,7 +174,7 @@ export default function TherapistSchedule() {
                       onValueChange={handleTherapistChange}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un orthophoniste" />
+                        <SelectValue placeholder="Sélectionner un thérapeute" />
                       </SelectTrigger>
                       <SelectContent>
                         {therapists?.map((therapist) => (

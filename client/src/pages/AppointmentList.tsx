@@ -336,7 +336,7 @@ export default function AppointmentList() {
             <div className="flex items-center space-x-4">
               <HomeButton />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Centre d'Orthophonie</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Cabinet Paramédical de la Renaissance</h1>
                 {isTherapistUser && (
                   <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">
                     Vue Thérapeute
