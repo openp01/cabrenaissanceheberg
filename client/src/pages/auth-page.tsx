@@ -88,10 +88,13 @@ export default function AuthPage() {
       {/* Formulaire d'authentification */}
       <div className="flex flex-col justify-center w-full md:w-1/2 p-8">
         <div className="max-w-md mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Centre d'Orthophonie</h1>
-          <p className="text-muted-foreground mb-8">
-            Connectez-vous ou créez un compte pour accéder au système.
-          </p>
+          <div className="flex flex-col items-center mb-6">
+            <img src="/images/LaR_PICTO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-20 w-auto mb-4" />
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent">Cabinet Paramédical de la Renaissance</h1>
+            <p className="text-[#266d2c] mt-2 text-center">
+              Connectez-vous ou créez un compte pour accéder au système.
+            </p>
+          </div>
 
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "login" | "register")}>
             <TabsList className="grid grid-cols-2 mb-8">
@@ -111,12 +114,13 @@ export default function AuthPage() {
       </div>
 
       {/* Héro section */}
-      <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-primary/10 p-8">
+      <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-b from-[#f8fff9] to-[#e3f5e5] p-8">
         <div className="max-w-md text-center">
-          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-indigo-600 text-transparent bg-clip-text">
-            Plateforme d'orthophonie
+          <img src="/images/LaR_LOGO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-32 w-auto mb-6 mx-auto" />
+          <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent">
+            Cabinet Paramédical de la Renaissance
           </h2>
-          <p className="text-xl mb-6 text-muted-foreground">
+          <p className="text-xl mb-6 text-[#266d2c]">
             Un outil complet pour gérer les rendez-vous, les factures et les dossiers patients
           </p>
           <div className="grid grid-cols-2 gap-4 text-left">
@@ -368,9 +372,9 @@ function RegisterForm() {
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="p-4 rounded-lg bg-white/50 backdrop-blur shadow-sm">
-      <h3 className="font-semibold text-primary">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
+    <div className="p-4 rounded-lg bg-white/50 backdrop-blur shadow-sm border-l-4 border-[#3fb549]">
+      <h3 className="font-semibold text-[#266d2c]">{title}</h3>
+      <p className="text-sm text-[#0d240f]/80">{description}</p>
     </div>
   );
 }
