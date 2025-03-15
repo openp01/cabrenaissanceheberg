@@ -68,7 +68,7 @@ export async function generateInvoicePDF(
   const pageWidth = doc.page.width - 100; // Marge de 50 de chaque côté
   
   // Ajouter l'en-tête
-  doc.fontSize(25).text('CABINET D\'ORTHOPHONIE', { align: 'center' });
+  doc.fontSize(25).text('Cabinet Paramédical de la Renaissance', { align: 'center' });
   doc.moveDown(0.5);
   doc.fontSize(18).text('FACTURE', { align: 'center' });
   doc.moveDown(1);
@@ -96,7 +96,7 @@ export async function generateInvoicePDF(
   doc.fontSize(12).font('Helvetica').text(`Nom: ${invoice.patientName}`, 50, sectionY + 25);
   
   // Information du thérapeute (section droite)
-  doc.fontSize(14).font('Helvetica-Bold').text('Orthophoniste:', 50 + sectionWidth + 20, sectionY);
+  doc.fontSize(14).font('Helvetica-Bold').text('Thérapeute:', 50 + sectionWidth + 20, sectionY);
   doc.fontSize(12).font('Helvetica').text(`Nom: ${invoice.therapistName}`, 50 + sectionWidth + 20, sectionY + 25);
   
   // Positionner à la fin des sections
@@ -136,8 +136,8 @@ export async function generateInvoicePDF(
   
   // Ligne avec la prestation
   const descriptionText = invoice.notes && invoice.notes.includes('Facture groupée') 
-    ? 'Séances d\'orthophonie (facturation groupée)' 
-    : 'Séance d\'orthophonie';
+    ? 'Séances thérapeutiques (facturation groupée)' 
+    : 'Séance thérapeutique';
   
   doc.font('Helvetica').fontSize(12);
   doc.text(descriptionText, tableLeft + 10, tableTop + 35);
@@ -257,7 +257,7 @@ export async function generateInvoicePDF(
   doc.font('Helvetica').fontSize(10);
   doc.text('Merci pour votre confiance.', 50, footerTop, { align: 'center', width: pageWidth });
   doc.moveDown(0.5);
-  doc.text('Cette facture est générée par le système de gestion du cabinet d\'orthophonie.', 
+  doc.text('Cette facture est générée par le système de gestion du Cabinet Paramédical de la Renaissance.', 
     50, doc.y, { align: 'center', width: pageWidth });
   doc.moveDown(0.5);
   doc.text('Pour toute question, veuillez contacter le secrétariat.', 
