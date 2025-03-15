@@ -93,7 +93,7 @@ export default function InvoiceTemplatePreview({ template }: InvoiceTemplatePrev
               </thead>
               <tbody>
                 <tr className="border-b">
-                  <td className="p-2 text-left">Séance d'orthophonie</td>
+                  <td className="p-2 text-left">Séance thérapeutique</td>
                   <td className="p-2 text-center">13/03/2025</td>
                   <td className="p-2 text-center">45 min</td>
                   <td className="p-2 text-right">50,00 €</td>

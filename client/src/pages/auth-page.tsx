@@ -90,7 +90,7 @@ export default function AuthPage() {
         <div className="max-w-md mx-auto">
           <div className="flex flex-col items-center mb-6">
             <img src="/images/LaR_PICTO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-20 w-auto mb-4" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent">Cabinet Paramédical de la Renaissance</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent">Espace Connexion</h1>
             <p className="text-[#266d2c] mt-2 text-center">
               Connectez-vous ou créez un compte pour accéder au système.
             </p>
