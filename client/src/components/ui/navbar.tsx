@@ -56,12 +56,12 @@ export function Navbar() {
   }
 
   return (
-    <nav className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200">
+    <nav className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8cd392]">
       {/* Logo et titre */}
       <div className="flex items-center space-x-3">
         <Link href="/">
           <div className="flex items-center space-x-3 cursor-pointer">
-            <img src="/images/logo-icon.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-10 w-auto" />
+            <img src="/images/logo-picto.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-10 w-auto" />
             <span className="text-xl font-bold text-primary">
               Cabinet Paramédical de la Renaissance
             </span>
