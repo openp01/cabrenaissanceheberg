@@ -218,8 +218,8 @@ export async function generateInvoicePDF(
       const permanentStampY = doc.page.height - 200; // position y (200 du bas pour laisser de l'espace pour le pied de page)
       
       doc.image(adminSignature.permanentStampData, permanentStampX, permanentStampY, { 
-        width: permanentStampWidth,
-        opacity: 0.8 // Légèrement transparent
+        width: permanentStampWidth
+        // Note: l'option opacity a été retirée car non supportée par l'interface ImageOption
       });
       
     } catch (error) {
@@ -239,8 +239,8 @@ export async function generateInvoicePDF(
       
       // Translater au centre, pivoter, puis translater en arrière
       doc.translate(centerX, centerY)
-         .rotate(30, { origin: [0, 0] })
-         .opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
+         .rotate(30, { origin: [0, 0] });
+      // Note: L'option opacity a été retirée car non supportée par certaines implémentations de PDFKit
       
       // Dessiner le tampon avec une taille appropriée
       doc.image(adminSignature.paidStampData, -100, -100, { width: 200 });

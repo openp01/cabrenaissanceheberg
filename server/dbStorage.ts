@@ -999,11 +999,11 @@ export class PgStorage implements IStorage {
       // Supprimer le rendez-vous principal
       const result = await pool.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [id]);
       return { success: result.rows.length > 0 };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la suppression du rendez-vous:", error);
       
       // Vérifier si l'erreur est liée à une contrainte de clé étrangère concernant les paiements
-      if (error.code === '23503' && error.constraint === 'therapist_payments_invoiceid_fkey') {
+      if (error && error.code === '23503' && error.constraint === 'therapist_payments_invoiceid_fkey') {
         return {
           success: false,
           message: "Ce rendez-vous ne peut pas être supprimé car il a déjà été réglé au thérapeute"
@@ -1076,7 +1076,7 @@ export class PgStorage implements IStorage {
         appointmentDate: row.appointmentdate || 'N/A',
         appointmentTime: row.appointmenttime || 'N/A'
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la récupération des factures:", error);
       return [];
     }
