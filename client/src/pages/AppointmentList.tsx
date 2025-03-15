@@ -25,9 +25,22 @@ export default function AppointmentList() {
   const [expandedAppointments, setExpandedAppointments] = useState<string[]>([]);
 
   // Fetch appointments
-  const { data: appointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
+  const { data: allAppointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
     queryKey: ['/api/appointments'],
   });
+  
+  // Filtrer les rendez-vous en fonction du rôle de l'utilisateur
+  const appointments = useMemo(() => {
+    if (!allAppointments) return undefined;
+    
+    // Si l'utilisateur est un thérapeute, on ne montre que ses propres rendez-vous
+    if (user && user.role === 'therapist' && user.therapistId) {
+      return allAppointments.filter(appointment => appointment.therapistId === user.therapistId);
+    }
+    
+    // Sinon (pour admin et secrétariat), on montre tous les rendez-vous
+    return allAppointments;
+  }, [allAppointments, user]);
 
   // Delete single appointment mutation
   const deleteMutation = useMutation({
