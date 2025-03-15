@@ -1221,6 +1221,26 @@ export class PgStorage implements IStorage {
     // Vérifier si nous mettons à jour le statut en "Payée"
     const isBeingPaidUpdate = invoiceUpdate.status === "Payée";
     
+    // Vérifier si c'est une mise à jour des montants seulement (amount et totalAmount)
+    const isAmountUpdate = invoiceUpdate.amount !== undefined && invoiceUpdate.totalAmount !== undefined;
+    
+    // Récupérer la facture actuelle
+    const existingInvoice = await this.getInvoice(id);
+    if (!existingInvoice) {
+      return undefined;
+    }
+    
+    // Vérifier si la facture est déjà payée, et si oui, bloquer la mise à jour du statut
+    // Mais autoriser la mise à jour des montants même pour les factures payées
+    if (
+      (existingInvoice.status === 'Payée' || existingInvoice.status === 'paid' || 
+      existingInvoice.status === 'Paid') && 
+      !isAmountUpdate
+    ) {
+      console.log(`Facture ${id} déjà payée, pas de modification du statut`);
+      delete invoiceUpdate.status; // Supprimer le statut de la mise à jour pour éviter de le changer
+    }
+    
     // Construire la requête de mise à jour de manière dynamique
     let query = 'UPDATE invoices SET ';
     const values: any[] = [];
