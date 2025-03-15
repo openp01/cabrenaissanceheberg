@@ -49,6 +49,27 @@ export default function AppointmentList() {
       });
     },
   });
+  
+  // Update appointment status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number, status: string }) => {
+      return await apiRequest(`/api/appointments/${id}`, "PUT", { status });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/appointments'] });
+      toast({
+        title: "Statut mis à jour",
+        description: `Le statut du rendez-vous a été modifié avec succès en "${getStatusLabel(data.status)}".`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le statut du rendez-vous. Veuillez réessayer plus tard.",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Delete multiple appointments mutation
   const deleteMultipleMutation = useMutation({
@@ -85,6 +106,11 @@ export default function AppointmentList() {
     if (confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous ?")) {
       deleteMutation.mutate(id);
     }
+  };
+  
+  // Fonction pour changer le statut d'un rendez-vous
+  const handleStatusChange = (id: number, status: string) => {
+    updateStatusMutation.mutate({ id, status });
   };
 
   const toggleAppointmentSelection = (id: number) => {
@@ -138,6 +164,8 @@ export default function AppointmentList() {
         return "bg-yellow-100 text-yellow-800";
       case "cancelled":
         return "bg-red-100 text-red-800";
+      case "completed":
+        return "bg-blue-100 text-blue-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -151,6 +179,8 @@ export default function AppointmentList() {
         return "En attente";
       case "cancelled":
         return "Annulé";
+      case "completed":
+        return "Terminé";
       default:
         return status;
     }
@@ -525,9 +555,22 @@ export default function AppointmentList() {
                                       })()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                                        {getStatusLabel(appointment.status)}
-                                      </span>
+                                      {selectMode ? (
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
+                                          {getStatusLabel(appointment.status)}
+                                        </span>
+                                      ) : (
+                                        <select
+                                          value={appointment.status}
+                                          onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                                          className={`text-xs font-semibold px-2 py-1 rounded-full border-0 ${getStatusBadgeClass(appointment.status)}`}
+                                        >
+                                          <option value="pending" className="bg-white text-yellow-800">En attente</option>
+                                          <option value="confirmed" className="bg-white text-green-800">Confirmé</option>
+                                          <option value="cancelled" className="bg-white text-red-800">Annulé</option>
+                                          <option value="completed" className="bg-white text-blue-800">Terminé</option>
+                                        </select>
+                                      )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                       {selectMode ? (
