@@ -711,9 +711,32 @@ export class PgStorage implements IStorage {
       parentAppointmentId: row.parentappointmentid
     };
     
-    // Si le statut a changé, mettre à jour la facture correspondante
+    // Si le statut a changé, gérer les mises à jour additionnelles
     if (appointmentUpdate.status && oldAppointment.status !== appointmentUpdate.status) {
       console.log(`Statut du rendez-vous ${id} modifié: ${oldAppointment.status} -> ${appointmentUpdate.status}`);
+      
+      // Vérifier si c'est un rendez-vous récurrent parent
+      const isRecurringParent = updatedAppointment.isRecurring && !updatedAppointment.parentAppointmentId;
+      
+      // Si c'est un rendez-vous parent, propager le changement de statut aux enfants
+      if (isRecurringParent) {
+        console.log(`Propagation du statut ${appointmentUpdate.status} aux rendez-vous liés...`);
+        const childrenResult = await pool.query(
+          'SELECT id FROM appointments WHERE parentAppointmentId = $1',
+          [id]
+        );
+        
+        // Mise à jour en masse des statuts des rendez-vous enfants
+        if (childrenResult.rows.length > 0) {
+          const childIds = childrenResult.rows.map(row => row.id);
+          console.log(`Mise à jour du statut de ${childIds.length} rendez-vous liés`);
+          
+          await pool.query(
+            'UPDATE appointments SET status = $1 WHERE id = ANY($2)',
+            [appointmentUpdate.status, childIds]
+          );
+        }
+      }
       
       // Vérifier si c'est un rendez-vous issu d'une récurrence
       const isRecurringChild = updatedAppointment.parentAppointmentId !== null;
