@@ -314,8 +314,8 @@ export default function Planning() {
     }
   };
 
-  const selectAllAppointments = (checked: boolean) => {
-    if (checked && appointments) {
+  const selectAllAppointments = (checked: boolean | string) => {
+    if (checked === true && appointments) {
       setSelectedAppointments(appointments.map(appointment => appointment.id));
     } else {
       setSelectedAppointments([]);
@@ -338,7 +338,7 @@ export default function Planning() {
     
     // Vérifier si le rendez-vous est lié à une récurrence
     const isRecurringChild = appointment.parentAppointmentId !== null;
-    const isRecurringParent = appointment.isRecurring && appointment.relatedAppointments && appointment.relatedAppointments.length > 0;
+    const isRecurringParent = appointment.isRecurring === true && appointment.relatedAppointments && appointment.relatedAppointments.length > 0;
     
     // Procéder avec la mise à jour du statut
     updateStatus(id, status, isRecurringParent, isRecurringChild, appointment.parentAppointmentId);
@@ -498,7 +498,7 @@ export default function Planning() {
   
   // Fonction pour déterminer le type de rendez-vous
   const getAppointmentType = (appointment: AppointmentWithDetails) => {
-    if (appointment.isRecurring) {
+    if (appointment.isRecurring === true) {
       return "recurring";
     } else if (appointment.relatedAppointments && appointment.relatedAppointments.length > 0) {
       return "multiple";
@@ -542,7 +542,7 @@ export default function Planning() {
     // Filtrer les rendez-vous pour garder uniquement les parents ou les rendez-vous sans parent
     return appointments.filter(appointment => {
       // Si c'est un parent de rendez-vous récurrents
-      if (appointment.isRecurring && parentMap.has(appointment.id)) {
+      if (appointment.isRecurring === true && parentMap.has(appointment.id)) {
         // Ajouter les rendez-vous enfants comme propriété
         appointment.relatedAppointments = parentMap.get(appointment.id)?.map(child => ({
           id: child.id,
