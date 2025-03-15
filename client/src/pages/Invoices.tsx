@@ -178,7 +178,7 @@ export default function Invoices() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-2xl font-bold">Factures</CardTitle>
-            <CardDescription>Gestion des factures pour les séances d'orthophonie</CardDescription>
+            <CardDescription>Gestion des factures pour les séances thérapeutiques</CardDescription>
           </div>
           <div className="flex gap-2">
             <Button 
@@ -219,7 +219,7 @@ export default function Invoices() {
         <CardContent>
           <div className="mb-6">
             <div className="flex items-center gap-4 mb-4">
-              <Label htmlFor="therapist-filter">Filtrer par orthophoniste:</Label>
+              <Label htmlFor="therapist-filter">Filtrer par thérapeute:</Label>
               <Select
                 value={selectedTherapist}
                 onValueChange={setSelectedTherapist}

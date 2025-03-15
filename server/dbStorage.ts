@@ -196,7 +196,7 @@ async function initializeExampleData() {
       // Générer un numéro de facture unique
       const invoiceNumber = `F-${today.getFullYear()}-${String(appointment.id).padStart(4, '0')}`;
       
-      // Prix standard pour une séance d'orthophonie
+      // Prix standard pour une séance thérapeutique
       const sessionPrice = "50.00";
       
       // Créer la facture
@@ -222,7 +222,7 @@ async function initializeExampleData() {
         "En attente",
         issueDate,
         dueDate,
-        `Séance d'orthophonie du ${appointment.date} à ${appointment.time}`
+        `Séance thérapeutique du ${appointment.date} à ${appointment.time}`
       ]);
     }
   } finally {
@@ -536,7 +536,7 @@ export class PgStorage implements IStorage {
     // Générer un numéro de facture unique
     const invoiceNumber = `F-${today.getFullYear()}-${String(appointment.id).padStart(4, '0')}`;
     
-    // Prix standard pour une séance d'orthophonie
+    // Prix standard pour une séance thérapeutique
     const sessionPrice = "50.00";
     
     // Créer la facture
@@ -552,7 +552,7 @@ export class PgStorage implements IStorage {
       issueDate,
       dueDate,
       paymentMethod: null,
-      notes: `Séance d'orthophonie du ${appointment.date} à ${appointment.time}`
+      notes: `Séance thérapeutique du ${appointment.date} à ${appointment.time}`
     };
     
     return await this.createInvoice(invoice);
@@ -653,7 +653,7 @@ export class PgStorage implements IStorage {
     if (firstInvoice) {
       const totalAmount = (parseFloat(firstInvoice.amount) * count).toFixed(2);
       await this.updateInvoice(firstInvoice.id, {
-        notes: `Facture groupée pour ${count} séances d'orthophonie (${frequency})`,
+        notes: `Facture groupée pour ${count} séances thérapeutiques (${frequency})`,
         amount: (parseFloat(firstInvoice.amount) * count).toString(),
         totalAmount: totalAmount
       });
