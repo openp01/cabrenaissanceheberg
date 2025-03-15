@@ -870,9 +870,10 @@ export default function Planning() {
                                           <div 
                                             className="h-6 w-full cursor-pointer hover:bg-gray-100 rounded"
                                             onClick={() => {
-                                              // Redirect to booking page with pre-filled date, time and therapist
+                                              // Ouvrir le formulaire de création directement avec des valeurs pré-remplies
                                               const formattedDate = format(date, 'dd/MM/yyyy');
-                                              setLocation(`/booking?date=${formattedDate}&time=${time}&therapistId=${selectedTherapist}`);
+                                              // Nous n'avons pas de route /booking, utilisons notre nouveau planning
+                                              handleNewAppointment();
                                             }}
                                           ></div>
                                         )}
@@ -990,7 +991,7 @@ export default function Planning() {
                                           onClick={() => {
                                             // Redirect to booking page with pre-filled date and therapist
                                             const formattedDate = format(date, 'dd/MM/yyyy');
-                                            setLocation(`/booking?date=${formattedDate}&therapistId=${selectedTherapist}`);
+                                            handleNewAppointment();
                                           }}
                                         >
                                           + Ajouter
