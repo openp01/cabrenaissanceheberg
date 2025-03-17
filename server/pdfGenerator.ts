@@ -67,22 +67,26 @@ export async function generateInvoicePDF(
   try {
     // Si la facture a un templateId, utiliser ce template
     if (invoice.templateId) {
-      const result = await storage.db.execute(
-        'SELECT * FROM invoice_templates WHERE id = $1',
-        [invoice.templateId]
-      );
-      if (result.rows.length > 0) {
-        template = result.rows[0];
+      // Utiliser la méthode de stockage pour récupérer le template
+      const invoiceTemplate = await fetch(`/api/invoice-templates/${invoice.templateId}`)
+        .then(res => res.json())
+        .catch(() => null);
+        
+      if (invoiceTemplate) {
+        template = invoiceTemplate;
       }
     }
     
     // Si pas de template trouvé, chercher le template par défaut
     if (!template) {
-      const result = await storage.db.execute(
-        'SELECT * FROM invoice_templates WHERE is_default = true'
-      );
-      if (result.rows.length > 0) {
-        template = result.rows[0];
+      // Récupérer tous les templates et filtrer pour trouver celui par défaut
+      const templates = await fetch('/api/invoice-templates')
+        .then(res => res.json())
+        .catch(() => []);
+        
+      const defaultTemplate = templates.find((t: any) => t.is_default === true);
+      if (defaultTemplate) {
+        template = defaultTemplate;
       }
     }
     
@@ -186,36 +190,44 @@ export async function generateInvoicePDF(
   const objectY = sectionY + 70;
   doc.fontSize(12)
      .fillColor('black')
-     .text('OBJET :', 50, objectY, { underline: true })
-     .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 50, objectY + 20)
-     .text('Nous restons à votre disposition pour toute information complémentaire.', 50, objectY + 35);
+     .text('OBJET :', 50, objectY, { underline: true });
+     
+  // Utiliser l'option width pour limiter la largeur du texte et permettre le passage à la ligne
+  doc.text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
+      50, objectY + 20, 
+      { width: pageWidth, align: 'left' });
   
-  // Ajouter une ligne de séparation
+  // Ajouter plus d'espace entre les lignes
+  doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
+      50, objectY + 50, 
+      { width: pageWidth, align: 'left' });
+  
+  // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .moveTo(50, objectY + 60)
-     .lineTo(pageWidth + 50, objectY + 60)
+     .moveTo(50, objectY + 75)
+     .lineTo(pageWidth + 50, objectY + 75)
      .stroke();
   
-  // Ajouter le titre pour la période concernée
+  // Ajouter le titre pour la période concernée (ajuster la position en fonction du nouveau texte)
   doc.fontSize(14)
      .fillColor(primaryColor)
-     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 70, { align: 'center' });
+     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 85, { align: 'center' });
   
-  // Ajouter une ligne de séparation
+  // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .moveTo(50, objectY + 95)
-     .lineTo(pageWidth + 50, objectY + 95)
+     .moveTo(50, objectY + 110)
+     .lineTo(pageWidth + 50, objectY + 110)
      .stroke();
   
-  // Afficher la date de l'appointment
+  // Afficher la date de l'appointment (ajuster la position en fonction du nouveau texte)
   doc.fontSize(12)
      .fillColor('black')
-     .text(formatDate(invoice.appointmentDate), 50, objectY + 105, { align: 'center' });
+     .text(formatDate(invoice.appointmentDate), 50, objectY + 120, { align: 'center' });
   
-  // Ajouter le tableau pour les prestations
-  const tableY = objectY + 135;
+  // Ajouter le tableau pour les prestations (ajuster la position en fonction des modifications précédentes)
+  const tableY = objectY + 150;
   
   // Créer les en-têtes du tableau
   const colWidths = [pageWidth * 0.5, pageWidth * 0.25, pageWidth * 0.25];
@@ -244,7 +256,7 @@ export async function generateInvoicePDF(
   // Déterminer le texte de description
   const descriptionText = invoice.notes && invoice.notes.includes('Facture groupée') 
     ? 'Séances thérapeutiques (facturation groupée)' 
-    : 'Séance ' + (invoice.type || 'thérapeutique');
+    : 'Séance thérapeutique';
   
   doc.fontSize(12)
      .fillColor('black')
@@ -366,15 +378,19 @@ export async function generateInvoicePDF(
       const permanentStampX = doc.page.width - permanentStampWidth - 50; // position x (50 pour la marge)
       const permanentStampY = doc.page.height - 200; // position y (200 du bas pour laisser de l'espace pour le pied de page)
       
+      // Réduire l'opacité pour ne pas cacher le contenu
+      doc.opacity(0.8);
+      
+      // Ajouter l'image du tampon
       doc.image(
         Buffer.from(adminSignature.permanentStampData.split(',')[1], 'base64'),
         permanentStampX, 
         permanentStampY, 
-        { 
-          width: permanentStampWidth,
-          opacity: 0.8 // Légèrement transparent
-        }
+        { width: permanentStampWidth }
       );
+      
+      // Rétablir l'opacité normale
+      doc.opacity(1);
     } catch (error) {
       console.error("Erreur lors de l'ajout du tampon permanent:", error);
     }
@@ -392,8 +408,8 @@ export async function generateInvoicePDF(
       
       // Translater au centre, pivoter, puis translater en arrière
       doc.translate(centerX, centerY)
-         .rotate(30, { origin: [0, 0] })
-         .opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
+         .rotate(30, { origin: [0, 0] });
+      doc.opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
       
       // Dessiner le tampon avec une taille appropriée
       doc.image(
