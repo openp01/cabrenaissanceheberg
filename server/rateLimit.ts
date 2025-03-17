@@ -43,13 +43,15 @@ export function loginRateLimiter(req: Request, res: Response, next: NextFunction
 
   // Utiliser l'adresse IP comme identifiant
   // Dans une application réelle, on pourrait utiliser une combinaison de facteurs
-  const identifier = req.ip;
+  const identifier = req.ip || 'unknown';
   const now = Date.now();
 
   // Vérifier si cet identifiant est déjà bloqué
-  if (loginAttempts[identifier] && loginAttempts[identifier].blockedUntil) {
+  if (identifier in loginAttempts && loginAttempts[identifier].blockedUntil) {
     if (loginAttempts[identifier].blockedUntil! > now) {
-      const remainingTimeMinutes = Math.ceil((loginAttempts[identifier].blockedUntil! - now) / 60000);
+      const remainingTimeMinutes = Math.ceil(
+        (loginAttempts[identifier].blockedUntil! - now) / 60000
+      );
       return res.status(429).json({
         error: `Trop de tentatives de connexion. Veuillez réessayer dans ${remainingTimeMinutes} minute(s).`
       });
@@ -60,7 +62,7 @@ export function loginRateLimiter(req: Request, res: Response, next: NextFunction
   }
 
   // Initialiser ou augmenter le compteur
-  if (!loginAttempts[identifier]) {
+  if (!(identifier in loginAttempts)) {
     loginAttempts[identifier] = {
       count: 1,
       firstAttempt: now

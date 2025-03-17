@@ -161,7 +161,7 @@ export function setupAuth(app: Express) {
   });
   
   // Route pour récupérer la liste des utilisateurs (admin uniquement)
-  app.get("/api/auth/users", isAdmin, async (req, res) => {
+  app.get("/api/auth/users", (req, res, next) => isAdmin(req as any, res, next), async (req, res) => {
     try {
       const users = await authService.getAllUsers();
       
@@ -200,7 +200,7 @@ export function setupAuth(app: Express) {
   });
   
   // Route pour changer le mot de passe d'un utilisateur connecté
-  app.post("/api/auth/change-password", isAuthenticated, async (req, res) => {
+  app.post("/api/auth/change-password", (req, res, next) => isAuthenticated(req, res, next), async (req, res) => {
     try {
       const { currentPassword, newPassword, confirmPassword } = req.body;
       const userId = (req.user as SessionUser).id;
@@ -238,7 +238,7 @@ export function setupAuth(app: Express) {
   });
   
   // Route pour désactiver un compte utilisateur (admin uniquement)
-  app.post("/api/auth/deactivate-user/:id", isAdmin, async (req, res) => {
+  app.post("/api/auth/deactivate-user/:id", (req, res, next) => isAdmin(req as any, res, next), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       

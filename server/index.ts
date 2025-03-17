@@ -10,6 +10,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use('/images', express.static('public/images'));
 
+// Protection contre les attaques par force brute
+app.use(loginRateLimiter);
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
