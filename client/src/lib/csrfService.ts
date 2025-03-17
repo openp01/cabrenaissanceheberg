@@ -1,5 +1,5 @@
 // Token CSRF stocké en mémoire
-let csrfToken: string | null = null;
+let csrfToken = '';
 
 /**
  * Récupère un token CSRF depuis le serveur
@@ -24,6 +24,9 @@ export async function fetchCsrfToken(): Promise<string> {
     
     const data = await response.json();
     csrfToken = data.csrfToken;
+    if (!csrfToken) {
+      throw new Error('Token CSRF non trouvé dans la réponse');
+    }
     return csrfToken;
   } catch (error) {
     console.error('Erreur lors de la récupération du token CSRF:', error);
@@ -48,5 +51,5 @@ export async function withCsrfToken(headers: Record<string, string> = {}): Promi
  * Réinitialise le token CSRF (à utiliser après une déconnexion ou une erreur CSRF)
  */
 export function resetCsrfToken(): void {
-  csrfToken = null;
+  csrfToken = '';
 }
