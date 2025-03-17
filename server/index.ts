@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
+import { loginRateLimiter } from "./rateLimit";
 
 const app = express();
 app.use(express.json());
@@ -43,11 +44,33 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Toujours consigner l'erreur complète pour le débogage
+    console.error('Erreur serveur:', err);
+    
+    // En production, envoyer un message générique
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Déterminer le statut HTTP approprié
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    
+    // Personnaliser la réponse en fonction du type d'erreur
+    if (err.name === 'ValidationError' || err.name === 'ZodError') {
+      return res.status(400).json({ 
+        error: "Données d'entrée invalides", 
+        details: isProduction ? undefined : err.errors 
+      });
+    }
+    
+    if (err.name === 'UnauthorizedError') {
+      return res.status(401).json({ error: "Accès non autorisé" });
+    }
+    
+    // Erreur par défaut, générique en production
+    const errorMessage = isProduction 
+      ? "Une erreur est survenue lors du traitement de votre demande" 
+      : err.message || "Erreur interne du serveur";
+    
+    res.status(status).json({ error: errorMessage });
   });
 
   // importantly only setup vite in development and after

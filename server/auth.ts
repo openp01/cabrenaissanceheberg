@@ -26,6 +26,8 @@ export function setupAuth(app: Express) {
   const PgSession = connectPgSimple(session);
   
   // Configuration de la session
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   const sessionSettings: session.SessionOptions = {
     store: new PgSession({
       pool: pool as any, // Conversion de type nécessaire pour la compatibilité
@@ -36,10 +38,11 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Désactivé pour assurer la compatibilité avec l'environnement de déploiement
-      httpOnly: true,
+      secure: isProduction, // Activer en production, désactiver en développement
+      httpOnly: true, // Toujours activé pour empêcher l'accès via JavaScript
       maxAge: 24 * 60 * 60 * 1000, // 1 jour
-      sameSite: 'lax', // Permettre les requêtes cross-site pour faciliter le développement
+      sameSite: isProduction ? 'strict' : 'lax', // Plus sécurisé en production
+      path: '/',
     }
   };
 
@@ -52,9 +55,14 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log(`Tentative de connexion pour l'utilisateur: ${username}`);
+        // Journalisation réduite en production
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Tentative de connexion pour l'utilisateur: ${username}`);
+        }
+        
         const user = await authService.validateUser(username, password);
         if (!user) {
+          // Toujours journaliser les échecs d'authentification pour des raisons de sécurité
           console.log(`Échec d'authentification pour l'utilisateur: ${username}`);
           return done(null, false, { message: "Identifiants incorrects" });
         }
@@ -69,7 +77,9 @@ export function setupAuth(app: Express) {
           isActive: user.isActive
         };
         
-        console.log(`Authentification réussie pour l'utilisateur: ${username}, ID: ${user.id}, Rôle: ${user.role}`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Authentification réussie pour l'utilisateur: ${username}, ID: ${user.id}, Rôle: ${user.role}`);
+        }
         return done(null, sessionUser);
       } catch (error) {
         console.error(`Erreur lors de l'authentification:`, error);
@@ -80,14 +90,20 @@ export function setupAuth(app: Express) {
 
   // Sérialisation de l'utilisateur pour la session
   passport.serializeUser((user: SessionUser, done) => {
-    console.log(`Sérialisation de l'utilisateur ID:${user.id} pour la session`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Sérialisation de l'utilisateur ID:${user.id} pour la session`);
+    }
     done(null, user.id);
   });
 
   // Désérialisation de l'utilisateur à partir de la session
   passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log(`Tentative de désérialisation pour l'utilisateur ID:${id}`);
+      // Journalisation limitée en production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Tentative de désérialisation pour l'utilisateur ID:${id}`);
+      }
+      
       const user = await authService.getUser(id);
       if (!user) {
         console.log(`Utilisateur ID:${id} non trouvé lors de la désérialisation`);
@@ -108,7 +124,11 @@ export function setupAuth(app: Express) {
         isActive: user.isActive
       };
       
-      console.log(`Désérialisation réussie pour l'utilisateur ID:${id}, Rôle:${user.role}`);
+      // Journalisation limitée en production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Désérialisation réussie pour l'utilisateur ID:${id}, Rôle:${user.role}`);
+      }
+      
       done(null, sessionUser);
     } catch (error) {
       console.error(`Erreur lors de la désérialisation de l'utilisateur ID:${id}:`, error);
