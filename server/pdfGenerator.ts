@@ -61,155 +61,300 @@ export async function generateInvoicePDF(
     adminSignature = signatures.length > 0 ? signatures[0] : undefined;
   }
   
+  // Récupérer le template de facture
+  let template: any = null;
+  
+  try {
+    // Si la facture a un templateId, utiliser ce template
+    if (invoice.templateId) {
+      const result = await storage.db.execute(
+        'SELECT * FROM invoice_templates WHERE id = $1',
+        [invoice.templateId]
+      );
+      if (result.rows.length > 0) {
+        template = result.rows[0];
+      }
+    }
+    
+    // Si pas de template trouvé, chercher le template par défaut
+    if (!template) {
+      const result = await storage.db.execute(
+        'SELECT * FROM invoice_templates WHERE is_default = true'
+      );
+      if (result.rows.length > 0) {
+        template = result.rows[0];
+      }
+    }
+    
+    // Si toujours pas de template, utiliser des valeurs par défaut
+    if (!template) {
+      template = {
+        name: 'Template par défaut',
+        primary_color: '#266d2c',
+        secondary_color: '#3fb549',
+        font_family: 'Helvetica',
+        header_content: '<div>Cabinet Paramédical de la Renaissance</div>',
+        footer_content: '<div>Cabinet paramédical de la renaissance SUARL - NINEA : 007795305</div>',
+        logo_url: '/images/LaR_LOGO-Rev.jpg',
+        show_therapist_signature: true
+      };
+    }
+  } catch (error) {
+    console.error('Erreur lors de la récupération du template:', error);
+    // Utiliser un template par défaut si erreur
+    template = {
+      name: 'Template par défaut',
+      primary_color: '#266d2c',
+      secondary_color: '#3fb549',
+      font_family: 'Helvetica',
+      header_content: '<div>Cabinet Paramédical de la Renaissance</div>',
+      footer_content: '<div>Cabinet paramédical de la renaissance SUARL - NINEA : 007795305</div>',
+      logo_url: '/images/LaR_LOGO-Rev.jpg',
+      show_therapist_signature: true
+    };
+  }
+  
   // Pipe le PDF dans le stream
   doc.pipe(stream);
   
   // Définir des positions et dimensions constantes
   const pageWidth = doc.page.width - 100; // Marge de 50 de chaque côté
   
-  // Ajouter l'en-tête
-  doc.fontSize(25).text('Cabinet Paramédical de la Renaissance', { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(18).text('FACTURE', { align: 'center' });
-  doc.moveDown(1);
+  // Définir les couleurs à partir du template
+  const primaryColor = template.primary_color || '#266d2c';
+  const secondaryColor = template.secondary_color || '#3fb549';
   
-  // Ajout d'un encadré pour les informations de facture
-  const infoBoxTop = doc.y;
-  doc.rect(50, infoBoxTop, pageWidth, 90).fillAndStroke('#f9fafb', '#e5e7eb');
-  doc.fillColor('#000');
+  // Ajouter l'en-tête avec la couleur du thème
+  // Créer un arrière-plan coloré pour l'en-tête
+  doc.rect(0, 0, doc.page.width, 120).fill(primaryColor);
   
-  // Informations de la facture - colonne gauche
-  doc.fontSize(12).text(`Numéro de facture: ${invoice.invoiceNumber}`, 60, infoBoxTop + 10);
-  doc.text(`Date d'émission: ${formatDate(invoice.issueDate)}`, 60, infoBoxTop + 30);
-  doc.text(`Date d'échéance: ${formatDate(invoice.dueDate)}`, 60, infoBoxTop + 50);
-  doc.text(`Statut: ${formatInvoiceStatus(invoice.status)}`, 60, infoBoxTop + 70);
-  
-  // Avancer après la zone d'informations
-  doc.y = infoBoxTop + 110;
-  
-  // Création de sections pour patient et thérapeute côte à côte
-  const sectionY = doc.y;
-  const sectionWidth = pageWidth / 2 - 10;
-  
-  // Information du patient (section gauche)
-  doc.fontSize(14).font('Helvetica-Bold').text('Patient:', 50, sectionY);
-  doc.fontSize(12).font('Helvetica').text(`Nom: ${invoice.patientName}`, 50, sectionY + 25);
-  
-  // Information du thérapeute (section droite)
-  doc.fontSize(14).font('Helvetica-Bold').text('Thérapeute:', 50 + sectionWidth + 20, sectionY);
-  doc.fontSize(12).font('Helvetica').text(`Nom: ${invoice.therapistName}`, 50 + sectionWidth + 20, sectionY + 25);
-  
-  // Positionner à la fin des sections
-  doc.y = sectionY + 50;
-  
-  // Détails du rendez-vous
-  doc.fontSize(14).font('Helvetica-Bold').text('Détails de la prestation:');
-  doc.fontSize(12).font('Helvetica');
-  
-  let detailsY = doc.y;
-  if (invoice.appointmentDate !== 'N/A') {
-    doc.text(`Date du rendez-vous: ${formatDate(invoice.appointmentDate)}`, 50, detailsY);
-    doc.text(`Heure du rendez-vous: ${invoice.appointmentTime}`, 50, detailsY + 20);
-    detailsY += 40;
-  } else {
-    detailsY += 20;
+  // Ajouter le logo si disponible
+  try {
+    if (template.logo_url && template.logo_url.startsWith('/images/')) {
+      const logoPath = './public' + template.logo_url;
+      doc.image(logoPath, doc.page.width - 150, 20, { width: 100 });
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement du logo:', error);
   }
   
-  // Vérifier si des notes sont présentes, mais ne pas les afficher ici
-  // Les notes d'assurance seront affichées sous le motif de consultation plus bas
+  // Ajouter les informations de contact
+  doc.fillColor('white')
+     .fontSize(12)
+     .text('Mail: contact@cabinet-renaissance.com', 50, 30)
+     .text('Tél: +221 33 824 35 50', 50, 45)
+     .text('Immeuble SAWA', 50, 60)
+     .text('Bloc B - Étage 2', 50, 75)
+     .text('1763, Avenue Cheikh A. DIOP', 50, 90)
+     .text('DAKAR', 50, 105);
   
-  // Tableau des prestations avec positionnement dynamique
-  const tableTop = detailsY + 30; // Espace après les détails
-  const tableLeft = 50;
-  const tableRight = 550;
-  const rowHeight = 30;
+  // Information de la facture avec espacement après l'en-tête
+  const infoY = 140;
+  doc.fillColor('black')
+     .fontSize(18)
+     .text('FACTURE N° ' + invoice.invoiceNumber, 50, infoY, { align: 'center' });
   
-  // En-têtes du tableau avec style amélioré
-  doc.rect(tableLeft, tableTop, tableRight - tableLeft, 25).fill('#f3f4f6');
-  doc.fillColor('#000');
-  doc.font('Helvetica-Bold').fontSize(12);
-  doc.text('Description', tableLeft + 10, tableTop + 7);
-  doc.text('Montant', tableRight - 110, tableTop + 7, { width: 100, align: 'right' });
+  // Statut de la facture
+  doc.fontSize(14)
+     .fillColor(secondaryColor)
+     .text('STATUT: ' + formatInvoiceStatus(invoice.status), 50, infoY + 30, { align: 'center' });
   
-  // Ligne de séparation après entête
-  doc.moveTo(tableLeft, tableTop + 25).lineTo(tableRight, tableTop + 25).stroke();
+  // Date de la facture
+  doc.fillColor('black')
+     .fontSize(12)
+     .text('Date : ' + formatDate(invoice.issueDate), 50, infoY + 50, { align: 'center' });
   
-  // Ligne avec la prestation
+  // Ajout des informations du thérapeute et du patient avec style moderne
+  const sectionY = infoY + 80;
+  doc.fontSize(16)
+     .fillColor(primaryColor)
+     .text('THERAPEUTE', 50, sectionY, { underline: true });
+  
+  doc.fontSize(12)
+     .fillColor('black')
+     .text(invoice.therapistName, 50, sectionY + 25);
+  
+  doc.fontSize(16)
+     .fillColor(primaryColor)
+     .text('PATIENT(E)', pageWidth + 50 - 100, sectionY, { underline: true });
+  
+  doc.fontSize(12)
+     .fillColor('black')
+     .text(invoice.patientName, pageWidth + 50 - 100, sectionY + 25);
+  
+  // Ajouter le texte explicatif
+  const objectY = sectionY + 70;
+  doc.fontSize(12)
+     .fillColor('black')
+     .text('OBJET :', 50, objectY, { underline: true })
+     .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 50, objectY + 20)
+     .text('Nous restons à votre disposition pour toute information complémentaire.', 50, objectY + 35);
+  
+  // Ajouter une ligne de séparation
+  doc.strokeColor(primaryColor)
+     .lineWidth(1)
+     .moveTo(50, objectY + 60)
+     .lineTo(pageWidth + 50, objectY + 60)
+     .stroke();
+  
+  // Ajouter le titre pour la période concernée
+  doc.fontSize(14)
+     .fillColor(primaryColor)
+     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 70, { align: 'center' });
+  
+  // Ajouter une ligne de séparation
+  doc.strokeColor(primaryColor)
+     .lineWidth(1)
+     .moveTo(50, objectY + 95)
+     .lineTo(pageWidth + 50, objectY + 95)
+     .stroke();
+  
+  // Afficher la date de l'appointment
+  doc.fontSize(12)
+     .fillColor('black')
+     .text(formatDate(invoice.appointmentDate), 50, objectY + 105, { align: 'center' });
+  
+  // Ajouter le tableau pour les prestations
+  const tableY = objectY + 135;
+  
+  // Créer les en-têtes du tableau
+  const colWidths = [pageWidth * 0.5, pageWidth * 0.25, pageWidth * 0.25];
+  
+  // En-têtes
+  doc.strokeColor(primaryColor)
+     .lineWidth(1)
+     .rect(50, tableY, colWidths[0], 30).stroke()
+     .rect(50 + colWidths[0], tableY, colWidths[1], 30).stroke()
+     .rect(50 + colWidths[0] + colWidths[1], tableY, colWidths[2], 30).stroke();
+  
+  doc.fontSize(12)
+     .fillColor('black')
+     .text('NATURE DES ACTES', 50 + 5, tableY + 10)
+     .text('NOMBRE D\'ACTES', 50 + colWidths[0] + 5, tableY + 10)
+     .text('TARIF UNITAIRE', 50 + colWidths[0] + colWidths[1] + 5, tableY + 10);
+  
+  // Ligne de données
+  const rowY = tableY + 30;
+  doc.strokeColor(primaryColor)
+     .lineWidth(1)
+     .rect(50, rowY, colWidths[0], 30).stroke()
+     .rect(50 + colWidths[0], rowY, colWidths[1], 30).stroke()
+     .rect(50 + colWidths[0] + colWidths[1], rowY, colWidths[2], 30).stroke();
+  
+  // Déterminer le texte de description
   const descriptionText = invoice.notes && invoice.notes.includes('Facture groupée') 
     ? 'Séances thérapeutiques (facturation groupée)' 
-    : 'Séance thérapeutique';
+    : 'Séance ' + (invoice.type || 'thérapeutique');
   
-  doc.font('Helvetica').fontSize(12);
-  doc.text(descriptionText, tableLeft + 10, tableTop + 35);
+  doc.fontSize(12)
+     .fillColor('black')
+     .text(descriptionText, 50 + 5, rowY + 10)
+     .text('1', 50 + colWidths[0] + 5, rowY + 10)
+     .text(formatCurrency(invoice.amount), 50 + colWidths[0] + colWidths[1] + 5, rowY + 10);
   
-  // Affichage des notes spéciales sous le motif de consultation
+  // Affichage des notes spéciales
+  let notesY = rowY + 40;
   if (invoice.notes) {
-    // Pour les factures groupées avec notes supplémentaires (format: "Facture groupée - Notes supplémentaires")
+    // Pour les factures groupées avec notes supplémentaires
     if (invoice.notes.includes('Facture groupée') && invoice.notes.includes(' - ')) {
       const additionalNotes = invoice.notes.split(' - ').slice(1).join(' - ');
       if (additionalNotes.trim()) {
-        doc.font('Helvetica-Oblique').fontSize(10);
-        doc.fillColor('#1e3a8a'); // Couleur bleue pour différencier des autres textes
-        doc.text(`Information supplémentaire: ${additionalNotes}`, tableLeft + 15, tableTop + 55);
-        doc.fillColor('#000'); // Remettre la couleur par défaut
-        doc.font('Helvetica').fontSize(12);
+        doc.strokeColor(primaryColor)
+          .lineWidth(1)
+          .rect(50, notesY, pageWidth, 50).stroke();
+        
+        doc.fontSize(10)
+          .fillColor(secondaryColor)
+          .text('NOTE(S) COMPLEMENTAIRE(S):', 50 + 5, notesY + 5);
+        
+        doc.fontSize(10)
+          .fillColor('black')
+          .text(additionalNotes, 50 + 5, notesY + 20, { width: pageWidth - 10 });
+        
+        notesY += 60;
       }
     }
-    // Pour les notes d'assurance normales (qui ne contiennent pas "Facture groupée")
+    // Pour les notes d'assurance normales
     else if (!invoice.notes.includes('Facture groupée')) {
-      doc.font('Helvetica-Oblique').fontSize(10);
-      doc.fillColor('#1e3a8a'); // Couleur bleue pour différencier des autres textes
-      doc.text(`Note assurance: ${invoice.notes}`, tableLeft + 15, tableTop + 55);
-      doc.fillColor('#000'); // Remettre la couleur par défaut
-      doc.font('Helvetica').fontSize(12);
+      doc.strokeColor(primaryColor)
+        .lineWidth(1)
+        .rect(50, notesY, pageWidth, 50).stroke();
+      
+      doc.fontSize(10)
+        .fillColor(secondaryColor)
+        .text('NOTE(S) COMPLEMENTAIRE(S):', 50 + 5, notesY + 5);
+      
+      doc.fontSize(10)
+        .fillColor('black')
+        .text(invoice.notes, 50 + 5, notesY + 20, { width: pageWidth - 10 });
+      
+      notesY += 60;
     }
   }
-  doc.text(formatCurrency(invoice.amount), tableRight - 110, tableTop + 35, { width: 100, align: 'right' });
   
-  // TVA si applicable (généralement pas de TVA pour les actes médicaux)
-  let taxLineY = tableTop + 65;
-  if (parseFloat(invoice.taxRate) > 0) {
-    doc.text(`TVA (${invoice.taxRate}%)`, tableLeft + 10, taxLineY);
-    const taxAmount = (parseFloat(invoice.amount) * parseFloat(invoice.taxRate) / 100).toFixed(2);
-    doc.text(formatCurrency(taxAmount), tableRight - 110, taxLineY, { width: 100, align: 'right' });
-    taxLineY += 30;
-  }
+  // Ajouter le total
+  const totalY = notesY + 10;
+  doc.fontSize(16)
+     .fillColor(secondaryColor)
+     .text('TOTAL:', 50, totalY);
   
-  // Ligne de séparation avant le total
-  doc.moveTo(tableLeft, taxLineY).lineTo(tableRight, taxLineY).stroke();
-  
-  // Total avec mise en évidence
-  doc.rect(tableLeft, taxLineY + 10, tableRight - tableLeft, 30).fillAndStroke('#f9fafb', '#e5e7eb');
-  doc.fillColor('#000');
-  doc.font('Helvetica-Bold').fontSize(14);
-  doc.text('TOTAL', tableLeft + 10, taxLineY + 20);
   // Utiliser le montant réel (amount) au lieu du montant total (totalAmount) pour les factures qui ont été ajustées
   const displayAmount = invoice.status === 'paid' || invoice.notes?.includes('Facture groupée') 
     ? invoice.amount 
     : invoice.totalAmount;
-  doc.text(formatCurrency(displayAmount), tableRight - 110, taxLineY + 20, { width: 100, align: 'right' });
   
-  // Espace pour signature
-  const signatureY = taxLineY + 60;
+  doc.fontSize(16)
+     .fillColor('black')
+     .text(formatCurrency(displayAmount), 50 + 100, totalY);
   
-  // Si une signature administrative est fournie, l'utiliser (téléchargement)
-  if (adminSignature && adminSignature.signatureData) {
-    doc.font('Helvetica').fontSize(12).text('Signature administrative:', 50, signatureY);
-    try {
-      doc.image(adminSignature.signatureData, 230, signatureY, { width: 150 });
-    } catch (error) {
-      console.error("Erreur lors du chargement de la signature administrative:", error);
-      doc.text("(Signature non disponible)", 230, signatureY);
+  // Ajouter la section d'attention
+  const attentionY = totalY + 40;
+  doc.fontSize(12)
+     .fillColor(secondaryColor)
+     .text('ATTENTION:', 50, attentionY);
+  
+  doc.fontSize(11)
+     .fillColor('black')
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 20)
+     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 35);
+  
+  doc.fontSize(11)
+     .fillColor(secondaryColor)
+     .text('Merci de votre compréhension', 50, attentionY + 60, { align: 'center' });
+  
+  // Ajouter la signature si nécessaire
+  if (template.show_therapist_signature) {
+    const signatureY = totalY + 10;
+    
+    // Si une signature administrative est fournie, l'utiliser (téléchargement)
+    if (adminSignature && adminSignature.signatureData) {
+      doc.font('Helvetica').fontSize(12).text('Signature:', doc.page.width - 170, signatureY);
+      try {
+        doc.image(
+          Buffer.from(adminSignature.signatureData.split(',')[1], 'base64'),
+          doc.page.width - 150,
+          signatureY + 20,
+          { width: 100, height: 50 }
+        );
+      } catch (error) {
+        console.error("Erreur lors du chargement de la signature administrative:", error);
+        doc.text("(Signature non disponible)", doc.page.width - 150, signatureY + 20);
+      }
     }
-  } 
-  // Sinon, utiliser la signature de la facture si disponible (prévisualisation)
-  else if (invoice.signatureUrl) {
-    doc.font('Helvetica').fontSize(12).text('Signature:', 50, signatureY);
-    try {
-      doc.image(invoice.signatureUrl, 150, signatureY, { width: 150 });
-    } catch (error) {
-      console.error("Erreur lors du chargement de la signature:", error);
-      doc.text("(Signature non disponible)", 150, signatureY);
+    // Sinon, utiliser la signature de la facture si disponible (prévisualisation)
+    else if (invoice.signatureUrl) {
+      doc.font('Helvetica').fontSize(12).text('Signature:', doc.page.width - 170, signatureY);
+      try {
+        doc.image(
+          invoice.signatureUrl,
+          doc.page.width - 150,
+          signatureY + 20,
+          { width: 100, height: 50 }
+        );
+      } catch (error) {
+        console.error("Erreur lors du chargement de la signature:", error);
+        doc.text("(Signature non disponible)", doc.page.width - 150, signatureY + 20);
+      }
     }
   }
   
@@ -221,11 +366,15 @@ export async function generateInvoicePDF(
       const permanentStampX = doc.page.width - permanentStampWidth - 50; // position x (50 pour la marge)
       const permanentStampY = doc.page.height - 200; // position y (200 du bas pour laisser de l'espace pour le pied de page)
       
-      doc.image(adminSignature.permanentStampData, permanentStampX, permanentStampY, { 
-        width: permanentStampWidth,
-        opacity: 0.8 // Légèrement transparent
-      });
-      
+      doc.image(
+        Buffer.from(adminSignature.permanentStampData.split(',')[1], 'base64'),
+        permanentStampX, 
+        permanentStampY, 
+        { 
+          width: permanentStampWidth,
+          opacity: 0.8 // Légèrement transparent
+        }
+      );
     } catch (error) {
       console.error("Erreur lors de l'ajout du tampon permanent:", error);
     }
@@ -247,7 +396,12 @@ export async function generateInvoicePDF(
          .opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
       
       // Dessiner le tampon avec une taille appropriée
-      doc.image(adminSignature.paidStampData, -100, -100, { width: 200 });
+      doc.image(
+        Buffer.from(adminSignature.paidStampData.split(',')[1], 'base64'),
+        -100, 
+        -100, 
+        { width: 200 }
+      );
       
       // Restaurer l'état original
       doc.restore();
@@ -256,16 +410,12 @@ export async function generateInvoicePDF(
     }
   }
   
-  // Pied de page en bas de la page
-  const footerTop = doc.page.height - 100;
-  doc.font('Helvetica').fontSize(10);
-  doc.text('Merci pour votre confiance.', 50, footerTop, { align: 'center', width: pageWidth });
-  doc.moveDown(0.5);
-  doc.text('Cette facture est générée par le système de gestion du Cabinet Paramédical de la Renaissance.', 
-    50, doc.y, { align: 'center', width: pageWidth });
-  doc.moveDown(0.5);
-  doc.text('Pour toute question, veuillez contacter le secrétariat.', 
-    50, doc.y, { align: 'center', width: pageWidth });
+  // Ajouter le pied de page avec les informations légales
+  const footerY = doc.page.height - 30;
+  doc.fontSize(8)
+     .fillColor('black')
+     .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
+           50, footerY, { align: 'center' });
   
   // Finaliser le document
   doc.end();
