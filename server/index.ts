@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cookieParser from "cookie-parser";
 import { loginRateLimiter } from "./rateLimit";
+import { csrfApiProtection, handleCsrfError, setupCsrfRoutes } from "./csrf";
 
 const app = express();
 app.use(express.json());
@@ -44,6 +45,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Configurer les routes CSRF
+  setupCsrfRoutes(app);
+  
+  // Appliquer la protection CSRF pour les routes API
+  app.use('/api', csrfApiProtection);
+  
+  // Gestionnaire d'erreurs CSRF
+  app.use(handleCsrfError);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
