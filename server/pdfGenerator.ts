@@ -378,19 +378,19 @@ export async function generateInvoicePDF(
   }
   
   // Ajouter la section d'attention avec une police plus petite pour économiser de l'espace
-  const attentionY = totalY + 40;
-  doc.fontSize(9)
+  const attentionY = totalY + 38;
+  doc.fontSize(8)
      .fillColor(secondaryColor)
      .text('ATTENTION:', 50, attentionY);
   
-  doc.fontSize(8)
+  doc.fontSize(7)
      .fillColor('black')
-     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 12, { width: pageWidth })
-     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 22, { width: pageWidth });
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 70, attentionY + 10, { width: pageWidth - 20 })
+     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 70, attentionY + 18, { width: pageWidth - 20 });
   
-  doc.fontSize(9)
+  doc.fontSize(8)
      .fillColor(secondaryColor)
-     .text('Merci de votre compréhension', 50, attentionY + 35, { align: 'center' });
+     .text('Merci de votre compréhension', 50, attentionY + 28, { align: 'center' });
   
   // Le tampon permanent est maintenant ajouté à côté de la signature dans la section Total
   
@@ -424,12 +424,12 @@ export async function generateInvoicePDF(
     }
   }
   
-  // Ajouter le pied de page avec les informations légales
-  const footerY = doc.page.height - 30;
-  doc.fontSize(8)
+  // Ajouter le pied de page avec les informations légales - position plus haute pour éviter la seconde page
+  const footerY = doc.page.height - 50;
+  doc.fontSize(7)
      .fillColor('black')
      .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
-           50, footerY, { align: 'center' });
+           50, footerY, { align: 'center', width: pageWidth });
   
   // Finaliser le document
   doc.end();
