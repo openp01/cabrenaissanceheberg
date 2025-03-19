@@ -57,14 +57,11 @@ export function Navbar() {
 
   return (
     <nav className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#8cd392]">
-      {/* Logo et titre */}
+      {/* Espace réservé pour maintenir la structure */}
       <div className="flex items-center space-x-3">
         <Link href="/">
           <div className="flex items-center space-x-3 cursor-pointer">
-            <img src="/images/LaR_PICTO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-10 w-auto" />
-            <span className="text-xl font-bold text-primary">
-              Cabinet Paramédical de la Renaissance
-            </span>
+            {/* Logo et titre supprimés */}
           </div>
         </Link>
       </div>
