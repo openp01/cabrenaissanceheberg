@@ -130,13 +130,13 @@ export async function generateInvoicePDF(
   
   // Ajouter l'en-tête avec la couleur du thème
   // Créer un arrière-plan coloré pour l'en-tête
-  doc.rect(0, 0, doc.page.width, 120).fill(primaryColor);
+  doc.rect(0, 0, doc.page.width, 110).fill(primaryColor);
   
   // Ajouter le logo si disponible
   try {
     if (template.logo_url && template.logo_url.startsWith('/images/')) {
       const logoPath = './public' + template.logo_url;
-      doc.image(logoPath, doc.page.width - 150, 20, { width: 100 });
+      doc.image(logoPath, doc.page.width - 140, 15, { width: 90 });
     }
   } catch (error) {
     console.error('Erreur lors du chargement du logo:', error);
@@ -144,13 +144,13 @@ export async function generateInvoicePDF(
   
   // Ajouter les informations de contact
   doc.fillColor('white')
-     .fontSize(12)
-     .text('Mail: contact@cabinet-renaissance.com', 50, 30)
-     .text('Tél: +221 33 824 35 50', 50, 45)
-     .text('Immeuble SAWA', 50, 60)
-     .text('Bloc B - Étage 2', 50, 75)
-     .text('1763, Avenue Cheikh A. DIOP', 50, 90)
-     .text('DAKAR', 50, 105);
+     .fontSize(10)
+     .text('Mail: contact@cabinet-renaissance.com', 50, 25)
+     .text('Tél: +221 33 824 35 50', 50, 38)
+     .text('Immeuble SAWA', 50, 51)
+     .text('Bloc B - Étage 2', 50, 64)
+     .text('1763, Avenue Cheikh A. DIOP', 50, 77)
+     .text('DAKAR', 50, 90);
   
   // Information de la facture avec espacement après l'en-tête
   const infoY = 140;
