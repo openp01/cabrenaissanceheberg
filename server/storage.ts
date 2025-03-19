@@ -8,7 +8,9 @@ import {
   Expense, InsertExpense, expenses,
   TherapistPayment, InsertTherapistPayment, therapistPayments,
   TherapistPaymentWithDetails,
-  Signature, InsertSignature
+  Signature, InsertSignature,
+  AppointmentTypeColor, InsertAppointmentTypeColor, appointmentTypeColors,
+  APPOINTMENT_TYPES
 } from "@shared/schema";
 import { addDays, addWeeks, addMonths, format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -36,6 +38,14 @@ export interface IStorage {
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number): Promise<{ success: boolean; message?: string }>;
   checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }>;
+  
+  // Méthodes pour les types d'appointement et leurs couleurs
+  getAppointmentTypeColors(): Promise<AppointmentTypeColor[]>;
+  getAppointmentTypeColor(id: number): Promise<AppointmentTypeColor | undefined>;
+  getAppointmentTypeColorByType(type: string): Promise<AppointmentTypeColor | undefined>;
+  createAppointmentTypeColor(typeColor: InsertAppointmentTypeColor): Promise<AppointmentTypeColor>;
+  updateAppointmentTypeColor(id: number, typeColor: Partial<InsertAppointmentTypeColor>): Promise<AppointmentTypeColor | undefined>;
+  deleteAppointmentTypeColor(id: number): Promise<boolean>;
   
   // Invoice methods
   getInvoices(): Promise<InvoiceWithDetails[]>;
