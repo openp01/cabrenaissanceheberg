@@ -304,97 +304,95 @@ export async function generateInvoicePDF(
     }
   }
   
-  // Ajouter le total
+  // Créer une zone Total + Signature + Tampon
   const totalY = notesY + 10;
-  doc.fontSize(16)
-     .fillColor(secondaryColor)
-     .text('TOTAL:', 50, totalY);
   
   // Utiliser le montant réel (amount) au lieu du montant total (totalAmount) pour les factures qui ont été ajustées
   const displayAmount = invoice.status === 'paid' || invoice.notes?.includes('Facture groupée') 
     ? invoice.amount 
     : invoice.totalAmount;
   
-  doc.fontSize(16)
-     .fillColor('black')
-     .text(formatCurrency(displayAmount), 50 + 100, totalY);
+  // Créer un tableau pour Total, Signature et Tampon côte à côte
+  // Zone Total
+  doc.strokeColor(primaryColor)
+     .lineWidth(1)
+     .rect(50, totalY, 200, 40).stroke();
   
-  // Ajouter la section d'attention
-  const attentionY = totalY + 40;
-  doc.fontSize(12)
+  doc.fontSize(14)
      .fillColor(secondaryColor)
-     .text('ATTENTION:', 50, attentionY);
+     .text('TOTAL:', 60, totalY + 12);
   
-  doc.fontSize(11)
+  doc.fontSize(15)
      .fillColor('black')
-     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 20)
-     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 35);
+     .text(formatCurrency(displayAmount), 120, totalY + 12);
   
-  doc.fontSize(11)
-     .fillColor(secondaryColor)
-     .text('Merci de votre compréhension', 50, attentionY + 60, { align: 'center' });
-  
-  // Ajouter la signature si nécessaire
+  // Ajouter la signature à droite du total
   if (template.show_therapist_signature) {
-    const signatureY = totalY + 10;
+    // Zone pour la signature + tampon
+    doc.strokeColor(primaryColor)
+       .lineWidth(1)
+       .rect(270, totalY, 275, 40).stroke();
+       
+    doc.fontSize(10)
+       .fillColor(secondaryColor)
+       .text('Signature et tampon:', 280, totalY + 3);
     
     // Si une signature administrative est fournie, l'utiliser (téléchargement)
     if (adminSignature && adminSignature.signatureData) {
-      doc.font('Helvetica').fontSize(12).text('Signature:', doc.page.width - 170, signatureY);
       try {
         doc.image(
           Buffer.from(adminSignature.signatureData.split(',')[1], 'base64'),
-          doc.page.width - 150,
-          signatureY + 20,
-          { width: 100, height: 50 }
+          305,
+          totalY + 5,
+          { width: 70, height: 30 }
         );
+        
+        // Ajouter le tampon à côté de la signature si disponible
+        if (adminSignature.permanentStampData) {
+          doc.opacity(0.7);
+          doc.image(
+            Buffer.from(adminSignature.permanentStampData.split(',')[1], 'base64'),
+            400,
+            totalY + 5,
+            { width: 80 }
+          );
+          doc.opacity(1);
+        }
       } catch (error) {
         console.error("Erreur lors du chargement de la signature administrative:", error);
-        doc.text("(Signature non disponible)", doc.page.width - 150, signatureY + 20);
       }
     }
     // Sinon, utiliser la signature de la facture si disponible (prévisualisation)
     else if (invoice.signatureUrl) {
-      doc.font('Helvetica').fontSize(12).text('Signature:', doc.page.width - 170, signatureY);
       try {
         doc.image(
           invoice.signatureUrl,
-          doc.page.width - 150,
-          signatureY + 20,
-          { width: 100, height: 50 }
+          305,
+          totalY + 5,
+          { width: 70, height: 30 }
         );
       } catch (error) {
         console.error("Erreur lors du chargement de la signature:", error);
-        doc.text("(Signature non disponible)", doc.page.width - 150, signatureY + 20);
       }
     }
   }
   
-  // Ajouter le tampon permanent du cabinet sur toutes les factures s'il est disponible
-  if (adminSignature && adminSignature.permanentStampData) {
-    try {
-      // Afficher le tampon permanent en bas à droite de la facture
-      const permanentStampWidth = 150; // taille du tampon
-      const permanentStampX = doc.page.width - permanentStampWidth - 50; // position x (50 pour la marge)
-      const permanentStampY = doc.page.height - 200; // position y (200 du bas pour laisser de l'espace pour le pied de page)
-      
-      // Réduire l'opacité pour ne pas cacher le contenu
-      doc.opacity(0.8);
-      
-      // Ajouter l'image du tampon
-      doc.image(
-        Buffer.from(adminSignature.permanentStampData.split(',')[1], 'base64'),
-        permanentStampX, 
-        permanentStampY, 
-        { width: permanentStampWidth }
-      );
-      
-      // Rétablir l'opacité normale
-      doc.opacity(1);
-    } catch (error) {
-      console.error("Erreur lors de l'ajout du tampon permanent:", error);
-    }
-  }
+  // Ajouter la section d'attention avec une police plus petite pour économiser de l'espace
+  const attentionY = totalY + 50;
+  doc.fontSize(10)
+     .fillColor(secondaryColor)
+     .text('ATTENTION:', 50, attentionY);
+  
+  doc.fontSize(9)
+     .fillColor('black')
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 15, { width: pageWidth })
+     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 28, { width: pageWidth });
+  
+  doc.fontSize(10)
+     .fillColor(secondaryColor)
+     .text('Merci de votre compréhension', 50, attentionY + 45, { align: 'center' });
+  
+  // Le tampon permanent est maintenant ajouté à côté de la signature dans la section Total
   
   // Ajouter le tampon "PAYÉ" si le statut de la facture est "paid" et qu'un tampon est disponible
   if (invoice.status === 'paid' && adminSignature && adminSignature.paidStampData) {
