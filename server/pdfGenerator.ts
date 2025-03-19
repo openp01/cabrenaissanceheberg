@@ -153,81 +153,81 @@ export async function generateInvoicePDF(
      .text('DAKAR', 50, 90);
   
   // Information de la facture avec espacement après l'en-tête
-  const infoY = 140;
+  const infoY = 130;
   doc.fillColor('black')
-     .fontSize(18)
+     .fontSize(16)
      .text('FACTURE N° ' + invoice.invoiceNumber, 50, infoY, { align: 'center' });
   
   // Statut de la facture
-  doc.fontSize(14)
+  doc.fontSize(12)
      .fillColor(secondaryColor)
-     .text('STATUT: ' + formatInvoiceStatus(invoice.status), 50, infoY + 30, { align: 'center' });
+     .text('STATUT: ' + formatInvoiceStatus(invoice.status), 50, infoY + 25, { align: 'center' });
   
   // Date de la facture
   doc.fillColor('black')
-     .fontSize(12)
-     .text('Date : ' + formatDate(invoice.issueDate), 50, infoY + 50, { align: 'center' });
+     .fontSize(10)
+     .text('Date : ' + formatDate(invoice.issueDate), 50, infoY + 40, { align: 'center' });
   
   // Ajout des informations du thérapeute et du patient avec style moderne
-  const sectionY = infoY + 80;
-  doc.fontSize(16)
+  const sectionY = infoY + 60;
+  doc.fontSize(14)
      .fillColor(primaryColor)
      .text('THERAPEUTE', 50, sectionY, { underline: true });
   
-  doc.fontSize(12)
+  doc.fontSize(10)
      .fillColor('black')
-     .text(invoice.therapistName, 50, sectionY + 25);
+     .text(invoice.therapistName, 50, sectionY + 20);
   
-  doc.fontSize(16)
+  doc.fontSize(14)
      .fillColor(primaryColor)
      .text('PATIENT(E)', pageWidth + 50 - 100, sectionY, { underline: true });
   
-  doc.fontSize(12)
+  doc.fontSize(10)
      .fillColor('black')
-     .text(invoice.patientName, pageWidth + 50 - 100, sectionY + 25);
+     .text(invoice.patientName, pageWidth + 50 - 100, sectionY + 20);
   
   // Ajouter le texte explicatif
-  const objectY = sectionY + 70;
-  doc.fontSize(12)
+  const objectY = sectionY + 50;
+  doc.fontSize(10)
      .fillColor('black')
      .text('OBJET :', 50, objectY, { underline: true });
      
   // Utiliser l'option width pour limiter la largeur du texte et permettre le passage à la ligne
   doc.text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
-      50, objectY + 20, 
+      50, objectY + 15, 
       { width: pageWidth, align: 'left' });
   
   // Ajouter plus d'espace entre les lignes
   doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
-      50, objectY + 50, 
+      50, objectY + 35, 
       { width: pageWidth, align: 'left' });
   
   // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .moveTo(50, objectY + 75)
-     .lineTo(pageWidth + 50, objectY + 75)
+     .moveTo(50, objectY + 55)
+     .lineTo(pageWidth + 50, objectY + 55)
      .stroke();
   
   // Ajouter le titre pour la période concernée (ajuster la position en fonction du nouveau texte)
-  doc.fontSize(14)
+  doc.fontSize(12)
      .fillColor(primaryColor)
-     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 85, { align: 'center' });
+     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 65, { align: 'center' });
   
   // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .moveTo(50, objectY + 110)
-     .lineTo(pageWidth + 50, objectY + 110)
+     .moveTo(50, objectY + 80)
+     .lineTo(pageWidth + 50, objectY + 80)
      .stroke();
   
   // Afficher la date de l'appointment (ajuster la position en fonction du nouveau texte)
-  doc.fontSize(12)
+  doc.fontSize(10)
      .fillColor('black')
-     .text(formatDate(invoice.appointmentDate), 50, objectY + 120, { align: 'center' });
+     .text(formatDate(invoice.appointmentDate), 50, objectY + 90, { align: 'center' });
   
   // Ajouter le tableau pour les prestations (ajuster la position en fonction des modifications précédentes)
-  const tableY = objectY + 150;
+  const tableY = objectY + 110;
   
   // Créer les en-têtes du tableau
   const colWidths = [pageWidth * 0.5, pageWidth * 0.25, pageWidth * 0.25];
@@ -235,37 +235,37 @@ export async function generateInvoicePDF(
   // En-têtes
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .rect(50, tableY, colWidths[0], 30).stroke()
-     .rect(50 + colWidths[0], tableY, colWidths[1], 30).stroke()
-     .rect(50 + colWidths[0] + colWidths[1], tableY, colWidths[2], 30).stroke();
+     .rect(50, tableY, colWidths[0], 25).stroke()
+     .rect(50 + colWidths[0], tableY, colWidths[1], 25).stroke()
+     .rect(50 + colWidths[0] + colWidths[1], tableY, colWidths[2], 25).stroke();
   
-  doc.fontSize(12)
+  doc.fontSize(10)
      .fillColor('black')
-     .text('NATURE DES ACTES', 50 + 5, tableY + 10)
-     .text('NOMBRE D\'ACTES', 50 + colWidths[0] + 5, tableY + 10)
-     .text('TARIF UNITAIRE', 50 + colWidths[0] + colWidths[1] + 5, tableY + 10);
+     .text('NATURE DES ACTES', 50 + 5, tableY + 8)
+     .text('NOMBRE D\'ACTES', 50 + colWidths[0] + 5, tableY + 8)
+     .text('TARIF UNITAIRE', 50 + colWidths[0] + colWidths[1] + 5, tableY + 8);
   
   // Ligne de données
-  const rowY = tableY + 30;
+  const rowY = tableY + 25;
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .rect(50, rowY, colWidths[0], 30).stroke()
-     .rect(50 + colWidths[0], rowY, colWidths[1], 30).stroke()
-     .rect(50 + colWidths[0] + colWidths[1], rowY, colWidths[2], 30).stroke();
+     .rect(50, rowY, colWidths[0], 25).stroke()
+     .rect(50 + colWidths[0], rowY, colWidths[1], 25).stroke()
+     .rect(50 + colWidths[0] + colWidths[1], rowY, colWidths[2], 25).stroke();
   
   // Déterminer le texte de description
   const descriptionText = invoice.notes && invoice.notes.includes('Facture groupée') 
     ? 'Séances thérapeutiques (facturation groupée)' 
     : 'Séance thérapeutique';
   
-  doc.fontSize(12)
+  doc.fontSize(10)
      .fillColor('black')
-     .text(descriptionText, 50 + 5, rowY + 10)
-     .text('1', 50 + colWidths[0] + 5, rowY + 10)
-     .text(formatCurrency(invoice.amount), 50 + colWidths[0] + colWidths[1] + 5, rowY + 10);
+     .text(descriptionText, 50 + 5, rowY + 8)
+     .text('1', 50 + colWidths[0] + 5, rowY + 8)
+     .text(formatCurrency(invoice.amount), 50 + colWidths[0] + colWidths[1] + 5, rowY + 8);
   
   // Affichage des notes spéciales
-  let notesY = rowY + 40;
+  let notesY = rowY + 35;
   if (invoice.notes) {
     // Pour les factures groupées avec notes supplémentaires
     if (invoice.notes.includes('Facture groupée') && invoice.notes.includes(' - ')) {
@@ -273,39 +273,39 @@ export async function generateInvoicePDF(
       if (additionalNotes.trim()) {
         doc.strokeColor(primaryColor)
           .lineWidth(1)
-          .rect(50, notesY, pageWidth, 50).stroke();
+          .rect(50, notesY, pageWidth, 40).stroke();
         
-        doc.fontSize(10)
+        doc.fontSize(9)
           .fillColor(secondaryColor)
           .text('NOTE(S) COMPLEMENTAIRE(S):', 50 + 5, notesY + 5);
         
-        doc.fontSize(10)
+        doc.fontSize(9)
           .fillColor('black')
-          .text(additionalNotes, 50 + 5, notesY + 20, { width: pageWidth - 10 });
+          .text(additionalNotes, 50 + 5, notesY + 16, { width: pageWidth - 10 });
         
-        notesY += 60;
+        notesY += 45;
       }
     }
     // Pour les notes d'assurance normales
     else if (!invoice.notes.includes('Facture groupée')) {
       doc.strokeColor(primaryColor)
         .lineWidth(1)
-        .rect(50, notesY, pageWidth, 50).stroke();
+        .rect(50, notesY, pageWidth, 40).stroke();
       
-      doc.fontSize(10)
+      doc.fontSize(9)
         .fillColor(secondaryColor)
         .text('NOTE(S) COMPLEMENTAIRE(S):', 50 + 5, notesY + 5);
       
-      doc.fontSize(10)
+      doc.fontSize(9)
         .fillColor('black')
-        .text(invoice.notes, 50 + 5, notesY + 20, { width: pageWidth - 10 });
+        .text(invoice.notes, 50 + 5, notesY + 16, { width: pageWidth - 10 });
       
-      notesY += 60;
+      notesY += 45;
     }
   }
   
   // Créer une zone Total + Signature + Tampon
-  const totalY = notesY + 10;
+  const totalY = notesY + 5;
   
   // Utiliser le montant réel (amount) au lieu du montant total (totalAmount) pour les factures qui ont été ajustées
   const displayAmount = invoice.status === 'paid' || invoice.notes?.includes('Facture groupée') 
@@ -316,24 +316,24 @@ export async function generateInvoicePDF(
   // Zone Total
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .rect(50, totalY, 200, 40).stroke();
+     .rect(50, totalY, 200, 35).stroke();
   
-  doc.fontSize(14)
+  doc.fontSize(12)
      .fillColor(secondaryColor)
-     .text('TOTAL:', 60, totalY + 12);
+     .text('TOTAL:', 60, totalY + 10);
   
-  doc.fontSize(15)
+  doc.fontSize(12)
      .fillColor('black')
-     .text(formatCurrency(displayAmount), 120, totalY + 12);
+     .text(formatCurrency(displayAmount), 120, totalY + 10);
   
   // Ajouter la signature à droite du total
   if (template.show_therapist_signature) {
     // Zone pour la signature + tampon
     doc.strokeColor(primaryColor)
        .lineWidth(1)
-       .rect(270, totalY, 275, 40).stroke();
+       .rect(270, totalY, 275, 35).stroke();
        
-    doc.fontSize(10)
+    doc.fontSize(9)
        .fillColor(secondaryColor)
        .text('Signature et tampon:', 280, totalY + 3);
     
@@ -344,7 +344,7 @@ export async function generateInvoicePDF(
           Buffer.from(adminSignature.signatureData.split(',')[1], 'base64'),
           305,
           totalY + 5,
-          { width: 70, height: 30 }
+          { width: 65, height: 25 }
         );
         
         // Ajouter le tampon à côté de la signature si disponible
@@ -352,9 +352,9 @@ export async function generateInvoicePDF(
           doc.opacity(0.7);
           doc.image(
             Buffer.from(adminSignature.permanentStampData.split(',')[1], 'base64'),
-            400,
-            totalY + 5,
-            { width: 80 }
+            405,
+            totalY + 3,
+            { width: 70 }
           );
           doc.opacity(1);
         }
@@ -369,7 +369,7 @@ export async function generateInvoicePDF(
           invoice.signatureUrl,
           305,
           totalY + 5,
-          { width: 70, height: 30 }
+          { width: 65, height: 25 }
         );
       } catch (error) {
         console.error("Erreur lors du chargement de la signature:", error);
@@ -378,19 +378,19 @@ export async function generateInvoicePDF(
   }
   
   // Ajouter la section d'attention avec une police plus petite pour économiser de l'espace
-  const attentionY = totalY + 50;
-  doc.fontSize(10)
+  const attentionY = totalY + 40;
+  doc.fontSize(9)
      .fillColor(secondaryColor)
      .text('ATTENTION:', 50, attentionY);
   
-  doc.fontSize(9)
+  doc.fontSize(8)
      .fillColor('black')
-     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 15, { width: pageWidth })
-     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 28, { width: pageWidth });
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 12, { width: pageWidth })
+     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 22, { width: pageWidth });
   
-  doc.fontSize(10)
+  doc.fontSize(9)
      .fillColor(secondaryColor)
-     .text('Merci de votre compréhension', 50, attentionY + 45, { align: 'center' });
+     .text('Merci de votre compréhension', 50, attentionY + 35, { align: 'center' });
   
   // Le tampon permanent est maintenant ajouté à côté de la signature dans la section Total
   
@@ -400,21 +400,21 @@ export async function generateInvoicePDF(
       // Afficher le tampon en diagonale sur la facture avec une rotation de 30 degrés
       doc.save(); // Sauvegarder l'état actuel
       
-      // Positionner au centre de la page et appliquer une rotation
+      // Positionner au centre de la page mais plus haut pour une meilleure visibilité
       const centerX = doc.page.width / 2;
-      const centerY = doc.page.height / 2;
+      const centerY = doc.page.height / 2 - 50; // Plus haut sur la page
       
       // Translater au centre, pivoter, puis translater en arrière
       doc.translate(centerX, centerY)
          .rotate(30, { origin: [0, 0] });
-      doc.opacity(0.5); // Réduire l'opacité pour ne pas cacher le contenu
+      doc.opacity(0.4); // Réduire davantage l'opacité pour ne pas cacher le contenu
       
-      // Dessiner le tampon avec une taille appropriée
+      // Dessiner le tampon avec une taille légèrement réduite
       doc.image(
         Buffer.from(adminSignature.paidStampData.split(',')[1], 'base64'),
-        -100, 
-        -100, 
-        { width: 200 }
+        -90, 
+        -90, 
+        { width: 180 }
       );
       
       // Restaurer l'état original
