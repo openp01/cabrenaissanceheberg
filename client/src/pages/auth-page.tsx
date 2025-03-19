@@ -89,7 +89,7 @@ export default function AuthPage() {
       <div className="flex flex-col justify-center w-full md:w-1/2 p-8">
         <div className="max-w-md mx-auto">
           <div className="flex flex-col items-center mb-6">
-            <img src="/images/logo-renaissance.svg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-28 w-auto mb-4" />
+            <img src="/images/LaR_LOGO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-20 w-auto mb-4" />
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent">Espace Connexion</h1>
             <p className="text-[#266d2c] mt-2 text-center">
               Connectez-vous ou créez un compte pour accéder au système.
@@ -116,7 +116,7 @@ export default function AuthPage() {
       {/* Héro section */}
       <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-b from-[#f8fff9] to-[#e3f5e5] p-8">
         <div className="max-w-md text-center">
-          <img src="/images/logo-renaissance.svg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-40 w-auto mb-6 mx-auto" />
+          <img src="/images/LaR_PICTO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-32 w-auto mb-6 mx-auto" />
           <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-[#3fb549] to-[#266d2c] bg-clip-text text-transparent">
             Cabinet Paramédical de la Renaissance
           </h2>
