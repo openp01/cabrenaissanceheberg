@@ -152,31 +152,31 @@ export async function generateInvoicePDF(
      .text('1763, Avenue Cheikh A. DIOP', 50, 77)
      .text('DAKAR', 50, 90);
   
-  // Information de la facture avec espacement réduit après l'en-tête
-  const infoY = 125; // Position plus haute
+  // Information de la facture avec espacement après l'en-tête
+  const infoY = 130;
   doc.fillColor('black')
      .fontSize(16)
      .text('FACTURE N° ' + invoice.invoiceNumber, 50, infoY, { align: 'center' });
   
-  // Statut de la facture - espacement réduit
+  // Statut de la facture
   doc.fontSize(12)
      .fillColor(secondaryColor)
-     .text('STATUT: ' + formatInvoiceStatus(invoice.status), 50, infoY + 22, { align: 'center' });
+     .text('STATUT: ' + formatInvoiceStatus(invoice.status), 50, infoY + 25, { align: 'center' });
   
-  // Date de la facture - espacement réduit
+  // Date de la facture
   doc.fillColor('black')
      .fontSize(10)
-     .text('Date : ' + formatDate(invoice.issueDate), 50, infoY + 35, { align: 'center' });
+     .text('Date : ' + formatDate(invoice.issueDate), 50, infoY + 40, { align: 'center' });
   
-  // Ajout des informations du thérapeute et du patient avec style moderne et espacement réduit
-  const sectionY = infoY + 45; // Réduit l'espace après les infos de facture
+  // Ajout des informations du thérapeute et du patient avec style moderne
+  const sectionY = infoY + 60;
   doc.fontSize(14)
      .fillColor(primaryColor)
      .text('THERAPEUTE', 50, sectionY, { underline: true });
   
   doc.fontSize(10)
      .fillColor('black')
-     .text(invoice.therapistName, 50, sectionY + 18); // Réduit légèrement l'espace
+     .text(invoice.therapistName, 50, sectionY + 20);
   
   doc.fontSize(14)
      .fillColor(primaryColor)
@@ -184,45 +184,50 @@ export async function generateInvoicePDF(
   
   doc.fontSize(10)
      .fillColor('black')
-     .text(invoice.patientName, pageWidth + 50 - 100, sectionY + 18); // Réduit légèrement l'espace
+     .text(invoice.patientName, pageWidth + 50 - 100, sectionY + 20);
   
   // Ajouter le texte explicatif
-  const objectY = sectionY + 40; // Réduit l'espace après les infos de thérapeute/patient
+  const objectY = sectionY + 50;
   doc.fontSize(10)
      .fillColor('black')
      .text('OBJET :', 50, objectY, { underline: true });
      
-  // Version plus compacte du texte explicatif
+  // Utiliser l'option width pour limiter la largeur du texte et permettre le passage à la ligne
   doc.text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
       50, objectY + 15, 
       { width: pageWidth, align: 'left' });
   
-  // Ajouter une ligne de séparation avec espacement réduit
+  // Ajouter plus d'espace entre les lignes
+  doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
+      50, objectY + 35, 
+      { width: pageWidth, align: 'left' });
+  
+  // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .moveTo(50, objectY + 35)
-     .lineTo(pageWidth + 50, objectY + 35)
+     .moveTo(50, objectY + 55)
+     .lineTo(pageWidth + 50, objectY + 55)
      .stroke();
   
-  // Ajouter le titre pour la période concernée avec espacement réduit
+  // Ajouter le titre pour la période concernée (ajuster la position en fonction du nouveau texte)
   doc.fontSize(12)
      .fillColor(primaryColor)
-     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 42, { align: 'center' });
+     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 65, { align: 'center' });
   
-  // Ajouter une ligne de séparation avec espacement réduit
+  // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
-     .moveTo(50, objectY + 57)
-     .lineTo(pageWidth + 50, objectY + 57)
+     .moveTo(50, objectY + 80)
+     .lineTo(pageWidth + 50, objectY + 80)
      .stroke();
   
-  // Afficher la date de l'appointment avec espacement réduit
+  // Afficher la date de l'appointment (ajuster la position en fonction du nouveau texte)
   doc.fontSize(10)
      .fillColor('black')
-     .text(formatDate(invoice.appointmentDate), 50, objectY + 65, { align: 'center' });
+     .text(formatDate(invoice.appointmentDate), 50, objectY + 90, { align: 'center' });
   
   // Ajouter le tableau pour les prestations (position ajustée et compressée)
-  const tableY = objectY + 80; // Position plus haute pour le tableau
+  const tableY = objectY + 95; // Réduit l'espace avant le tableau
   
   // Créer les en-têtes du tableau
   const colWidths = [pageWidth * 0.5, pageWidth * 0.25, pageWidth * 0.25];
@@ -268,34 +273,34 @@ export async function generateInvoicePDF(
       if (additionalNotes.trim()) {
         doc.strokeColor(primaryColor)
           .lineWidth(1)
-          .rect(50, notesY, pageWidth, 30).stroke(); // Hauteur réduite
+          .rect(50, notesY, pageWidth, 40).stroke();
         
-        doc.fontSize(8) // Taille de police réduite
+        doc.fontSize(9)
           .fillColor(secondaryColor)
-          .text('NOTE(S):', 50 + 5, notesY + 4); // Position y réduite
+          .text('NOTE(S) COMPLEMENTAIRE(S):', 50 + 5, notesY + 5);
         
-        doc.fontSize(8) // Taille de police réduite
+        doc.fontSize(9)
           .fillColor('black')
-          .text(additionalNotes, 50 + 40, notesY + 4, { width: pageWidth - 45, continued: true }); // Position y réduite, sur la même ligne
+          .text(additionalNotes, 50 + 5, notesY + 16, { width: pageWidth - 10 });
         
-        notesY += 35; // Espace total réduit
+        notesY += 45;
       }
     }
     // Pour les notes d'assurance normales
     else if (!invoice.notes.includes('Facture groupée')) {
       doc.strokeColor(primaryColor)
         .lineWidth(1)
-        .rect(50, notesY, pageWidth, 30).stroke(); // Hauteur réduite
+        .rect(50, notesY, pageWidth, 40).stroke();
       
-      doc.fontSize(8) // Taille de police réduite
+      doc.fontSize(9)
         .fillColor(secondaryColor)
-        .text('NOTE(S):', 50 + 5, notesY + 4); // Position y réduite
+        .text('NOTE(S) COMPLEMENTAIRE(S):', 50 + 5, notesY + 5);
       
-      doc.fontSize(8) // Taille de police réduite
+      doc.fontSize(9)
         .fillColor('black')
-        .text(invoice.notes, 50 + 40, notesY + 4, { width: pageWidth - 45, continued: true }); // Position y réduite, sur la même ligne
+        .text(invoice.notes, 50 + 5, notesY + 16, { width: pageWidth - 10 });
       
-      notesY += 35; // Espace total réduit
+      notesY += 45;
     }
   }
   
@@ -372,15 +377,20 @@ export async function generateInvoicePDF(
     }
   }
   
-  // Section d'attention ultra-compacte en ligne unique
+  // Ajouter la section d'attention avec une police plus petite pour économiser de l'espace
   const attentionY = totalY + 38;
+  doc.fontSize(8)
+     .fillColor(secondaryColor)
+     .text('ATTENTION:', 50, attentionY);
+  
+  // Texte d'attention plus compact (sur une ligne)
   doc.fontSize(7)
-     .fillColor(secondaryColor)
-     .text('ATTENTION: ', 50, attentionY, { continued: true })
      .fillColor('black')
-     .text('• Tout RDV non annulé ou annulé <24h à l\'avance est dû. • Après 3 paiements non réalisés/en retard, le cabinet peut interrompre le suivi. ', { continued: true })
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû. • Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 70, attentionY + 10, { width: pageWidth - 20, lineBreak: false });
+  
+  doc.fontSize(8)
      .fillColor(secondaryColor)
-     .text('Merci de votre compréhension', { align: 'right' });
+     .text('Merci de votre compréhension', 50, attentionY + 20, { align: 'center' });
   
   // Le tampon permanent est maintenant ajouté à côté de la signature dans la section Total
   
@@ -414,8 +424,8 @@ export async function generateInvoicePDF(
     }
   }
   
-  // Ajouter le pied de page avec les informations légales - position beaucoup plus haute pour éviter la seconde page
-  const footerY = doc.page.height - 65; // Position plus haute
+  // Ajouter le pied de page avec les informations légales - position plus haute pour éviter la seconde page
+  const footerY = doc.page.height - 50;
   doc.fontSize(7)
      .fillColor('black')
      .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
