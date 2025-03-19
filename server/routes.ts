@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/appointments/patient/:patientId", async (req, res) => {
+  app.get("/api/appointments/patient/:patientId", isAuthenticated, async (req, res) => {
     try {
       const patientId = parseInt(req.params.patientId);
       if (isNaN(patientId)) {
