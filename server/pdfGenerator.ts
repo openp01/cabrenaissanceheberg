@@ -226,8 +226,8 @@ export async function generateInvoicePDF(
      .fillColor('black')
      .text(formatDate(invoice.appointmentDate), 50, objectY + 90, { align: 'center' });
   
-  // Ajouter le tableau pour les prestations (position ajustée et compressée)
-  const tableY = objectY + 95; // Réduit l'espace avant le tableau
+  // Ajouter le tableau pour les prestations (ajuster la position en fonction des modifications précédentes)
+  const tableY = objectY + 110;
   
   // Créer les en-têtes du tableau
   const colWidths = [pageWidth * 0.5, pageWidth * 0.25, pageWidth * 0.25];
@@ -383,14 +383,14 @@ export async function generateInvoicePDF(
      .fillColor(secondaryColor)
      .text('ATTENTION:', 50, attentionY);
   
-  // Texte d'attention plus compact (sur une ligne)
   doc.fontSize(7)
      .fillColor('black')
-     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû. • Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 70, attentionY + 10, { width: pageWidth - 20, lineBreak: false });
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 70, attentionY + 10, { width: pageWidth - 20 })
+     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 70, attentionY + 18, { width: pageWidth - 20 });
   
   doc.fontSize(8)
      .fillColor(secondaryColor)
-     .text('Merci de votre compréhension', 50, attentionY + 20, { align: 'center' });
+     .text('Merci de votre compréhension', 50, attentionY + 28, { align: 'center' });
   
   // Le tampon permanent est maintenant ajouté à côté de la signature dans la section Total
   
