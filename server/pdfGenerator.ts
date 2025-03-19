@@ -142,15 +142,15 @@ export async function generateInvoicePDF(
     console.error('Erreur lors du chargement du logo:', error);
   }
   
-  // Ajouter les informations de contact avec une police plus petite et moins d'espace
+  // Ajouter les informations de contact
   doc.fillColor('white')
-     .fontSize(10)
+     .fontSize(12)
      .text('Mail: contact@cabinet-renaissance.com', 50, 30)
-     .text('Tél: +221 33 824 35 50', 50, 42)
-     .text('Immeuble SAWA', 50, 54)
-     .text('Bloc B - Étage 2', 50, 66)
-     .text('1763, Avenue Cheikh A. DIOP', 50, 78)
-     .text('DAKAR', 50, 90);
+     .text('Tél: +221 33 824 35 50', 50, 45)
+     .text('Immeuble SAWA', 50, 60)
+     .text('Bloc B - Étage 2', 50, 75)
+     .text('1763, Avenue Cheikh A. DIOP', 50, 90)
+     .text('DAKAR', 50, 105);
   
   // Information de la facture avec espacement après l'en-tête
   const infoY = 140;
@@ -168,62 +168,66 @@ export async function generateInvoicePDF(
      .fontSize(12)
      .text('Date : ' + formatDate(invoice.issueDate), 50, infoY + 50, { align: 'center' });
   
-  // Ajout des informations du thérapeute et du patient avec style compact
-  const sectionY = infoY + 70;
-  doc.fontSize(12)
+  // Ajout des informations du thérapeute et du patient avec style moderne
+  const sectionY = infoY + 80;
+  doc.fontSize(16)
      .fillColor(primaryColor)
-     .text('THERAPEUTE:', 50, sectionY);
-  
-  doc.fontSize(10)
-     .fillColor('black')
-     .text(invoice.therapistName, 130, sectionY);
+     .text('THERAPEUTE', 50, sectionY, { underline: true });
   
   doc.fontSize(12)
-     .fillColor(primaryColor)
-     .text('PATIENT(E):', 300, sectionY);
-  
-  doc.fontSize(10)
      .fillColor('black')
-     .text(invoice.patientName, 370, sectionY);
+     .text(invoice.therapistName, 50, sectionY + 25);
   
-  // Ajouter le texte explicatif de manière plus concise
-  const objectY = sectionY + 30;
-  doc.fontSize(10)
+  doc.fontSize(16)
+     .fillColor(primaryColor)
+     .text('PATIENT(E)', pageWidth + 50 - 100, sectionY, { underline: true });
+  
+  doc.fontSize(12)
+     .fillColor('black')
+     .text(invoice.patientName, pageWidth + 50 - 100, sectionY + 25);
+  
+  // Ajouter le texte explicatif
+  const objectY = sectionY + 70;
+  doc.fontSize(12)
      .fillColor('black')
      .text('OBJET :', 50, objectY, { underline: true });
      
-  // Texte plus court avec police plus petite
-  doc.fontSize(8)
-     .text('Facture relative aux prestations paramédicales du Cabinet Paramédical de la Renaissance.', 
-          50, objectY + 15, 
-          { width: pageWidth, align: 'left' });
+  // Utiliser l'option width pour limiter la largeur du texte et permettre le passage à la ligne
+  doc.text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
+      50, objectY + 20, 
+      { width: pageWidth, align: 'left' });
   
-  // Ajouter une ligne de séparation avec position ajustée pour la mise en page réduite
-  doc.strokeColor(primaryColor)
-     .lineWidth(1)
-     .moveTo(50, objectY + 45)
-     .lineTo(pageWidth + 50, objectY + 45)
-     .stroke();
+  // Ajouter plus d'espace entre les lignes
+  doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
+      50, objectY + 50, 
+      { width: pageWidth, align: 'left' });
   
-  // Ajouter le titre pour la période concernée avec position ajustée
-  doc.fontSize(12)
-     .fillColor(primaryColor)
-     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 55, { align: 'center' });
-  
-  // Ajouter une ligne de séparation avec position ajustée
+  // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
   doc.strokeColor(primaryColor)
      .lineWidth(1)
      .moveTo(50, objectY + 75)
      .lineTo(pageWidth + 50, objectY + 75)
      .stroke();
   
-  // Afficher la date de l'appointment avec position ajustée
-  doc.fontSize(10)
-     .fillColor('black')
-     .text(formatDate(invoice.appointmentDate), 50, objectY + 85, { align: 'center' });
+  // Ajouter le titre pour la période concernée (ajuster la position en fonction du nouveau texte)
+  doc.fontSize(14)
+     .fillColor(primaryColor)
+     .text('DATE(S) OU PERIODE CONCERNEE', 50, objectY + 85, { align: 'center' });
   
-  // Ajouter le tableau pour les prestations avec position ajustée
-  const tableY = objectY + 110;
+  // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
+  doc.strokeColor(primaryColor)
+     .lineWidth(1)
+     .moveTo(50, objectY + 110)
+     .lineTo(pageWidth + 50, objectY + 110)
+     .stroke();
+  
+  // Afficher la date de l'appointment (ajuster la position en fonction du nouveau texte)
+  doc.fontSize(12)
+     .fillColor('black')
+     .text(formatDate(invoice.appointmentDate), 50, objectY + 120, { align: 'center' });
+  
+  // Ajouter le tableau pour les prestations (ajuster la position en fonction des modifications précédentes)
+  const tableY = objectY + 150;
   
   // Créer les en-têtes du tableau
   const colWidths = [pageWidth * 0.5, pageWidth * 0.25, pageWidth * 0.25];
@@ -375,18 +379,18 @@ export async function generateInvoicePDF(
   
   // Ajouter la section d'attention avec une police plus petite pour économiser de l'espace
   const attentionY = totalY + 50;
-  doc.fontSize(8)
+  doc.fontSize(10)
      .fillColor(secondaryColor)
      .text('ATTENTION:', 50, attentionY);
   
-  doc.fontSize(7)
+  doc.fontSize(9)
      .fillColor('black')
-     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 12, { width: pageWidth })
-     .text('• Après trois paiements non réalisés/en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 22, { width: pageWidth });
+     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 50, attentionY + 15, { width: pageWidth })
+     .text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 50, attentionY + 28, { width: pageWidth });
   
-  doc.fontSize(7)
+  doc.fontSize(10)
      .fillColor(secondaryColor)
-     .text('Merci de votre compréhension', 50, attentionY + 32, { align: 'center' });
+     .text('Merci de votre compréhension', 50, attentionY + 45, { align: 'center' });
   
   // Le tampon permanent est maintenant ajouté à côté de la signature dans la section Total
   
@@ -421,11 +425,11 @@ export async function generateInvoicePDF(
   }
   
   // Ajouter le pied de page avec les informations légales
-  const footerY = doc.page.height - 20;
-  doc.fontSize(7)
+  const footerY = doc.page.height - 30;
+  doc.fontSize(8)
      .fillColor('black')
      .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
-           50, footerY, { align: 'center', width: pageWidth });
+           50, footerY, { align: 'center' });
   
   // Finaliser le document
   doc.end();
