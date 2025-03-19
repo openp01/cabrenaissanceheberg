@@ -29,14 +29,7 @@ import { HomeButton } from "@/components/ui/home-button";
 import { TherapistPaymentWithDetails, Therapist } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  FileDown, 
-  Printer, 
-  Calendar, 
-  FilePlus2, 
-  FileSearch,
-  Eye
-} from "lucide-react";
+import { FileDown, Printer, Calendar } from "lucide-react";
 import { 
   Popover,
   PopoverContent,
@@ -52,8 +45,6 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import PaymentInvoicePreviewDialog from "@/components/PaymentInvoicePreviewDialog";
-import GroupPaymentPreviewDialog from "@/components/GroupPaymentPreviewDialog";
 
 export default function Payments() {
   // Récupération de tous les paiements
@@ -152,17 +143,6 @@ export default function Payments() {
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Prévisualisation groupée des factures */}
-          {filteredPayments.length > 0 && (
-            <GroupPaymentPreviewDialog payments={filteredPayments}>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Prévisualiser factures
-              </Button>
-            </GroupPaymentPreviewDialog>
-          )}
-          
-          {/* Dialog d'export PDF */}
           <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">
@@ -305,7 +285,6 @@ export default function Payments() {
                     <TableHead>Montant</TableHead>
                     <TableHead>Méthode</TableHead>
                     <TableHead>Référence</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -322,13 +301,6 @@ export default function Payments() {
                       </TableCell>
                       <TableCell>{payment.paymentMethod}</TableCell>
                       <TableCell>{payment.paymentReference || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <PaymentInvoicePreviewDialog 
-                          invoiceId={payment.invoiceId} 
-                          invoiceNumber={payment.invoiceNumber}
-                          paymentId={payment.id}
-                        />
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
