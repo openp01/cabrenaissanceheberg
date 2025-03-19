@@ -1052,29 +1052,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Exportation des dépenses en PDF
+  // Fonction utilitaire partagée pour filtrer et préparer les dépenses
+  async function prepareExpensesData(req: Request) {
+    // Récupérer toutes les dépenses
+    let expenses = await storage.getExpenses();
+      
+    // Extraire les dates de début et fin pour filtrer si elles sont spécifiées
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+      
+    // Filtrer par date si les dates sont spécifiées
+    if (startDate && endDate) {
+      expenses = await storage.getExpensesByDateRange(startDate, endDate);
+    }
+      
+    // Filtrer par catégorie si spécifié
+    const category = req.query.category as string;
+    if (category) {
+      expenses = await storage.getExpensesByCategory(category);
+    }
+      
+    // Définir le titre personnalisé si spécifié
+    const customTitle = req.query.title as string || 'REGISTRE DES DÉPENSES';
+    
+    // Générer un sous-titre
+    let subtitle = 'Document pour la comptabilité';
+    if (startDate && endDate) {
+      const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('fr-FR');
+      };
+      subtitle = `Période du ${formatDate(startDate)} au ${formatDate(endDate)}`;
+    }
+    if (category) {
+      subtitle += category ? ` - Catégorie: ${category}` : '';
+    }
+    
+    return {
+      expenses,
+      customTitle,
+      subtitle,
+      startDate,
+      endDate,
+      category
+    };
+  }
+  
+  // Exportation des dépenses en PDF (téléchargement)
   app.get("/api/expenses/export/pdf", async (req, res) => {
     try {
-      // Récupérer toutes les dépenses
-      let expenses = await storage.getExpenses();
+      const {
+        expenses,
+        customTitle,
+        subtitle,
+        startDate,
+        endDate
+      } = await prepareExpensesData(req);
       
-      // Extraire les dates de début et fin pour filtrer si elles sont spécifiées
-      const startDate = req.query.startDate as string;
-      const endDate = req.query.endDate as string;
-      
-      // Filtrer par date si les dates sont spécifiées
-      if (startDate && endDate) {
-        expenses = await storage.getExpensesByDateRange(startDate, endDate);
+      // Si après filtrage il n'y a pas de dépenses, on renvoie un message
+      if (expenses.length === 0) {
+        return res.status(404).json({ error: "Aucune dépense trouvée pour les critères sélectionnés" });
       }
-      
-      // Filtrer par catégorie si spécifié
-      const category = req.query.category as string;
-      if (category) {
-        expenses = await storage.getExpensesByCategory(category);
-      }
-      
-      // Définir le titre personnalisé si spécifié
-      const customTitle = req.query.title as string || 'REGISTRE DES DÉPENSES';
       
       // Définir les en-têtes de réponse pour le téléchargement du PDF
       res.setHeader('Content-Type', 'application/pdf');
@@ -1084,7 +1122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pdfStream = await generateExpensesPDF(
         expenses,
         customTitle,
-        'Document pour la comptabilité',
+        subtitle,
         startDate,
         endDate
       );
@@ -1093,6 +1131,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erreur lors de la génération du PDF des dépenses:", error);
       res.status(500).json({ error: "Erreur lors de la génération du PDF des dépenses" });
+    }
+  });
+  
+  // Prévisualisation des dépenses en PDF (affichage en ligne)
+  app.get("/api/expenses/preview/pdf", async (req, res) => {
+    try {
+      const {
+        expenses,
+        customTitle,
+        subtitle,
+        startDate,
+        endDate
+      } = await prepareExpensesData(req);
+      
+      // Si après filtrage il n'y a pas de dépenses, on renvoie un message
+      if (expenses.length === 0) {
+        return res.status(404).json({ error: "Aucune dépense trouvée pour les critères sélectionnés" });
+      }
+      
+      // Définir les en-têtes de réponse pour l'affichage en ligne
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline'); // Affichage en ligne au lieu de téléchargement
+      
+      // Générer le PDF et le transmettre directement au client
+      const pdfStream = await generateExpensesPDF(
+        expenses,
+        customTitle,
+        subtitle,
+        startDate,
+        endDate
+      );
+      
+      pdfStream.pipe(res);
+    } catch (error) {
+      console.error("Erreur lors de la prévisualisation du PDF des dépenses:", error);
+      res.status(500).json({ error: "Erreur lors de la prévisualisation du PDF des dépenses" });
     }
   });
 

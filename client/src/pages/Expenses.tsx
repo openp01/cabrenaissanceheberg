@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { type Expense } from "@shared/schema";
-import { PlusIcon, FileTextIcon, SearchIcon, FilterIcon, FileDown, Calendar } from "lucide-react";
+import { PlusIcon, FileTextIcon, SearchIcon, FilterIcon, FileDown, Calendar, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { HomeButton } from "@/components/ui/home-button";
@@ -44,6 +44,7 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
+import ExpensesPreviewDialog from "@/components/ExpensesPreviewDialog";
 
 export default function Expenses() {
   const { toast } = useToast();
@@ -116,6 +117,14 @@ export default function Expenses() {
           </div>
         </div>
         <div className="flex gap-2">
+          {/* Bouton de prévisualisation PDF */}
+          <ExpensesPreviewDialog
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            category={categoryFilter !== "all" ? categoryFilter : undefined}
+            customTitle={categoryFilter !== "all" ? `REGISTRE DES DÉPENSES - ${categoryFilter.toUpperCase()}` : undefined}
+          />
+          
           {/* Dialogue d'exportation PDF */}
           <Dialog>
             <DialogTrigger asChild>
