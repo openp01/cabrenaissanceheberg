@@ -94,6 +94,7 @@ export class MemStorage implements IStorage {
   private expensesData: Map<number, Expense> = new Map();
   private therapistPaymentsData: Map<number, TherapistPayment> = new Map();
   private signaturesData: Map<number, Signature> = new Map();
+  private appointmentTypeColorsData: Map<number, AppointmentTypeColor> = new Map();
   private patientCurrentId: number = 1;
   private therapistCurrentId: number = 1;
   private appointmentCurrentId: number = 1;
@@ -101,6 +102,7 @@ export class MemStorage implements IStorage {
   private expenseCurrentId: number = 1;
   private therapistPaymentCurrentId: number = 1;
   private signatureCurrentId: number = 1;
+  private appointmentTypeColorCurrentId: number = 1;
 
   constructor() {
     // Initialize with default therapists
@@ -111,6 +113,44 @@ export class MemStorage implements IStorage {
     
     // Initialize with example expenses
     this.initializeExampleExpenses();
+    
+    // Initialize appointment type colors
+    this.initializeAppointmentTypeColors();
+  }
+  
+  private initializeAppointmentTypeColors() {
+    // Couleurs par défaut pour les types de rendez-vous
+    const defaultTypeColors: InsertAppointmentTypeColor[] = [
+      {
+        type: APPOINTMENT_TYPES.INITIAL,
+        color: "#3fb549", // Vert - couleur principale du cabinet
+        description: "Rendez-vous initial pour évaluation"
+      },
+      {
+        type: APPOINTMENT_TYPES.FOLLOWUP,
+        color: "#8cd392", // Vert clair
+        description: "Séance de suivi standard"
+      },
+      {
+        type: APPOINTMENT_TYPES.EVALUATION,
+        color: "#266d2c", // Vert foncé
+        description: "Évaluation périodique des progrès"
+      },
+      {
+        type: APPOINTMENT_TYPES.RECOVERY,
+        color: "#e3f0e4", // Vert très clair
+        description: "Séance de rattrapage"
+      },
+      {
+        type: APPOINTMENT_TYPES.URGENT,
+        color: "#0d240f", // Vert très foncé
+        description: "Consultation urgente"
+      }
+    ];
+    
+    defaultTypeColors.forEach(typeColor => {
+      this.createAppointmentTypeColor(typeColor);
+    });
   }
   
   private initializeExampleExpenses() {
@@ -560,6 +600,56 @@ export class MemStorage implements IStorage {
     // Supprimer le rendez-vous
     const deleted = this.appointmentsData.delete(id);
     return { success: deleted };
+  }
+
+  // AppointmentTypeColor methods
+  async getAppointmentTypeColors(): Promise<AppointmentTypeColor[]> {
+    return Array.from(this.appointmentTypeColorsData.values());
+  }
+
+  async getAppointmentTypeColor(id: number): Promise<AppointmentTypeColor | undefined> {
+    return this.appointmentTypeColorsData.get(id);
+  }
+
+  async getAppointmentTypeColorByType(type: string): Promise<AppointmentTypeColor | undefined> {
+    return Array.from(this.appointmentTypeColorsData.values())
+      .find(typeColor => typeColor.type === type);
+  }
+
+  async createAppointmentTypeColor(typeColor: InsertAppointmentTypeColor): Promise<AppointmentTypeColor> {
+    const id = this.appointmentTypeColorCurrentId++;
+    const now = new Date();
+    const appointmentTypeColor: AppointmentTypeColor = {
+      id,
+      type: typeColor.type,
+      color: typeColor.color,
+      description: typeColor.description ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.appointmentTypeColorsData.set(id, appointmentTypeColor);
+    return appointmentTypeColor;
+  }
+
+  async updateAppointmentTypeColor(id: number, typeColorUpdate: Partial<InsertAppointmentTypeColor>): Promise<AppointmentTypeColor | undefined> {
+    const existingTypeColor = this.appointmentTypeColorsData.get(id);
+    
+    if (!existingTypeColor) {
+      return undefined;
+    }
+    
+    const updatedTypeColor = {
+      ...existingTypeColor,
+      ...typeColorUpdate,
+      updatedAt: new Date()
+    };
+    
+    this.appointmentTypeColorsData.set(id, updatedTypeColor);
+    return updatedTypeColor;
+  }
+
+  async deleteAppointmentTypeColor(id: number): Promise<boolean> {
+    return this.appointmentTypeColorsData.delete(id);
   }
 
   async checkAvailability(therapistId: number, date: string, time: string): Promise<{ available: boolean; conflictInfo?: { patientName: string; patientId: number } }> {
