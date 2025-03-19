@@ -72,7 +72,7 @@ export function Navbar() {
           <Link href="/appointments">
             <Button
               variant={isActive("/appointments") ? "default" : "secondary"}
-              className={`flex items-center font-bold ${isActive("/appointments") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+              className={`flex items-center font-bold ${isActive("/appointments") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <Calendar className="mr-2 h-5 w-5" />
@@ -83,7 +83,7 @@ export function Navbar() {
           <Link href="/schedule">
             <Button
               variant={isActive("/schedule") ? "default" : "secondary"}
-              className={`flex items-center font-bold ${isActive("/schedule") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+              className={`flex items-center font-bold ${isActive("/schedule") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <ClipboardList className="mr-2 h-5 w-5" />
@@ -97,7 +97,7 @@ export function Navbar() {
               <Link href="/invoices">
                 <Button
                   variant={isActive("/invoices") ? "default" : "secondary"}
-                  className={`flex items-center font-bold ${isActive("/invoices") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+                  className={`flex items-center font-bold ${isActive("/invoices") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
                   size="lg"
                 >
                   <CreditCard className="mr-2 h-5 w-5" />
@@ -108,7 +108,7 @@ export function Navbar() {
               <Link href="/payments">
                 <Button
                   variant={isActive("/payments") ? "default" : "secondary"}
-                  className={`flex items-center font-bold ${isActive("/payments") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+                  className={`flex items-center font-bold ${isActive("/payments") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
                   size="lg"
                 >
                   <CreditCard className="mr-2 h-5 w-5" />
@@ -122,7 +122,7 @@ export function Navbar() {
           <Link href="/profile">
             <Button
               variant={isActive("/profile") ? "default" : "secondary"}
-              className={`flex items-center font-bold ${isActive("/profile") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+              className={`flex items-center font-bold ${isActive("/profile") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
               size="lg"
             >
               <Settings className="mr-2 h-5 w-5" />
@@ -135,7 +135,7 @@ export function Navbar() {
             <Link href="/admin/users">
               <Button
                 variant={isActive("/admin/users") ? "default" : "secondary"}
-                className={`flex items-center font-bold ${isActive("/admin/users") ? "bg-primary text-white" : "bg-[#8cd392] text-[#0d240f] hover:bg-[#266d2c] hover:text-white"}`}
+                className={`flex items-center font-bold ${isActive("/admin/users") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
                 size="lg"
               >
                 <Users className="mr-2 h-5 w-5" />
