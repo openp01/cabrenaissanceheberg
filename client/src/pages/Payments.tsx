@@ -29,7 +29,7 @@ import { HomeButton } from "@/components/ui/home-button";
 import { TherapistPaymentWithDetails, Therapist } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileDown, Printer, Calendar, Eye, FileText } from "lucide-react";
+import { FileDown, Printer, Calendar } from "lucide-react";
 import { 
   Popover,
   PopoverContent,
@@ -45,8 +45,6 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import TherapistPaymentPreviewDialog from "@/components/TherapistPaymentPreviewDialog";
-import TherapistPaymentsReportDialog from "@/components/TherapistPaymentsReportDialog";
 
 export default function Payments() {
   // Récupération de tous les paiements
@@ -145,8 +143,6 @@ export default function Payments() {
           </p>
         </div>
         <div className="flex gap-2">
-          <TherapistPaymentsReportDialog />
-          
           <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">
@@ -289,7 +285,6 @@ export default function Payments() {
                     <TableHead>Montant</TableHead>
                     <TableHead>Méthode</TableHead>
                     <TableHead>Référence</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -306,12 +301,6 @@ export default function Payments() {
                       </TableCell>
                       <TableCell>{payment.paymentMethod}</TableCell>
                       <TableCell>{payment.paymentReference || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <TherapistPaymentPreviewDialog
-                          paymentId={payment.id}
-                          invoiceNumber={payment.invoiceNumber}
-                        />
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
