@@ -470,7 +470,7 @@ export async function generateTherapistPaymentsPDF(
   endDate?: string
 ): Promise<PassThrough> {
   // Créer un nouveau document PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+  const doc = new PDFDocument({ size: 'A4', margin: 5, bufferPages: true });
 
   
   // Utiliser PassThroughType '{ top: number; left: number; right: number; bottom: number; }' is not assignable to type 'number'.
@@ -632,7 +632,7 @@ export async function generateExpensesPDF(
   endDate?: string
 ): Promise<PassThrough> {
   // Créer un nouveau document PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 25, bufferPages: true });
+  const doc = new PDFDocument({ size: 'A4', margin: 5, bufferPages: true });
   
   // Utiliser PassThrough
   const stream = new PassThrough();
