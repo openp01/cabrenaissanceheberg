@@ -6,7 +6,8 @@ import {
   Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, 
   InsertAppointment, InsertInvoice, Expense, InsertExpense,
   TherapistPayment, TherapistPaymentWithDetails, InsertTherapistPayment,
-  Signature, InsertSignature
+  Signature, InsertSignature, AppointmentTypeColor, InsertAppointmentTypeColor,
+  APPOINTMENT_TYPES
 } from '@shared/schema';
 import { IStorage } from './storage';
 
@@ -116,6 +117,16 @@ async function initializeDatabase() {
         FOREIGN KEY (invoiceId) REFERENCES invoices (id)
       );
     `);
+    
+    // Création de la table appointment_type_colors
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS appointment_type_colors (
+        id SERIAL PRIMARY KEY,
+        type TEXT NOT NULL UNIQUE,
+        color TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
 
     // Vérifier si des données existent déjà
     const result = await client.query('SELECT COUNT(*) FROM patients');
@@ -172,6 +183,17 @@ async function initializeExampleData() {
         ('Formation continue', 350.00, $2, 'Formation', 'Virement', 'Séminaire sur les nouvelles techniques d''orthophonie pédiatrique'),
         ('Loyer du cabinet', 800.00, $1, 'Loyer', 'Virement', 'Loyer mensuel pour le local professionnel');
     `, [formatDate(today), formatDate(tomorrow)]);
+    
+    // Types de rendez-vous et leurs couleurs
+    await client.query(`
+      INSERT INTO appointment_type_colors (type, color)
+      VALUES 
+        ('Première consultation', '#3fb549'),
+        ('Suivi régulier', '#8cd392'),
+        ('Bilan', '#266d2c'),
+        ('Rééducation', '#0d240f'),
+        ('Urgence', '#ff0000');
+    `);
 
     await client.query(`
       INSERT INTO appointments (patientId, therapistId, date, time, duration, type, notes, status)
