@@ -122,7 +122,7 @@ export async function generateInvoicePDF(
   doc.pipe(stream);
   
   // Définir des positions et dimensions constantes
-  const pageWidth = doc.page.width - 100; // Marge de 50 de chaque côté
+  const pageWidth = doc.page.width - 125; // Marge de 50 de chaque côté
   
   // Définir les couleurs à partir du template
   const primaryColor = template.primary_color || '#266d2c';
@@ -425,11 +425,11 @@ export async function generateInvoicePDF(
   }
   
   // Ajouter le pied de page avec les informations légales - position plus haute pour éviter la seconde page
-  const footerY = doc.page.height - 50;
-  doc.fontSize(7)
+  const footerY = doc.page.height - 20;
+  doc.fontSize(5)
      .fillColor('black')
      .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
-           50, footerY, { align: 'center', width: pageWidth });
+           20, footerY, { align: 'center', width: pageWidth });
   
   // Finaliser le document
   doc.end();
@@ -470,9 +470,10 @@ export async function generateTherapistPaymentsPDF(
   endDate?: string
 ): Promise<PassThrough> {
   // Créer un nouveau document PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+  const doc = new PDFDocument({ size: 'A4', margin: { top: 50, left: 50, right: 50, bottom: 25 }, bufferPages: true });
+
   
-  // Utiliser PassThrough
+  // Utiliser PassThroughType '{ top: number; left: number; right: number; bottom: number; }' is not assignable to type 'number'.
   const stream = new PassThrough();
   
   // Pipe le PDF dans le stream
@@ -530,7 +531,7 @@ export async function generateTherapistPaymentsPDF(
   let currentY = startY + 25;
   const itemsPerPage = 20;
   let itemCount = 0;
-  let pageCount = 1;
+  let pageCount = 0;
   
   // Fonction pour ajouter une page
   const addPage = () => {
@@ -631,7 +632,7 @@ export async function generateExpensesPDF(
   endDate?: string
 ): Promise<PassThrough> {
   // Créer un nouveau document PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+  const doc = new PDFDocument({ size: 'A4', margin: 25, bufferPages: true });
   
   // Utiliser PassThrough
   const stream = new PassThrough();
