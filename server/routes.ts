@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/appointments/patient/:patientId", isAuthenticated, async (req, res) => {
+  app.get("/api/appointments/patient/:patientId", async (req, res) => {
     try {
       const patientId = parseInt(req.params.patientId);
       if (isNaN(patientId)) {
@@ -1299,113 +1299,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Enregistrement ou mise à jour de la signature administrative
-  // Routes pour les couleurs des types de rendez-vous
-  app.get("/api/appointment-type-colors", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const colors = await storage.getAppointmentTypeColors();
-      res.json(colors);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des couleurs de types de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  });
-  
-  app.get("/api/appointment-type-colors/:id", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const color = await storage.getAppointmentTypeColor(id);
-      
-      if (!color) {
-        return res.status(404).json({ error: "Couleur de type de rendez-vous non trouvée" });
-      }
-      
-      res.json(color);
-    } catch (error) {
-      console.error("Erreur lors de la récupération de la couleur de type de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  });
-  
-  app.get("/api/appointment-type-colors/type/:type", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const type = req.params.type;
-      const color = await storage.getAppointmentTypeColorByType(type);
-      
-      if (!color) {
-        return res.status(404).json({ error: "Couleur pour ce type de rendez-vous non trouvée" });
-      }
-      
-      res.json(color);
-    } catch (error) {
-      console.error("Erreur lors de la récupération de la couleur par type de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  });
-  
-  app.post("/api/appointment-type-colors", isAdminStaff, async (req: Request, res: Response) => {
-    try {
-      const colorData = req.body;
-      
-      if (!colorData.type || !colorData.color) {
-        return res.status(400).json({ error: "Type et couleur requis" });
-      }
-      
-      // Vérifier si une couleur existe déjà pour ce type
-      const existingColor = await storage.getAppointmentTypeColorByType(colorData.type);
-      
-      if (existingColor) {
-        return res.status(400).json({ 
-          error: "Une couleur existe déjà pour ce type de rendez-vous",
-          existingColor
-        });
-      }
-      
-      const newColor = await storage.createAppointmentTypeColor(colorData);
-      res.status(201).json(newColor);
-    } catch (error) {
-      console.error("Erreur lors de la création de la couleur de type de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  });
-  
-  app.put("/api/appointment-type-colors/:id", isAdminStaff, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const colorData = req.body;
-      
-      if (!colorData.color) {
-        return res.status(400).json({ error: "Couleur requise" });
-      }
-      
-      const updatedColor = await storage.updateAppointmentTypeColor(id, colorData);
-      
-      if (!updatedColor) {
-        return res.status(404).json({ error: "Couleur de type de rendez-vous non trouvée" });
-      }
-      
-      res.json(updatedColor);
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour de la couleur de type de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  });
-  
-  app.delete("/api/appointment-type-colors/:id", isAdmin, async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteAppointmentTypeColor(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: "Couleur de type de rendez-vous non trouvée" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Erreur lors de la suppression de la couleur de type de rendez-vous:", error);
-      res.status(500).json({ error: "Erreur serveur" });
-    }
-  });
-
   app.post("/api/admin-signature", isAdmin, async (req: Request, res: Response) => {
     try {
       const { signatureData, paidStampData } = req.body;

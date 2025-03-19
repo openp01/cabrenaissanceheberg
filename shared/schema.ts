@@ -2,34 +2,6 @@ import { pgTable, text, serial, integer, boolean, timestamp, numeric, varchar, j
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Types de rendez-vous prédéfinis avec leurs couleurs
-export const APPOINTMENT_TYPES = {
-  INITIAL: "Bilan initial",
-  FOLLOWUP: "Suivi régulier",
-  EVALUATION: "Évaluation périodique",
-  RECOVERY: "Séance de rattrapage",
-  URGENT: "Consultation urgente"
-};
-
-// Table pour les types de rendez-vous et leurs couleurs associées
-export const appointmentTypeColors = pgTable("appointment_type_colors", {
-  id: serial("id").primaryKey(),
-  type: text("type").notNull(),
-  color: text("color").notNull().default("#4f46e5"), // Couleur par défaut
-  description: text("description"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertAppointmentTypeColorSchema = createInsertSchema(appointmentTypeColors).pick({
-  type: true,
-  color: true,
-  description: true,
-});
-
-export type InsertAppointmentTypeColor = z.infer<typeof insertAppointmentTypeColorSchema>;
-export type AppointmentTypeColor = typeof appointmentTypeColors.$inferSelect;
-
 // Patient table
 export const patients = pgTable("patients", {
   id: serial("id").primaryKey(),

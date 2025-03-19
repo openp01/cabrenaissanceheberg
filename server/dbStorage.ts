@@ -6,8 +6,7 @@ import {
   Invoice, InvoiceWithDetails, InsertPatient, InsertTherapist, 
   InsertAppointment, InsertInvoice, Expense, InsertExpense,
   TherapistPayment, TherapistPaymentWithDetails, InsertTherapistPayment,
-  Signature, InsertSignature, AppointmentTypeColor, InsertAppointmentTypeColor,
-  APPOINTMENT_TYPES
+  Signature, InsertSignature
 } from '@shared/schema';
 import { IStorage } from './storage';
 
@@ -117,16 +116,6 @@ async function initializeDatabase() {
         FOREIGN KEY (invoiceId) REFERENCES invoices (id)
       );
     `);
-    
-    // Création de la table appointment_type_colors
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS appointment_type_colors (
-        id SERIAL PRIMARY KEY,
-        type TEXT NOT NULL UNIQUE,
-        color TEXT NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW()
-      );
-    `);
 
     // Vérifier si des données existent déjà
     const result = await client.query('SELECT COUNT(*) FROM patients');
@@ -183,17 +172,6 @@ async function initializeExampleData() {
         ('Formation continue', 350.00, $2, 'Formation', 'Virement', 'Séminaire sur les nouvelles techniques d''orthophonie pédiatrique'),
         ('Loyer du cabinet', 800.00, $1, 'Loyer', 'Virement', 'Loyer mensuel pour le local professionnel');
     `, [formatDate(today), formatDate(tomorrow)]);
-    
-    // Types de rendez-vous et leurs couleurs
-    await client.query(`
-      INSERT INTO appointment_type_colors (type, color)
-      VALUES 
-        ('Première consultation', '#3fb549'),
-        ('Suivi régulier', '#8cd392'),
-        ('Bilan', '#266d2c'),
-        ('Rééducation', '#0d240f'),
-        ('Urgence', '#ff0000');
-    `);
 
     await client.query(`
       INSERT INTO appointments (patientId, therapistId, date, time, duration, type, notes, status)
@@ -2024,151 +2002,6 @@ export class PgStorage implements IStorage {
       return result.rows.length > 0;
     } catch (error) {
       console.error("Erreur lors de la suppression de la signature:", error);
-      return false;
-    }
-  }
-
-  // Méthodes pour les couleurs de type de rendez-vous
-  async getAppointmentTypeColors(): Promise<AppointmentTypeColor[]> {
-    try {
-      const result = await pool.query('SELECT * FROM appointment_type_colors ORDER BY type');
-      return result.rows.map(row => ({
-        id: row.id,
-        type: row.type,
-        color: row.color,
-        createdAt: row.created_at
-      }));
-    } catch (error) {
-      console.error("Erreur lors de la récupération des couleurs de types de rendez-vous:", error);
-      return [];
-    }
-  }
-
-  async getAppointmentTypeColor(id: number): Promise<AppointmentTypeColor | undefined> {
-    try {
-      const result = await pool.query('SELECT * FROM appointment_type_colors WHERE id = $1', [id]);
-      if (result.rows.length === 0) {
-        return undefined;
-      }
-      const row = result.rows[0];
-      return {
-        id: row.id,
-        type: row.type,
-        color: row.color,
-        createdAt: row.created_at
-      };
-    } catch (error) {
-      console.error("Erreur lors de la récupération de la couleur de type de rendez-vous:", error);
-      return undefined;
-    }
-  }
-
-  async getAppointmentTypeColorByType(type: string): Promise<AppointmentTypeColor | undefined> {
-    try {
-      const result = await pool.query('SELECT * FROM appointment_type_colors WHERE type = $1', [type]);
-      if (result.rows.length === 0) {
-        return undefined;
-      }
-      const row = result.rows[0];
-      return {
-        id: row.id,
-        type: row.type,
-        color: row.color,
-        createdAt: row.created_at
-      };
-    } catch (error) {
-      console.error("Erreur lors de la récupération de la couleur par type de rendez-vous:", error);
-      return undefined;
-    }
-  }
-
-  async createAppointmentTypeColor(typeColor: InsertAppointmentTypeColor): Promise<AppointmentTypeColor> {
-    try {
-      // Vérifier si le type existe déjà
-      const existingResult = await pool.query('SELECT * FROM appointment_type_colors WHERE type = $1', [typeColor.type]);
-      
-      if (existingResult.rows.length > 0) {
-        // Mettre à jour la couleur si le type existe déjà
-        const result = await pool.query(
-          'UPDATE appointment_type_colors SET color = $1 WHERE type = $2 RETURNING *',
-          [typeColor.color, typeColor.type]
-        );
-        const row = result.rows[0];
-        return {
-          id: row.id,
-          type: row.type,
-          color: row.color,
-          createdAt: row.created_at
-        };
-      } else {
-        // Créer un nouveau type de couleur
-        const result = await pool.query(
-          'INSERT INTO appointment_type_colors (type, color) VALUES ($1, $2) RETURNING *',
-          [typeColor.type, typeColor.color]
-        );
-        const row = result.rows[0];
-        return {
-          id: row.id,
-          type: row.type,
-          color: row.color,
-          createdAt: row.created_at
-        };
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création de la couleur de type de rendez-vous:", error);
-      throw error;
-    }
-  }
-
-  async updateAppointmentTypeColor(id: number, typeColorUpdate: Partial<InsertAppointmentTypeColor>): Promise<AppointmentTypeColor | undefined> {
-    try {
-      // Construire la requête de mise à jour
-      let query = 'UPDATE appointment_type_colors SET ';
-      const values: any[] = [];
-      const updates: string[] = [];
-      
-      if (typeColorUpdate.type !== undefined) {
-        values.push(typeColorUpdate.type);
-        updates.push(`type = $${values.length}`);
-      }
-      
-      if (typeColorUpdate.color !== undefined) {
-        values.push(typeColorUpdate.color);
-        updates.push(`color = $${values.length}`);
-      }
-      
-      // Ajouter l'ID pour la clause WHERE
-      values.push(id);
-      
-      // Finaliser la requête
-      query += updates.join(', ') + ` WHERE id = $${values.length} RETURNING *`;
-      
-      // Exécuter la requête
-      const result = await pool.query(query, values);
-      
-      if (result.rows.length === 0) {
-        return undefined;
-      }
-      
-      const row = result.rows[0];
-      return {
-        id: row.id,
-        type: row.type,
-        color: row.color,
-        createdAt: row.created_at
-      };
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour de la couleur de type de rendez-vous:", error);
-      return undefined;
-    }
-  }
-
-  async deleteAppointmentTypeColor(id: number): Promise<boolean> {
-    try {
-      const result = await pool.query('DELETE FROM appointment_type_colors WHERE id = $1 RETURNING id', [id]);
-      return result.rows.length > 0;
-    } catch (error) {
-      console.error("Erreur lors de la suppression de la couleur de type de rendez-vous:", error);
       return false;
     }
   }
