@@ -26,8 +26,6 @@ export function setupAuth(app: Express) {
   const PgSession = connectPgSimple(session);
   
   // Configuration de la session
-  const isProduction = process.env.NODE_ENV === 'production';
-  
   const sessionSettings: session.SessionOptions = {
     store: new PgSession({
       pool: pool as any, // Conversion de type nécessaire pour la compatibilité
@@ -38,11 +36,10 @@ export function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: isProduction, // Activer en production, désactiver en développement
-      httpOnly: true, // Toujours activé pour empêcher l'accès via JavaScript
+      secure: false, // Désactivé pour assurer la compatibilité avec l'environnement de déploiement
+      httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 jour
-      sameSite: isProduction ? 'strict' : 'lax', // Plus sécurisé en production
-      path: '/',
+      sameSite: 'lax', // Permettre les requêtes cross-site pour faciliter le développement
     }
   };
 
@@ -55,14 +52,9 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        // Journalisation réduite en production
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Tentative de connexion pour l'utilisateur: ${username}`);
-        }
-        
+        console.log(`Tentative de connexion pour l'utilisateur: ${username}`);
         const user = await authService.validateUser(username, password);
         if (!user) {
-          // Toujours journaliser les échecs d'authentification pour des raisons de sécurité
           console.log(`Échec d'authentification pour l'utilisateur: ${username}`);
           return done(null, false, { message: "Identifiants incorrects" });
         }
@@ -77,9 +69,7 @@ export function setupAuth(app: Express) {
           isActive: user.isActive
         };
         
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`Authentification réussie pour l'utilisateur: ${username}, ID: ${user.id}, Rôle: ${user.role}`);
-        }
+        console.log(`Authentification réussie pour l'utilisateur: ${username}, ID: ${user.id}, Rôle: ${user.role}`);
         return done(null, sessionUser);
       } catch (error) {
         console.error(`Erreur lors de l'authentification:`, error);
@@ -90,20 +80,14 @@ export function setupAuth(app: Express) {
 
   // Sérialisation de l'utilisateur pour la session
   passport.serializeUser((user: SessionUser, done) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`Sérialisation de l'utilisateur ID:${user.id} pour la session`);
-    }
+    console.log(`Sérialisation de l'utilisateur ID:${user.id} pour la session`);
     done(null, user.id);
   });
 
   // Désérialisation de l'utilisateur à partir de la session
   passport.deserializeUser(async (id: number, done) => {
     try {
-      // Journalisation limitée en production
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`Tentative de désérialisation pour l'utilisateur ID:${id}`);
-      }
-      
+      console.log(`Tentative de désérialisation pour l'utilisateur ID:${id}`);
       const user = await authService.getUser(id);
       if (!user) {
         console.log(`Utilisateur ID:${id} non trouvé lors de la désérialisation`);
@@ -124,11 +108,7 @@ export function setupAuth(app: Express) {
         isActive: user.isActive
       };
       
-      // Journalisation limitée en production
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`Désérialisation réussie pour l'utilisateur ID:${id}, Rôle:${user.role}`);
-      }
-      
+      console.log(`Désérialisation réussie pour l'utilisateur ID:${id}, Rôle:${user.role}`);
       done(null, sessionUser);
     } catch (error) {
       console.error(`Erreur lors de la désérialisation de l'utilisateur ID:${id}:`, error);
@@ -161,7 +141,7 @@ export function setupAuth(app: Express) {
   });
   
   // Route pour récupérer la liste des utilisateurs (admin uniquement)
-  app.get("/api/auth/users", (req, res, next) => isAdmin(req as any, res, next), async (req, res) => {
+  app.get("/api/auth/users", isAdmin, async (req, res) => {
     try {
       const users = await authService.getAllUsers();
       
@@ -200,7 +180,7 @@ export function setupAuth(app: Express) {
   });
   
   // Route pour changer le mot de passe d'un utilisateur connecté
-  app.post("/api/auth/change-password", (req, res, next) => isAuthenticated(req, res, next), async (req, res) => {
+  app.post("/api/auth/change-password", isAuthenticated, async (req, res) => {
     try {
       const { currentPassword, newPassword, confirmPassword } = req.body;
       const userId = (req.user as SessionUser).id;
@@ -238,7 +218,7 @@ export function setupAuth(app: Express) {
   });
   
   // Route pour désactiver un compte utilisateur (admin uniquement)
-  app.post("/api/auth/deactivate-user/:id", (req, res, next) => isAdmin(req as any, res, next), async (req, res) => {
+  app.post("/api/auth/deactivate-user/:id", isAdmin, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
       

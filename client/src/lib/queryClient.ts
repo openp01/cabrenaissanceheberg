@@ -1,44 +1,22 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { withCsrfToken, resetCsrfToken } from './csrfService';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    // Si l'erreur est liée au CSRF, réinitialiser le token
-    if (res.status === 403 && (await res.json())?.code === 'CSRF_ERROR') {
-      resetCsrfToken();
-    }
-    
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
 }
 
-export async function apiRequest<T = any>({
-  url, 
-  method = "GET", 
-  data,
-  headers = {}
-}: {
-  url: string;
-  method?: string;
-  data?: unknown;
-  headers?: Record<string, string>;
-}): Promise<T> {
+export async function apiRequest<T = any>(
+  url: string,
+  method: string = "GET",
+  data?: unknown | undefined,
+): Promise<T> {
   console.log(`Sending ${method} request to ${url}`, data);
-  
-  // Ajouter le token CSRF aux en-têtes pour les requêtes qui modifient des données
-  const csrfHeaders = method !== 'GET' 
-    ? await withCsrfToken(headers)
-    : headers;
-
-  // Ajouter Content-Type pour les requêtes avec body
-  const finalHeaders = data 
-    ? { ...csrfHeaders, "Content-Type": "application/json" } 
-    : csrfHeaders;
   
   const res = await fetch(url, {
     method,
-    headers: finalHeaders,
+    headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include", // Important pour envoyer et recevoir des cookies
   });
@@ -59,7 +37,6 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     console.log(`Sending query request to ${queryKey[0]}`);
     
-    // Pour les requêtes GET standard, pas besoin de CSRF token
     const res = await fetch(queryKey[0] as string, {
       credentials: "include", // Important pour envoyer et recevoir des cookies
     });

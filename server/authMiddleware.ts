@@ -36,13 +36,12 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
  * @param roles Tableau des rôles autorisés
  */
 export function hasRole(roles: UserRoleType[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Non autorisé - Veuillez vous connecter' });
     }
     
-    const user = req.user as SessionUser;
-    if (!user || !roles.includes(user.role)) {
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Accès refusé - Droits insuffisants' });
     }
     
@@ -66,18 +65,13 @@ export const isAdminStaff = hasRole([UserRole.ADMIN, UserRole.SECRETARIAT]);
  * mais permet aussi au personnel administratif d'accéder à toutes les données.
  */
 export function isTherapistOwner(paramName: string = 'therapistId') {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated || !req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Non autorisé - Veuillez vous connecter' });
-    }
-    
-    const user = req.user as SessionUser;
-    if (!user) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
       return res.status(401).json({ error: 'Non autorisé - Veuillez vous connecter' });
     }
     
     // Les administrateurs et le secrétariat ont accès à tout
-    if (user.role === UserRole.ADMIN || user.role === UserRole.SECRETARIAT) {
+    if (req.user.role === UserRole.ADMIN || req.user.role === UserRole.SECRETARIAT) {
       return next();
     }
     
@@ -85,9 +79,9 @@ export function isTherapistOwner(paramName: string = 'therapistId') {
     const requestedTherapistId = parseInt(req.params[paramName]);
     
     if (
-      user.role === UserRole.THERAPIST &&
-      user.therapistId &&
-      user.therapistId === requestedTherapistId
+      req.user.role === UserRole.THERAPIST &&
+      req.user.therapistId &&
+      req.user.therapistId === requestedTherapistId
     ) {
       return next();
     }
