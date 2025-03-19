@@ -3,7 +3,7 @@ import React from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { AppointmentWithDetails } from "@shared/schema";
+import { AppointmentWithDetails, AppointmentTypeColor } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,11 @@ export default function AppointmentList() {
   // Fetch appointments
   const { data: allAppointments, isLoading, error } = useQuery<AppointmentWithDetails[]>({
     queryKey: ['/api/appointments'],
+  });
+  
+  // Fetch appointment type colors
+  const { data: typeColors, isLoading: isLoadingColors } = useQuery<AppointmentTypeColor[]>({
+    queryKey: ['/api/appointment-type-colors'],
   });
   
   // Filtrer les rendez-vous en fonction du rôle de l'utilisateur
@@ -261,6 +266,8 @@ export default function AppointmentList() {
       return "recurring";
     } else if (appointment.relatedAppointments && appointment.relatedAppointments.length > 0) {
       return "multiple";
+    } else if (appointment.type) {
+      return appointment.type; // Utiliser le type spécifique s'il existe
     } else {
       return "single";
     }
@@ -275,9 +282,33 @@ export default function AppointmentList() {
         return "Multiple";
       case "single":
         return "Ponctuel";
+      case "initial":
+        return "Initial";
+      case "followup":
+        return "Suivi";
+      case "evaluation":
+        return "Évaluation";
+      case "recovery":
+        return "Rattrapage";
+      case "urgent":
+        return "Urgent";
       default:
         return type;
     }
+  };
+  
+  // Fonction pour obtenir la couleur du type de rendez-vous
+  const getAppointmentColor = (appointmentType: string): string => {
+    if (!typeColors || typeColors.length === 0) {
+      // Couleurs par défaut si les couleurs ne sont pas encore chargées
+      return "#3fb549"; // Couleur verte par défaut
+    }
+    
+    // Chercher la couleur correspondant au type
+    const colorSetting = typeColors.find(c => c.type === appointmentType);
+    
+    // Retourner la couleur si trouvée, sinon une couleur par défaut
+    return colorSetting?.color || "#3fb549";
   };
   
   // Grouper les rendez-vous récurrents
@@ -610,15 +641,37 @@ export default function AppointmentList() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       {(() => {
                                         const appointmentType = getAppointmentType(appointment);
-                                        const badgeClass = 
-                                          appointmentType === "recurring" 
-                                            ? "bg-purple-100 text-purple-800"
-                                            : appointmentType === "multiple"
-                                              ? "bg-blue-100 text-blue-800"
-                                              : "bg-gray-100 text-gray-800";
+                                        const typeColor = getAppointmentColor(appointmentType);
+                                        
+                                        // Créer des couleurs légères et foncées à partir de la couleur principale
+                                        // Valeurs par défaut pour les types pré-définis
+                                        let bgColor = "bg-gray-100";
+                                        let textColor = "text-gray-800";
+                                        
+                                        if (appointmentType === "recurring") {
+                                          bgColor = "bg-purple-100";
+                                          textColor = "text-purple-800";
+                                        } else if (appointmentType === "multiple") {
+                                          bgColor = "bg-blue-100";
+                                          textColor = "text-blue-800";
+                                        } else if (typeColor) {
+                                          // Si nous avons une couleur personnalisée, nous l'utilisons avec un style inline
+                                          return (
+                                            <span 
+                                              className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                              style={{
+                                                backgroundColor: `${typeColor}20`, // Couleur avec opacité à 20%
+                                                color: typeColor,
+                                                border: `1px solid ${typeColor}40` // Bordure avec opacité à 40%
+                                              }}
+                                            >
+                                              {getAppointmentTypeLabel(appointmentType)}
+                                            </span>
+                                          );
+                                        }
                                         
                                         return (
-                                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}`}>
+                                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} ${textColor}`}>
                                             {getAppointmentTypeLabel(appointmentType)}
                                           </span>
                                         );
