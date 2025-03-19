@@ -29,7 +29,7 @@ import { HomeButton } from "@/components/ui/home-button";
 import { TherapistPaymentWithDetails, Therapist } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileDown, Printer, Calendar } from "lucide-react";
+import { FileDown, Printer, Calendar, Eye } from "lucide-react";
 import { 
   Popover,
   PopoverContent,
@@ -45,6 +45,7 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import PaymentsPreviewDialog from "@/components/PaymentsPreviewDialog";
 
 export default function Payments() {
   // Récupération de tous les paiements
@@ -143,6 +144,23 @@ export default function Payments() {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Bouton de prévisualisation */}
+          <PaymentsPreviewDialog 
+            startDate={startDate} 
+            endDate={endDate} 
+            therapistId={selectedTherapistId || undefined}
+            customTitle={selectedTherapistId && therapists ? 
+              `RELEVÉ DES PAIEMENTS - ${therapists.find(t => t.id.toString() === selectedTherapistId)?.name || ''}` : 
+              undefined
+            }
+          >
+            <Button variant="outline" className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Prévisualiser
+            </Button>
+          </PaymentsPreviewDialog>
+          
+          {/* Bouton d'export PDF */}
           <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2">

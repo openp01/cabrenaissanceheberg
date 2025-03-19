@@ -922,58 +922,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Endpoints pour l'exportation PDF pour la comptabilité
   
-  // Exportation des paiements aux thérapeutes en PDF
+  // Fonction utilitaire partagée pour filtrer et préparer les paiements
+  async function prepareTherapistPaymentsData(req: Request) {
+    // Extraire les dates de début et fin pour filtrer si elles sont spécifiées
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    
+    // Récupérer tous les paiements ou filtrer par date si spécifié
+    let filteredPayments;
+    if (startDate && endDate) {
+      filteredPayments = await storage.getTherapistPaymentsByDateRange(startDate, endDate);
+    } else {
+      filteredPayments = await storage.getTherapistPayments();
+    }
+    
+    // Filtrer par thérapeute si spécifié
+    const therapistId = req.query.therapistId as string;
+    let therapistName = '';
+    
+    if (therapistId && !isNaN(parseInt(therapistId))) {
+      const therapistIdNum = parseInt(therapistId);
+      filteredPayments = filteredPayments.filter(payment => payment.therapistId === therapistIdNum);
+      
+      // Récupérer le nom du thérapeute si spécifié
+      const therapist = await storage.getTherapist(parseInt(therapistId));
+      if (therapist) {
+        therapistName = therapist.name;
+      }
+    }
+    
+    // Définir le titre personnalisé si spécifié
+    const customTitle = req.query.title as string || 'RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES';
+    
+    // Générer un sous-titre avec la période ou le thérapeute
+    let subtitle = 'Document pour la comptabilité';
+    if (startDate && endDate) {
+      const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('fr-FR');
+      };
+      subtitle = `Période du ${formatDate(startDate)} au ${formatDate(endDate)}`;
+    }
+    
+    return {
+      filteredPayments,
+      customTitle,
+      subtitle,
+      startDate,
+      endDate,
+      therapistId,
+      therapistName
+    };
+  }
+  
+  // Exportation des paiements aux thérapeutes en PDF (téléchargement)
   app.get("/api/therapist-payments/export/pdf", async (req, res) => {
     try {
-      // Extraire les dates de début et fin pour filtrer si elles sont spécifiées
-      const startDate = req.query.startDate as string;
-      const endDate = req.query.endDate as string;
+      const {
+        filteredPayments,
+        customTitle,
+        subtitle,
+        startDate,
+        endDate,
+        therapistId,
+        therapistName
+      } = await prepareTherapistPaymentsData(req);
       
-      // Récupérer tous les paiements ou filtrer par date si spécifié
-      let filteredPayments;
-      if (startDate && endDate) {
-        filteredPayments = await storage.getTherapistPaymentsByDateRange(startDate, endDate);
-      } else {
-        filteredPayments = await storage.getTherapistPayments();
+      // Si après filtrage il n'y a pas de paiements, on renvoie un message
+      if (filteredPayments.length === 0) {
+        return res.status(404).json({ error: "Aucun paiement trouvé pour ce thérapeute durant cette période" });
       }
-      
-      // Filtrer par thérapeute si spécifié
-      const therapistId = req.query.therapistId as string;
-      if (therapistId && !isNaN(parseInt(therapistId))) {
-        const therapistIdNum = parseInt(therapistId);
-        filteredPayments = filteredPayments.filter(payment => payment.therapistId === therapistIdNum);
-        
-        // Si après filtrage il n'y a pas de paiements, on renvoie un message
-        if (filteredPayments.length === 0) {
-          return res.status(404).json({ error: "Aucun paiement trouvé pour ce thérapeute durant cette période" });
-        }
-      }
-      
-      // Définir le titre personnalisé si spécifié
-      const customTitle = req.query.title as string || 'RELEVÉ DES PAIEMENTS AUX THÉRAPEUTES';
       
       // Récupérer le nom du thérapeute pour le nom du fichier si spécifié
-      let filenameTherapist = '';
-      if (therapistId && !isNaN(parseInt(therapistId))) {
-        const therapist = await storage.getTherapist(parseInt(therapistId));
-        if (therapist) {
-          filenameTherapist = `-${therapist.name.replace(/\s+/g, '-')}`;
-        }
-      }
+      let filenameTherapist = therapistName ? `-${therapistName.replace(/\s+/g, '-')}` : '';
       
       // Définir les en-têtes de réponse pour le téléchargement du PDF
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="paiements-therapeutes${filenameTherapist}-${new Date().toISOString().slice(0, 10)}.pdf"`);
-      
-      // Générer un sous-titre avec la période ou le thérapeute
-      let subtitle = 'Document pour la comptabilité';
-      if (startDate && endDate) {
-        const formatDate = (dateStr: string) => {
-          const date = new Date(dateStr);
-          return date.toLocaleDateString('fr-FR');
-        };
-        subtitle = `Période du ${formatDate(startDate)} au ${formatDate(endDate)}`;
-      }
       
       // Générer le PDF et le transmettre directement au client
       const pdfStream = await generateTherapistPaymentsPDF(
@@ -988,6 +1013,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erreur lors de la génération du PDF des paiements:", error);
       res.status(500).json({ error: "Erreur lors de la génération du PDF des paiements" });
+    }
+  });
+  
+  // Prévisualisation des paiements aux thérapeutes en PDF (affichage en ligne)
+  app.get("/api/therapist-payments/preview/pdf", async (req, res) => {
+    try {
+      const {
+        filteredPayments,
+        customTitle,
+        subtitle,
+        startDate,
+        endDate
+      } = await prepareTherapistPaymentsData(req);
+      
+      // Si après filtrage il n'y a pas de paiements, on renvoie un message
+      if (filteredPayments.length === 0) {
+        return res.status(404).json({ error: "Aucun paiement trouvé pour ce thérapeute durant cette période" });
+      }
+      
+      // Définir les en-têtes de réponse pour l'affichage en ligne
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline'); // Affichage en ligne au lieu de téléchargement
+      
+      // Générer le PDF et le transmettre directement au client
+      const pdfStream = await generateTherapistPaymentsPDF(
+        filteredPayments,
+        customTitle,
+        subtitle,
+        startDate,
+        endDate
+      );
+      
+      pdfStream.pipe(res);
+    } catch (error) {
+      console.error("Erreur lors de la prévisualisation du PDF des paiements:", error);
+      res.status(500).json({ error: "Erreur lors de la prévisualisation du PDF des paiements" });
     }
   });
   
