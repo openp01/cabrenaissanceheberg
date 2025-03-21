@@ -36,12 +36,9 @@ export default function Home() {
         </div>
       </div>
       
-      {/* Titre principal et logo */}
+      {/* Logo principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-6 flex flex-col items-center">
-        <img src="/images/LaR_PICTO-Full.jpg" alt="Logo R Cabinet Paramédical de la Renaissance" className="h-24 w-auto mb-4" />
-        <h1 className="text-3xl font-bold text-[#266d2c] text-center">
-          CABINET PARAMÉDICAL DE LA RENAISSANCE
-        </h1>
+        <img src="/images/LaR_LOGO-Full.jpg" alt="Logo Cabinet Paramédical de la Renaissance" className="h-40 w-auto mb-4" />
         <p className="text-[#0d240f] mt-2 text-center font-medium">
           Système de gestion administratif
         </p>
