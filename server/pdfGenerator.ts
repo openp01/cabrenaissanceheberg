@@ -194,8 +194,13 @@ export async function generateInvoicePDF(
      .text('OBJET :', 50, objectY, { underline: true });
      
   // Utiliser l'option width pour limiter la largeur du texte et permettre le passage à la ligne
-  doc.text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.Nous restons à votre disposition pour toute information complémentaire.', 
+  doc.text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
       50, objectY + 20, 
+      { width: pageWidth, align: 'left' });
+  
+  // Ajouter plus d'espace entre les lignes
+  doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
+      50, objectY + 50, 
       { width: pageWidth, align: 'left' });
   
   // Ajouter une ligne de séparation (ajuster la position en fonction du nouveau texte)
@@ -421,11 +426,11 @@ export async function generateInvoicePDF(
   }
   
   // Ajouter le pied de page avec les informations légales
-  const footerY = doc.page.height - 15;
+  const footerY = doc.page.height - 30;
   doc.fontSize(8)
      .fillColor('black')
      .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
-           20, footerY, { align: 'center' });
+           50, footerY, { align: 'center' });
   
   // Finaliser le document
   doc.end();
