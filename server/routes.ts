@@ -653,8 +653,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return `${formattedDate} à ${app.time}`;
             });
             
-            // Préparer les informations de facture, en séparant les notes des dates
-            let notesBase = `Facture groupée pour ${activeAppointments.length} séances`;
+            // Préparer les informations de facture, en préservant les notes personnalisées
+            // Rechercher si des notes personnalisées ont été ajoutées
+
+            // Conserver les notes personnalisées si elles existent
+            let notesBase = '';
+            let userCustomNotes = '';
+
+            // Séparer les notes automatiques des notes personnalisées
+            if (invoice.notes) {
+              // Détecter si c'est une facture groupée ou récurrente
+              if (invoice.notes.includes('Facture groupée') || invoice.notes.includes('Rendez-vous récurrent')) {
+                // Extraire les notes personnalisées (après les lignes de dates)
+                const notesLines = invoice.notes.split('\n');
+                
+                // Si la note contient des lignes supplémentaires qui ne sont ni des dates ni des lignes vides
+                const nonDateLines = notesLines.filter(line => 
+                  !line.match(/^\d{2}\/\d{2}\/202\d/) && // Pas une date
+                  !line.includes('Facture groupée') && // Pas l'en-tête automatique
+                  !line.includes('Rendez-vous récurrent') && // Pas l'en-tête automatique
+                  line.trim() !== '' // Pas une ligne vide
+                );
+
+                // S'il y a des notes personnalisées, les conserver
+                if (nonDateLines.length > 0) {
+                  userCustomNotes = nonDateLines.join('\n');
+                }
+              } else {
+                // Pour les factures simples, conserver la note telle quelle
+                userCustomNotes = invoice.notes;
+              }
+            }
+
+            // Créer la note de base (partie automatique)
+            notesBase = `Facture groupée pour ${activeAppointments.length} séances`;
             
             // Extraire la fréquence si elle existe
             const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
@@ -662,13 +694,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               notesBase += ` (${frequencyMatch[1]})`;
             }
             
-            // Au lieu d'ajouter les dates dans les notes, les conserver séparément
-            // pour les passer au générateur de PDF
+            // Combiner les notes automatiques et personnalisées
+            const finalNotes = userCustomNotes 
+              ? `${notesBase}\n\n${userCustomNotes}` 
+              : notesBase;
             
-            // Mettre à jour l'objet invoice avec les notes (sans les dates) et dates séparées
+            // Mettre à jour l'objet invoice avec les notes et dates séparées
             invoice = {
               ...invoice,
-              notes: notesBase,
+              notes: finalNotes,
               // Ajouter un nouveau champ pour les dates de rendez-vous récurrents/groupés
               appointmentDates: allAppointmentDates
             };
