@@ -240,22 +240,27 @@ export function generateInvoicePDF(
     const lineSpacing = 12;
     
     // Tracer les lignes une par une
-    const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length);
+    const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length, col4Dates.length);
     
     for (let i = 0; i < maxLines; i++) {
       if (i < col1Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 210 });
+          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 155 });
       }
       
       if (i < col2Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 210 });
+          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 155 });
       }
       
       if (i < col3Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col3Dates[i]}`, col3X, currentY, { width: 210 });
+          .text(`• ${col3Dates[i]}`, col3X, currentY, { width: 155 });
+      }
+      
+      if (i < col4Dates.length) {
+        doc.fontSize(fontSize).font('Helvetica')
+          .text(`• ${col4Dates[i]}`, col4X, currentY, { width: 155 });
       }
       
       currentY += lineSpacing;
