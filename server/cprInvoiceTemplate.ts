@@ -305,39 +305,9 @@ export function generateInvoicePDF(
   if (invoice.notes) {
     doc.moveDown(0.8); // Plus d'espace avant les notes
     
-    // Extraire correctement les notes personnalisées dans le cas de factures groupées ou récurrentes
+    // Traiter simplement les notes comme elles sont, sans filtrage spécial pour les factures récurrentes
+    // Ce comportement correspond à celui des factures à séance unique
     let displayNotes = invoice.notes;
-    
-    if (invoice.notes.includes('Facture groupée pour séances') || invoice.notes.includes('Rendez-vous récurrent')) {
-      // Vérifier s'il y a des notes additionnelles après la première ligne standard
-      const notesLines = invoice.notes.split('\n');
-      
-      // La première ligne est toujours le texte standard
-      let customNotes = notesLines[0];
-      
-      // S'il y a plus de 2 lignes, c'est qu'il y a des notes personnalisées
-      // (on saute la première ligne et les dates)
-      if (notesLines.length > 2) {
-        // Trouver l'index où commencent les notes personnalisées (après les dates)
-        let customNotesStartIndex = 1;
-        
-        // Ignorer les lignes qui contiennent des dates de rendez-vous
-        while (customNotesStartIndex < notesLines.length && 
-              (notesLines[customNotesStartIndex].includes('/202') || 
-               notesLines[customNotesStartIndex].trim() === '')) {
-          customNotesStartIndex++;
-        }
-        
-        // S'il reste des lignes qui ne sont pas des dates, ce sont des notes personnalisées
-        if (customNotesStartIndex < notesLines.length) {
-          // Ajouter un délimiteur visuel, puis les notes personnalisées
-          customNotes += "\n\nNotes additionnelles :\n" + 
-                        notesLines.slice(customNotesStartIndex).join('\n');
-        }
-      }
-      
-      displayNotes = customNotes;
-    }
     
     // Afficher les notes avec une taille de police plus lisible
     doc.fontSize(10).font('Helvetica-Bold')
