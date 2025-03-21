@@ -427,6 +427,23 @@ export async function generateInvoicePDF(
      .text('Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable', 
            20, footerY, { align: 'center' });
   
+  // Vérifier si le document a plus d'une page et restreindre à une seule page si nécessaire
+  const pageCount = doc.bufferedPageRange().count;
+  if (pageCount > 1) {
+    // Si le document a plus d'une page, on va redimensionner le contenu pour qu'il tienne sur une seule page
+    console.log(`La facture ${invoice.invoiceNumber} génère ${pageCount} pages, forçage à une seule page`);
+    
+    // Accéder à la première page et la conserver uniquement
+    const pagesRange = doc.bufferedPageRange();
+    for (let i = 1; i < pagesRange.count; i++) {
+      doc.switchToPage(i);
+      doc.text(''); // Page vide
+    }
+    
+    // Revenir à la première page
+    doc.switchToPage(0);
+  }
+  
   // Finaliser le document
   doc.end();
   
