@@ -1493,10 +1493,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log("Insertion du template PNG...");
           
           // Utiliser la méthode d'insertion SQL qui fonctionne pour les autres templates
+          // Utilisation de guillemets doubles pour le nom de la table
           const resultSQL = await db.execute(
-            `INSERT INTO invoice_templates (
-              name, description, header_content, footer_content, logo_url, primary_color, 
-              secondary_color, font_family, show_therapist_signature, is_default, created_at, updated_at
+            `INSERT INTO "invoice_templates" (
+              "name", "description", "header_content", "footer_content", "logo_url", "primary_color", 
+              "secondary_color", "font_family", "show_therapist_signature", "is_default", "created_at", "updated_at"
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
             [
               templateName,
