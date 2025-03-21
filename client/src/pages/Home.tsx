@@ -63,7 +63,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Rendez-vous Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-[#3fb549] text-white">
+                <CardHeader className="bg-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Rendez-vous</CardTitle>
                     <CalendarDays className="h-8 w-8 text-white opacity-80" />
@@ -101,7 +101,7 @@ export default function Home() {
               
               {/* Emploi du temps Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-[#3fb549] text-white">
+                <CardHeader className="bg-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Emploi du temps</CardTitle>
                     <Clock className="h-8 w-8 text-white opacity-80" />
@@ -131,7 +131,7 @@ export default function Home() {
               
               {/* Factures Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-[#3fb549] text-white">
+                <CardHeader className="bg-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Factures</CardTitle>
                     <FileText className="h-8 w-8 text-white opacity-80" />
@@ -161,7 +161,7 @@ export default function Home() {
               
               {/* Dépenses Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-[#3fb549] text-white">
+                <CardHeader className="bg-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Dépenses</CardTitle>
                     <WalletIcon className="h-8 w-8 text-white opacity-80" />
@@ -199,7 +199,7 @@ export default function Home() {
               
               {/* Paiements Card */}
               <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-[#3fb549] text-white">
+                <CardHeader className="bg-[#266d2c] text-white">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Paiements</CardTitle>
                     <CreditCard className="h-8 w-8 text-white opacity-80" />
@@ -232,7 +232,7 @@ export default function Home() {
               {/* Signatures Électroniques - visible uniquement pour les administrateurs */}
               {isAdmin && (
                 <Card className="overflow-hidden transition-all hover:shadow-lg">
-                  <CardHeader className="bg-[#3fb549] text-white">
+                  <CardHeader className="bg-[#266d2c] text-white">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-xl">Signatures Électroniques</CardTitle>
                       <Pen className="h-8 w-8 text-white opacity-80" />
