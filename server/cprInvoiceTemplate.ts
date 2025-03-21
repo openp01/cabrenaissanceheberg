@@ -158,11 +158,18 @@ export function generateInvoicePDF(
   // Déterminer quelles dates afficher
   if (invoice.appointmentDates && invoice.appointmentDates.length > 0) {
     // Utiliser directement les dates fournies dans le champ appointmentDates
-    dates = [...invoice.appointmentDates];
+    // Mais supprimer l'heure pour gagner de l'espace
+    dates = [...invoice.appointmentDates].map(dateTime => {
+      // Si la date contient "à" (séparateur d'heure), ne garder que la partie date
+      if (dateTime.includes(' à ')) {
+        return dateTime.split(' à ')[0];
+      }
+      return dateTime;
+    });
     isMultipleAppointments = dates.length > 1;
   } else {
-    // Cas standard d'un seul rendez-vous
-    dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
+    // Cas standard d'un seul rendez-vous - même ici on ne garde que la date
+    dates.push(formatDate(invoice.appointmentDate));
     isMultipleAppointments = false;
   }
   
@@ -206,29 +213,31 @@ export function generateInvoicePDF(
   // Afficher les dates selon qu'il s'agit d'un rendez-vous unique ou multiple
   if (isMultipleAppointments) {
     // SÉANCES MULTIPLES
-    doc.fontSize(11).font('Helvetica-Bold')
+    doc.fontSize(10).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
-    doc.moveDown(0.3);
+    doc.moveDown(0.2);
     
     // OPTIMISATION DE L'AFFICHAGE POUR TENIR SUR UNE SEULE PAGE
-    // Toujours utiliser l'affichage en 3 colonnes pour économiser de l'espace vertical
-    const datesPerColumn = Math.ceil(dates.length / 3);
+    // Utiliser 4 colonnes au lieu de 3 pour économiser encore plus d'espace vertical
+    const datesPerColumn = Math.ceil(dates.length / 4);
     const col1Dates = dates.slice(0, datesPerColumn);
     const col2Dates = dates.slice(datesPerColumn, datesPerColumn * 2);
-    const col3Dates = dates.slice(datesPerColumn * 2);
+    const col3Dates = dates.slice(datesPerColumn * 2, datesPerColumn * 3);
+    const col4Dates = dates.slice(datesPerColumn * 3);
     
     // Position de départ pour les colonnes
-    const col1X = 60;
-    const col2X = 270;
-    const col3X = 480;
+    const col1X = 55;
+    const col2X = 210;
+    const col3X = 365;
+    const col4X = 510;
     let currentY = doc.y;
     
-    // Ajuster la taille de la police selon le nombre de dates
-    const fontSize = dates.length > 9 ? 8 : 9;
+    // Réduire davantage la taille de police
+    const fontSize = 7;
     
-    // Espacement réduit pour les factures avec beaucoup de dates
-    const lineSpacing = dates.length > 9 ? 15 : 18;
+    // Espacement très réduit pour optimiser l'espace
+    const lineSpacing = 12;
     
     // Tracer les lignes une par une
     const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length);
@@ -255,9 +264,9 @@ export function generateInvoicePDF(
     // Mettre à jour la position Y du document
     doc.y = currentY + 5;
   } else {
-    // Cas standard d'un seul rendez-vous
-    doc.fontSize(10).font('Helvetica')
-      .text(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, { align: 'center' });
+    // Cas standard d'un seul rendez-vous - sans afficher l'heure
+    doc.fontSize(9).font('Helvetica')
+      .text(formatDate(invoice.appointmentDate), { align: 'center' });
   }
   
   // Ligne horizontale
