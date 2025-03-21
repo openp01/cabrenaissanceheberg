@@ -213,54 +213,47 @@ export function generateInvoicePDF(
   // Afficher les dates selon qu'il s'agit d'un rendez-vous unique ou multiple
   if (isMultipleAppointments) {
     // SÉANCES MULTIPLES
-    doc.fontSize(10).font('Helvetica-Bold')
+    doc.fontSize(11).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
-    doc.moveDown(0.2);
+    doc.moveDown(0.4); // Plus d'espace
     
-    // OPTIMISATION DE L'AFFICHAGE POUR TENIR SUR UNE SEULE PAGE
-    // Utiliser 4 colonnes au lieu de 3 pour économiser encore plus d'espace vertical
-    const datesPerColumn = Math.ceil(dates.length / 4);
+    // Meilleur équilibre entre espace et lisibilité
+    // Utiliser 3 colonnes au lieu de 4 pour plus d'espacement horizontal
+    const datesPerColumn = Math.ceil(dates.length / 3);
     const col1Dates = dates.slice(0, datesPerColumn);
     const col2Dates = dates.slice(datesPerColumn, datesPerColumn * 2);
-    const col3Dates = dates.slice(datesPerColumn * 2, datesPerColumn * 3);
-    const col4Dates = dates.slice(datesPerColumn * 3);
+    const col3Dates = dates.slice(datesPerColumn * 2);
     
     // Position de départ pour les colonnes
-    const col1X = 55;
-    const col2X = 210;
-    const col3X = 365;
-    const col4X = 510;
+    const col1X = 70; // Plus d'espace à gauche
+    const col2X = 280; // Plus d'espace entre colonnes
+    const col3X = 490; // Plus d'espace entre colonnes
     let currentY = doc.y;
     
-    // Réduire davantage la taille de police
-    const fontSize = 7;
+    // Police plus grande pour une meilleure lisibilité
+    const fontSize = 9;
     
-    // Espacement très réduit pour optimiser l'espace
-    const lineSpacing = 12;
+    // Plus d'espace entre les lignes
+    const lineSpacing = 16;
     
-    // Tracer les lignes une par une
-    const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length, col4Dates.length);
+    // Tracer les lignes une par une pour les 3 colonnes
+    const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length);
     
     for (let i = 0; i < maxLines; i++) {
       if (i < col1Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 155 });
+          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 190 });
       }
       
       if (i < col2Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 155 });
+          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 190 });
       }
       
       if (i < col3Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col3Dates[i]}`, col3X, currentY, { width: 155 });
-      }
-      
-      if (i < col4Dates.length) {
-        doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col4Dates[i]}`, col4X, currentY, { width: 155 });
+          .text(`• ${col3Dates[i]}`, col3X, currentY, { width: 190 });
       }
       
       currentY += lineSpacing;
@@ -280,21 +273,21 @@ export function generateInvoicePDF(
   doc.moveTo(50, lineY).lineTo(doc.page.width - 50, lineY).stroke();
   
   // ==== TABLEAU DES ACTES ====
-  doc.moveDown(1); // Réduit l'espacement
+  doc.moveDown(1.5); // Plus d'espace avant le tableau
   // En-têtes des colonnes
-  doc.fontSize(9).font('Helvetica-Bold'); // Police plus petite
+  doc.fontSize(10).font('Helvetica-Bold'); // Police légèrement plus grande
   doc.text('NATURE DES ACTES', 70, doc.y);
   doc.text('NOMBRE D\'ACTES', 300, doc.y - 12);
   doc.text('TARIF UNITAIRE', 450, doc.y - 12);
   
   // Ligne après les en-têtes
-  doc.moveDown(0.3); // Espacement réduit
+  doc.moveDown(0.5); // Plus d'espace après les en-têtes
   const headerLineY = doc.y + 5;
   doc.moveTo(50, headerLineY).lineTo(doc.page.width - 50, headerLineY).stroke();
   
   // Contenu de la ligne principale (séance)
-  doc.moveDown(1); // Espacement réduit
-  doc.fontSize(9).font('Helvetica'); // Police plus petite
+  doc.moveDown(1.2); // Plus d'espace pour le contenu
+  doc.fontSize(10).font('Helvetica'); // Police légèrement plus grande
   
   // Déterminer le texte descriptif et le nombre de séances
   let descriptionText = 'Séance d\'orthophonie';
@@ -311,13 +304,13 @@ export function generateInvoicePDF(
   doc.text(formatCurrency(50), 460, doc.y - 12); // Prix unitaire fixe de 50€
   
   // Ligne pour les notes
-  doc.moveDown(1); // Espacement réduit
-  const notesLineY = doc.y + 5; // Moins de marge
+  doc.moveDown(1.5); // Plus d'espace
+  const notesLineY = doc.y + 5;
   doc.moveTo(50, notesLineY).lineTo(doc.page.width - 50, notesLineY).stroke();
   
-  // Notes complémentaires si présentes - optimisé pour tenir sur une page
+  // Notes complémentaires si présentes
   if (invoice.notes) {
-    doc.moveDown(0.3); // Réduit encore plus l'espacement
+    doc.moveDown(0.8); // Plus d'espace avant les notes
     
     // Toujours conserver les notes originales mais supprimer les dates quand elles sont déjà affichées
     let displayNotes = invoice.notes;
@@ -333,15 +326,13 @@ export function generateInvoicePDF(
       }
     }
     
-    // Afficher les notes avec une taille de police réduite
-    const fontSize = 8; // Réduire encore plus la taille pour économiser de l'espace
-    
-    doc.fontSize(9).font('Helvetica-Bold')
+    // Afficher les notes avec une taille de police plus lisible
+    doc.fontSize(10).font('Helvetica-Bold')
       .text('NOTE(S):', 70);
-    doc.fontSize(fontSize).font('Helvetica')
-      .text(displayNotes, 70, doc.y + 3, { width: pageWidth - 140 });
+    doc.fontSize(9).font('Helvetica') // Police plus grande pour les notes
+      .text(displayNotes, 70, doc.y + 5, { width: pageWidth - 140 });
   } else {
-    doc.moveDown(0.5); // Réduit l'espacement quand il n'y a pas de notes
+    doc.moveDown(0.8); // Plus d'espace même quand il n'y a pas de notes
   }
   
   // Ligne avant le total
@@ -358,24 +349,23 @@ export function generateInvoicePDF(
     .text(formatCurrency(invoice.totalAmount), 130, doc.y - 12);
   
   // ==== SECTION ATTENTION ====
-  // Vérifier si on a beaucoup de dates (pour les factures avec beaucoup de rendez-vous)
-  // Si c'est le cas, optimiser davantage l'espace
-  const hasManyDates = dates.length > 6;
-    
-  // Ajuster l'espacement en fonction du nombre de dates
-  doc.moveDown(0.5); // Toujours utiliser un petit espacement
+  // Déterminer l'espacement en fonction du nombre de dates
+  const hasManyDates = dates.length > 8;
   
-  // Format très compact pour économiser l'espace quels que soient le nombre de dates
-  doc.fontSize(8).font('Helvetica-Bold')
+  // Plus d'espace avant la section d'attention
+  doc.moveDown(hasManyDates ? 0.7 : 1.0);
+  
+  // Format plus lisible avec une police légèrement plus grande
+  doc.fontSize(9).font('Helvetica-Bold')
     .fillColor(primaryColor)
     .text('ATTENTION:', 70);
     
   doc.fillColor('black').font('Helvetica')
-    .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 3);
-  doc.moveDown(0.2);
+    .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 5);
+  doc.moveDown(0.5); // Plus d'espace entre les points
   doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
   
-  doc.moveDown(0.3);
+  doc.moveDown(0.5); // Plus d'espace avant le message de remerciement
   doc.text('Merci de votre compréhension', { align: 'center' });
   
   // ==== SIGNATURE ====
