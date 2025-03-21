@@ -177,7 +177,7 @@ export function generateInvoicePDF(
       }
     }
 
-    // TOUJOURS AFFICHER TOUTES LES DATES INDIVIDUELLEMENT, MÊME SI AUCUNE DATE N'EST TROUVÉE DANS LES NOTES
+    // TOUJOURS AFFICHER TOUTES LES DATES INDIVIDUELLEMENT
     
     // Ajouter la date principale si aucune date n'est extraite des notes
     if (dates.length === 0) {
@@ -203,12 +203,29 @@ export function generateInvoicePDF(
       }
     }
     
+    // S'assurer que chaque date contient le format "jour mois année à heure"
+    dates = dates.map(date => {
+      // Si la date contient déjà "à", on suppose qu'elle est bien formatée
+      if (date.includes(' à ')) {
+        return date;
+      }
+      
+      // Sinon, on ajoute l'heure du rendez-vous principal
+      return `${date} à ${invoice.appointmentTime}`;
+    });
+    
     // Trier les dates si possible
     try {
       dates.sort((a, b) => {
-        // Essayer d'extraire et de comparer les dates
-        const dateA = new Date(a.split(' à ')[0]);
-        const dateB = new Date(b.split(' à ')[0]);
+        // Extraire la partie date (avant "à")
+        const datePartA = a.split(' à ')[0];
+        const datePartB = b.split(' à ')[0];
+        
+        // Convertir en objets Date
+        const dateA = new Date(datePartA);
+        const dateB = new Date(datePartB);
+        
+        // Comparer les dates
         return dateA.getTime() - dateB.getTime();
       });
     } catch (e) {
@@ -324,13 +341,34 @@ export function generateInvoicePDF(
   const notesLineY = doc.y + 10;
   doc.moveTo(50, notesLineY).lineTo(doc.page.width - 50, notesLineY).stroke();
   
-  // Notes complémentaires si présentes
+  // Notes complémentaires si présentes (mais sans les dates)
   if (invoice.notes) {
+    // Filtrer les notes pour ne pas afficher les informations de dates qui sont déjà affichées dans la section DATE(S)
+    let filteredNotes = invoice.notes;
+    
+    // Supprimer les mentions de dates pour les factures groupées ou récurrentes
+    if (invoice.notes.includes('Facture groupée') || invoice.notes.includes('récurrent')) {
+      // Enlever la partie qui liste les dates après le ":"
+      const noteParts = invoice.notes.split(':');
+      if (noteParts.length > 1) {
+        filteredNotes = noteParts[0].trim();
+      }
+      
+      // Enlever également toute mention de dates après "dates:"
+      filteredNotes = filteredNotes.replace(/dates?: (.*?)(?:\.|$)/i, '');
+      
+      // Si la note est maintenant vide ou ne contient que des espaces, ne rien afficher
+      if (!filteredNotes.trim()) {
+        doc.moveDown(2);
+        return;
+      }
+    }
+    
     doc.moveDown(1);
     doc.fontSize(10).font('Helvetica-Bold')
       .text('NOTE(S) COMPLEMENTAIRE(S):', 70);
     doc.font('Helvetica')
-      .text(invoice.notes, 70, doc.y + 10, { width: pageWidth - 40 });
+      .text(filteredNotes, 70, doc.y + 10, { width: pageWidth - 40 });
   } else {
     doc.moveDown(2);
   }
