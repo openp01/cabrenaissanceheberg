@@ -10,17 +10,19 @@ import { ArrowLeft, ArrowRight, Calendar } from "lucide-react";
 
 // Couleurs prédéfinies pour les thérapeutes
 const DEFAULT_COLORS = [
-  "#FF5252", // Rouge
-  "#4CAF50", // Vert
-  "#2196F3", // Bleu
-  "#FF9800", // Orange
-  "#9C27B0", // Violet
-  "#00BCD4", // Cyan
-  "#607D8B", // Bleu gris
-  "#FF4081", // Rose
-  "#009688", // Teal
-  "#FFC107", // Jaune
-  "#795548"  // Marron
+  "#3fb549", // Vert (Couleur principale CPR)
+  "#266d2c", // Vert foncé (Couleur secondaire CPR)
+  "#3b82f6", // Bleu
+  "#ef4444", // Rouge
+  "#8b5cf6", // Violet
+  "#f97316", // Orange
+  "#ec4899", // Rose
+  "#6366f1", // Indigo
+  "#eab308", // Jaune
+  "#06b6d4", // Cyan
+  "#10b981", // Émeraude
+  "#1d4ed8", // Bleu foncé
+  "#991b1b"  // Rouge foncé
 ];
 
 // Heures de travail au cabinet
