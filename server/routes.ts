@@ -587,39 +587,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         try {
           // Récupérer le rendez-vous parent
-          const mainAppointment = await pool.query(
-            `SELECT * FROM appointments WHERE id = $1`,
-            [invoice.appointmentId]
-          );
+          const mainAppointment = await db.query.appointments.findFirst({
+            where: (appointment, { eq }) => eq(appointment.id, invoice.appointmentId)
+          });
           
-          if (mainAppointment.rows.length > 0) {
-            const parentAppointmentId = mainAppointment.rows[0].parentappointmentid || mainAppointment.rows[0].id;
+          if (mainAppointment) {
+            const parentAppointmentId = mainAppointment.parentAppointmentId || mainAppointment.id;
             
-            // Requête pour récupérer tous les rendez-vous liés (parent + enfants)
-            const relatedAppointmentsQuery = `
-              SELECT a.id, a.date, a.time, a.status
+            // Requête SQL directe pour récupérer tous les rendez-vous liés
+            const { rows: relatedAppointments } = await db.execute(
+              `SELECT a.id, a.date, a.time, a.status
               FROM appointments a
               WHERE a.id = $1 
-                 OR a.parentAppointmentId = $1 
-                 OR (a.parentAppointmentId IS NOT NULL AND a.parentAppointmentId = $2)
-              ORDER BY a.date, a.time
-            `;
-            
-            const relatedAppointmentsResult = await pool.query(
-              relatedAppointmentsQuery,
+                 OR a.parent_appointment_id = $1 
+                 OR (a.parent_appointment_id IS NOT NULL AND a.parent_appointment_id = $2)
+              ORDER BY a.date, a.time`,
               [invoice.appointmentId, parentAppointmentId]
             );
             
             // Si des rendez-vous multiples ont été trouvés, formater leurs dates pour les notes
-            if (relatedAppointmentsResult.rows.length > 1) {
-              console.log(`Trouvé ${relatedAppointmentsResult.rows.length} rendez-vous liés pour la facture ${invoice.invoiceNumber}`);
+            if (relatedAppointments.length > 1) {
+              console.log(`Trouvé ${relatedAppointments.length} rendez-vous liés pour la facture ${invoice.invoiceNumber}`);
               
               // Formater toutes les dates en français pour les inclure dans les notes
-              const allAppointmentDates = relatedAppointmentsResult.rows.map(app => {
+              const allAppointmentDates = relatedAppointments.map((app: { status: string; date: string; time: string }) => {
                 if (app.status === 'cancelled') return null; // Ignorer les rendez-vous annulés
                 
                 // Convertir le format de date DD/MM/YYYY en objet Date
-                const [day, month, year] = app.date.split('/').map(n => parseInt(n));
+                const [day, month, year] = app.date.split('/').map((n: string) => parseInt(n));
                 const appDate = new Date(year, month - 1, day);
                 
                 // Formater en français
