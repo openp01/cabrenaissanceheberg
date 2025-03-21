@@ -213,67 +213,60 @@ export function generateInvoicePDF(
   // Afficher les dates selon qu'il s'agit d'un rendez-vous unique ou multiple
   if (isMultipleAppointments) {
     // SÉANCES MULTIPLES
-    doc.fontSize(11).font('Helvetica-Bold')
+    doc.fontSize(12).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
-    doc.moveDown(0.4); // Plus d'espace
+    doc.moveDown(0.7); // Encore plus d'espace
     
-    // Meilleur équilibre entre espace et lisibilité
-    // Utiliser 3 colonnes au lieu de 4 pour plus d'espacement horizontal
-    const datesPerColumn = Math.ceil(dates.length / 3);
+    // Équilibre optimal entre espace et lisibilité
+    // Utiliser 2 colonnes au lieu de 3 pour maximiser l'espacement horizontal
+    const datesPerColumn = Math.ceil(dates.length / 2);
     const col1Dates = dates.slice(0, datesPerColumn);
-    const col2Dates = dates.slice(datesPerColumn, datesPerColumn * 2);
-    const col3Dates = dates.slice(datesPerColumn * 2);
+    const col2Dates = dates.slice(datesPerColumn);
     
-    // Position de départ pour les colonnes
-    const col1X = 70; // Plus d'espace à gauche
-    const col2X = 280; // Plus d'espace entre colonnes
-    const col3X = 490; // Plus d'espace entre colonnes
+    // Position de départ pour les colonnes - grand espacement entre les colonnes
+    const col1X = 100; // Encore plus d'espace à gauche
+    const col2X = 370; // Beaucoup plus d'espace entre colonnes
     let currentY = doc.y;
     
-    // Police plus grande pour une meilleure lisibilité
-    const fontSize = 9;
+    // Police encore plus grande pour une meilleure lisibilité
+    const fontSize = 10;
     
-    // Plus d'espace entre les lignes
-    const lineSpacing = 16;
+    // Espacement très généreux entre les lignes
+    const lineSpacing = 20;
     
-    // Tracer les lignes une par une pour les 3 colonnes
-    const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length);
+    // Tracer les lignes une par une pour les 2 colonnes
+    const maxLines = Math.max(col1Dates.length, col2Dates.length);
     
     for (let i = 0; i < maxLines; i++) {
       if (i < col1Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 190 });
+          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 240 });
       }
       
       if (i < col2Dates.length) {
         doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 190 });
-      }
-      
-      if (i < col3Dates.length) {
-        doc.fontSize(fontSize).font('Helvetica')
-          .text(`• ${col3Dates[i]}`, col3X, currentY, { width: 190 });
+          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 240 });
       }
       
       currentY += lineSpacing;
     }
     
-    // Mettre à jour la position Y du document
-    doc.y = currentY + 5;
+    // Mettre à jour la position Y du document et ajouter de l'espace
+    doc.y = currentY + 10;
   } else {
     // Cas standard d'un seul rendez-vous - sans afficher l'heure
     doc.fontSize(9).font('Helvetica')
       .text(formatDate(invoice.appointmentDate), { align: 'center' });
   }
   
-  // Ligne horizontale - moins d'espace
-  doc.moveDown(0.5);
+  // Ligne horizontale - avec plus d'espace
+  doc.moveDown(1.0);
   const lineY = doc.y + 5;
   doc.moveTo(50, lineY).lineTo(doc.page.width - 50, lineY).stroke();
   
   // ==== TABLEAU DES ACTES ====
-  doc.moveDown(1.5); // Plus d'espace avant le tableau
+  doc.moveDown(2.0); // Encore plus d'espace avant le tableau
   // En-têtes des colonnes
   doc.fontSize(10).font('Helvetica-Bold'); // Police légèrement plus grande
   doc.text('NATURE DES ACTES', 70, doc.y);
