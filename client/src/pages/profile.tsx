@@ -42,17 +42,19 @@ import { Badge } from "@/components/ui/badge";
 
 // Couleurs prédéfinies pour les thérapeutes
 const PREDEFINED_COLORS = [
-  { name: "Rouge", value: "#FF5252" },
-  { name: "Vert", value: "#4CAF50" },
-  { name: "Bleu", value: "#2196F3" },
-  { name: "Orange", value: "#FF9800" },
-  { name: "Violet", value: "#9C27B0" },
-  { name: "Cyan", value: "#00BCD4" },
-  { name: "Bleu gris", value: "#607D8B" },
-  { name: "Rose", value: "#FF4081" },
-  { name: "Turquoise", value: "#009688" },
-  { name: "Jaune", value: "#FFC107" },
-  { name: "Marron", value: "#795548" }
+  { name: "Vert", value: "#3fb549" }, // Couleur principale CPR
+  { name: "Vert foncé", value: "#266d2c" }, // Couleur secondaire CPR
+  { name: "Bleu", value: "#3b82f6" },
+  { name: "Rouge", value: "#ef4444" },
+  { name: "Violet", value: "#8b5cf6" },
+  { name: "Orange", value: "#f97316" },
+  { name: "Rose", value: "#ec4899" },
+  { name: "Indigo", value: "#6366f1" },
+  { name: "Jaune", value: "#eab308" },
+  { name: "Cyan", value: "#06b6d4" },
+  { name: "Émeraude", value: "#10b981" },
+  { name: "Bleu foncé", value: "#1d4ed8" },
+  { name: "Rouge foncé", value: "#991b1b" }
 ];
 
 // Schéma de validation pour le formulaire de changement de mot de passe

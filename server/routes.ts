@@ -12,8 +12,10 @@ import {
   expenseFormSchema,
   insertTherapistPaymentSchema,
   UserRole,
-  invoiceTemplates
+  invoiceTemplates,
+  therapists
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";

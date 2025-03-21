@@ -100,6 +100,10 @@ export function Navbar() {
                 <User className="mr-2 h-4 w-4" />
                 Planning par thérapeute
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation("/all-therapists-schedule")}>
+                <Calendar className="mr-2 h-4 w-4" />
+                Planning multi-thérapeutes
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -236,6 +240,10 @@ export function Navbar() {
                   <DropdownMenuItem onClick={() => setLocation("/therapist-schedule")}>
                     <User className="mr-2 h-4 w-4" />
                     Planning par thérapeute
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/all-therapists-schedule")}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Planning multi-thérapeutes
                   </DropdownMenuItem>
                   
                   {/* Options admin */}
