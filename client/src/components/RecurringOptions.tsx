@@ -2,15 +2,18 @@ import { useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import RecurringInvoiceOptions from "./RecurringInvoiceOptions";
 
 interface RecurringOptionsProps {
   isRecurring: boolean;
   recurringFrequency: string;
   recurringCount: number;
   recurringDates: string[];
+  generateSingleInvoice?: boolean;
   onRecurringChange: (value: boolean) => void;
   onFrequencyChange: (value: string) => void;
   onCountChange: (value: number) => void;
+  onGenerateSingleInvoiceChange?: (value: boolean) => void;
 }
 
 export default function RecurringOptions({
@@ -18,9 +21,11 @@ export default function RecurringOptions({
   recurringFrequency,
   recurringCount,
   recurringDates,
+  generateSingleInvoice = true,
   onRecurringChange,
   onFrequencyChange,
   onCountChange,
+  onGenerateSingleInvoiceChange,
 }: RecurringOptionsProps) {
   
   // Adapter le nombre de séances selon la fréquence
@@ -131,6 +136,14 @@ export default function RecurringOptions({
                 </ul>
               </div>
             </div>
+          )}
+          
+          {/* Options de facturation quand la récurrence est activée et qu'il y a plus d'une séance */}
+          {recurringCount > 1 && onGenerateSingleInvoiceChange && (
+            <RecurringInvoiceOptions
+              generateSingleInvoice={generateSingleInvoice}
+              onGenerateSingleInvoiceChange={onGenerateSingleInvoiceChange}
+            />
           )}
         </div>
       )}

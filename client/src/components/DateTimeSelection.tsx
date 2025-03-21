@@ -28,6 +28,7 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
   const [recurringCount, setRecurringCount] = useState(4);
   const [recurringDates, setRecurringDates] = useState<string[]>([]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<Array<{date: string, time: string}>>([]);
+  const [generateSingleInvoice, setGenerateSingleInvoice] = useState<boolean>(true);
   
   // État pour le thérapeute actuellement sélectionné dans l'interface
   const [currentTherapistIndex, setCurrentTherapistIndex] = useState<number>(0);
@@ -279,7 +280,19 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     if (value) {
       setIsMultipleTimeSlots(false);
       // Mettre à jour les données du formulaire
-      updateFormData({ isMultipleTimeSlots: false });
+      updateFormData({ 
+        isMultipleTimeSlots: false,
+        generateSingleInvoice: generateSingleInvoice
+      });
+    } else {
+      // Si on désactive les rendez-vous récurrents, on réinitialise les données associées
+      updateFormData({ 
+        isRecurring: false,
+        recurringFrequency: undefined,
+        recurringCount: undefined,
+        recurringDates: undefined,
+        generateSingleInvoice: undefined
+      });
     }
     
     // Generate recurring dates if now enabled
