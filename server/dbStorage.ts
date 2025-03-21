@@ -561,7 +561,8 @@ export class PgStorage implements IStorage {
   async createRecurringAppointments(
     baseAppointment: InsertAppointment, 
     frequency: string, 
-    count: number
+    count: number,
+    generateSingleInvoice: boolean = true
   ): Promise<Appointment[]> {
     const appointments: Appointment[] = [];
     
@@ -658,8 +659,10 @@ export class PgStorage implements IStorage {
     
     // Créer les rendez-vous récurrents
     for (let i = 1; i < count; i++) {
-      // Désactiver la génération automatique de facture en utilisant un flag spécial
-      const skipInvoiceGeneration = true;
+      // Déterminer si on doit générer une facture pour ce rendez-vous récurrent
+      // Si generateSingleInvoice est true -> on saute la génération de facture
+      // Si generateSingleInvoice est false -> on génère une facture individuelle
+      const skipInvoiceGeneration = generateSingleInvoice;
       
       const recurringAppointment = await this.createAppointment({
         ...baseAppointment,
@@ -672,9 +675,9 @@ export class PgStorage implements IStorage {
       
       appointments.push(recurringAppointment);
       
-      // Si une facture a été générée pour le premier rendez-vous, mettre à jour ses notes
-      // pour mentionner ce rendez-vous supplémentaire
-      if (firstInvoice) {
+      // Si on a choisi de générer une facture unique et qu'une facture a été générée pour le premier rendez-vous,
+      // mettre à jour ses notes pour mentionner ce rendez-vous supplémentaire
+      if (generateSingleInvoice && firstInvoice) {
         const updatedNotes = `${firstInvoice.notes}\nInclut également la séance du ${recurringDates[i].date}`;
         await this.updateInvoice(firstInvoice.id, { 
           notes: updatedNotes
@@ -683,7 +686,8 @@ export class PgStorage implements IStorage {
     }
     
     // Mettre à jour la facture du premier rendez-vous pour indiquer qu'elle couvre plusieurs séances
-    if (firstInvoice) {
+    // mais seulement si on a choisi de générer une facture unique
+    if (firstInvoice && generateSingleInvoice) {
       // Collecter toutes les dates pour les inclure dans la note de facture
       const allFormattedDates = recurringDates.map(rd => {
         // Formater la date en français

@@ -335,10 +335,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle recurring appointments
       if (validatedData.isRecurring && validatedData.recurringFrequency && validatedData.recurringCount) {
         try {
+          // Récupérer l'option pour générer une facture unique ou plusieurs factures individuelles
+          // Par défaut, on génère une facture unique pour tous les rendez-vous récurrents
+          const generateSingleInvoice = validatedData.generateSingleInvoice !== undefined 
+            ? validatedData.generateSingleInvoice 
+            : true;
+            
           const appointments = await storage.createRecurringAppointments(
             validatedData,
             validatedData.recurringFrequency,
-            validatedData.recurringCount
+            validatedData.recurringCount,
+            generateSingleInvoice
           );
           res.status(201).json(appointments);
         } catch (recurringError) {
