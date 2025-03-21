@@ -348,16 +348,16 @@ export default function InvoiceTemplates() {
           <DialogHeader>
             <DialogTitle>Importer un template</DialogTitle>
             <DialogDescription>
-              Sélectionnez un fichier JSON contenant la configuration du template
+              Sélectionnez un fichier JSON ou PNG pour créer un template de facture
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <label className="block">
-              <span className="text-sm font-medium mb-1 block">Fichier de template (JSON)</span>
+              <span className="text-sm font-medium mb-1 block">Fichier de template (JSON ou PNG)</span>
               <input
                 type="file"
-                accept=".json"
+                accept=".json,.png"
                 className="block w-full text-sm 
                   file:mr-4 file:py-2 file:px-4 file:rounded-md
                   file:border-0 file:text-sm file:font-medium

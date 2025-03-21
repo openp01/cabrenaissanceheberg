@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
+import multer from "multer";
 import { 
   insertPatientSchema, 
   patientFormSchema, 
@@ -31,6 +32,14 @@ import {
 } from "./authMiddleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Configuration de multer pour les uploads de fichiers
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // Limite à 10 MB
+    }
+  });
+  
   // Configurer l'authentification
   setupAuth(app);
   
@@ -1413,6 +1422,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Erreur lors de la suppression du template:', error);
       res.status(500).json({ error: 'Erreur lors de la suppression du template' });
+    }
+  });
+  
+  // Importation d'un template (JSON ou PNG)
+  app.post("/api/invoice-templates/import", isAdminStaff, upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Aucun fichier fourni' });
+      }
+      
+      const fileType = req.file.originalname.split('.').pop()?.toLowerCase();
+      
+      // Traitement selon le type de fichier
+      if (fileType === 'json') {
+        // Traitement de fichier JSON
+        const fileContent = req.file.buffer.toString('utf8');
+        const templateData = JSON.parse(fileContent);
+        
+        // Validation des données du template
+        if (!templateData.name || !templateData.headerContent || !templateData.footerContent) {
+          return res.status(400).json({ error: 'Données du template invalides' });
+        }
+        
+        // Si le template est défini comme par défaut, mettre à jour les autres templates
+        if (templateData.isDefault) {
+          await db.execute('UPDATE invoice_templates SET is_default = false');
+        }
+        
+        // Insertion du template
+        const result = await db.execute(
+          `INSERT INTO invoice_templates (
+            name, description, header_content, footer_content, logo_url, primary_color, 
+            secondary_color, font_family, show_therapist_signature, is_default
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          [
+            templateData.name,
+            templateData.description || '',
+            templateData.headerContent,
+            templateData.footerContent,
+            templateData.logoUrl || null,
+            templateData.primaryColor || '#4f46e5',
+            templateData.secondaryColor || '#6366f1',
+            templateData.fontFamily || 'Arial, sans-serif',
+            templateData.showTherapistSignature !== undefined ? templateData.showTherapistSignature : true,
+            templateData.isDefault || false
+          ]
+        );
+        
+        res.status(201).json(result.rows[0]);
+      } else if (fileType === 'png') {
+        // Traitement d'une image PNG comme template
+        const imageBase64 = req.file.buffer.toString('base64');
+        
+        // Générer un nom basé sur le nom du fichier original sans extension
+        const fileName = req.file.originalname.replace(/\.[^/.]+$/, "");
+        const templateName = `Template ${fileName}`;
+        
+        // Créer un template basé sur l'image PNG
+        // Nous allons intégrer l'image dans le contenu HTML du template
+        const headerContent = `
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="data:image/png;base64,${imageBase64}" style="max-width: 100%; margin: 0 auto;" alt="Template de facture" />
+          </div>
+        `;
+        
+        // Footer minimal pour compléter le template
+        const footerContent = `
+          <div style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;">
+            <p>Paiement à réception - TVA non applicable, article 293B du CGI</p>
+          </div>
+        `;
+        
+        // Insertion du template
+        const result = await db.execute(
+          `INSERT INTO invoice_templates (
+            name, description, header_content, footer_content, logo_url, primary_color, 
+            secondary_color, font_family, show_therapist_signature, is_default
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          [
+            templateName,
+            `Template importé depuis ${req.file.originalname}`,
+            headerContent,
+            footerContent,
+            null, // Pas besoin de logo séparé car l'image est déjà intégrée
+            '#3fb549', // Couleur principale du cabinet
+            '#266d2c', // Couleur secondaire
+            'Arial, sans-serif',
+            true,
+            false
+          ]
+        );
+        
+        res.status(201).json(result.rows[0]);
+      } else {
+        return res.status(400).json({ error: 'Format de fichier non supporté. Utilisez JSON ou PNG.' });
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'importation du template:', error);
+      res.status(500).json({ error: 'Erreur lors de l\'importation du template' });
     }
   });
   
