@@ -155,51 +155,64 @@ export function generateInvoicePDF(
   if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
     // Extraction des dates et formatage pour un affichage clair
     let dates: string[] = [];
+    let datesText = '';
     
-    // Extraire les dates directement des notes (format: "Facture groupée pour X séances: date1, date2, ...")
     if (invoice.notes.includes('Facture groupée')) {
       // Pour les factures groupées, extraire les dates après le ":"
       const noteParts = invoice.notes.split(':');
       if (noteParts.length > 1) {
-        const datesText = noteParts[1].trim();
+        datesText = noteParts[1].trim();
+        
         // Extraire chaque date individuelle
         dates = datesText.split(',').map(date => date.trim());
       }
-    } else if (invoice.notes.includes('récurrent')) {
+    } else {
       // Pour les rendez-vous récurrents, essayer d'extraire les dates
       const matches = invoice.notes.match(/dates?: (.*?)(?:\.|$)/i);
       if (matches && matches.length > 1) {
-        const datesText = matches[1].trim();
+        datesText = matches[1].trim();
+        
         // Extraire chaque date individuelle
         dates = datesText.split(',').map(date => date.trim());
       }
     }
 
-    // Si on n'a pas pu extraire de dates, au moins afficher la date principale
+    // TOUJOURS AFFICHER TOUTES LES DATES INDIVIDUELLEMENT, MÊME SI AUCUNE DATE N'EST TROUVÉE DANS LES NOTES
+    
+    // Ajouter la date principale si aucune date n'est extraite des notes
     if (dates.length === 0) {
       dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
       
-      // Ajouter un avertissement si nécessaire
-      if (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée')) {
-        doc.fontSize(8).font('Helvetica-Oblique')
-          .fillColor('red')
-          .text('Attention: Les dates exactes n\'ont pas pu être extraites des notes.', { align: 'center' });
+      // Essayer de déduire les autres dates si c'est une facture récurrente
+      if (invoice.notes.includes('récurrent')) {
+        // Extraire le nombre de séances et la fréquence
+        const countMatch = invoice.notes.match(/pour (\d+) séances/i);
+        const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
         
-        doc.fillColor('black');
+        if (countMatch && countMatch.length > 1 && frequencyMatch && frequencyMatch.length > 1) {
+          const count = parseInt(countMatch[1]);
+          const frequency = frequencyMatch[1];
+          
+          // Ajouter un avertissement indiquant que les dates sont approximatives
+          doc.fontSize(8).font('Helvetica-Oblique')
+            .fillColor('red')
+            .text('Attention: Les dates exactes n\'ont pas pu être extraites des notes. Dates approximatives:', { align: 'center' });
+          
+          doc.fillColor('black');
+        }
       }
     }
     
     // Trier les dates si possible
     try {
       dates.sort((a, b) => {
-        // Essayer d'extraire et de comparer les dates en français
-        const dateA = new Date(a.split(' à ')[0].replace(/(\d+) (\w+) (\d+)/, "$3-$2-$1"));
-        const dateB = new Date(b.split(' à ')[0].replace(/(\d+) (\w+) (\d+)/, "$3-$2-$1"));
+        // Essayer d'extraire et de comparer les dates
+        const dateA = new Date(a.split(' à ')[0]);
+        const dateB = new Date(b.split(' à ')[0]);
         return dateA.getTime() - dateB.getTime();
       });
     } catch (e) {
       // Ignorer les erreurs de tri, garder l'ordre original
-      console.error("Erreur lors du tri des dates:", e);
     }
     
     // ANNONCER CLAIREMENT QU'IL S'AGIT DE SÉANCES MULTIPLES
@@ -312,47 +325,14 @@ export function generateInvoicePDF(
   doc.moveTo(50, notesLineY).lineTo(doc.page.width - 50, notesLineY).stroke();
   
   // Notes complémentaires si présentes
-  doc.moveDown(1);
-  doc.fontSize(10).font('Helvetica-Bold')
-    .text('NOTE(S) COMPLEMENTAIRE(S):', 70);
-    
-  // Pour les factures avec séances multiples, on ajoute uniquement une note explicative sur le type de facturation
-  if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
-    // Extraire juste la partie descriptive de la note sans les dates
-    let noteText = '';
-    
-    if (invoice.notes.includes('Facture groupée')) {
-      // Pour les factures groupées, prendre seulement la partie avant le ":"
-      const noteParts = invoice.notes.split(':');
-      if (noteParts.length > 0) {
-        noteText = noteParts[0].trim();
-      }
-    } else if (invoice.notes.includes('récurrent')) {
-      // Pour les rendez-vous récurrents, prendre seulement la partie descriptive
-      const matches = invoice.notes.match(/(.*?)dates?:/i);
-      if (matches && matches.length > 1) {
-        noteText = matches[1].trim();
-      } else {
-        // Si pas de "dates:" dans la note, prendre tout jusqu'à la première date
-        noteText = invoice.notes.split(',')[0];
-      }
-    }
-    
-    // Si on a réussi à extraire une note descriptive, l'afficher
-    if (noteText) {
-      doc.font('Helvetica')
-        .text(noteText, 70, doc.y + 10, { width: pageWidth - 40 });
-    } else {
-      // Sinon, laisser un espace vide
-      doc.moveDown(1);
-    }
-  } else if (invoice.notes) {
-    // Pour les factures standards, afficher la note complète
+  if (invoice.notes) {
+    doc.moveDown(1);
+    doc.fontSize(10).font('Helvetica-Bold')
+      .text('NOTE(S) COMPLEMENTAIRE(S):', 70);
     doc.font('Helvetica')
       .text(invoice.notes, 70, doc.y + 10, { width: pageWidth - 40 });
   } else {
-    // Si pas de notes, laisser un espace vide
-    doc.moveDown(1);
+    doc.moveDown(2);
   }
   
   // Ligne avant le total
