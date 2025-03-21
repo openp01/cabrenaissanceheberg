@@ -139,12 +139,11 @@ export function generateInvoicePDF(
   doc.font('Helvetica')
     .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée. Nous restons à votre disposition pour toute information complémentaire.', 
       50, 290, { width: pageWidth });
-  
   // Ligne horizontale
-  doc.moveTo(100, 450).lineTo(doc.page.width - 100, 350).stroke();
+  doc.moveTo(50, 350).lineTo(doc.page.width - 50, 350).stroke();
   
   // ==== SECTION PÉRIODE CONCERNÉE ====
-  doc.fontSize(12).font('Helvetica-Bold')
+  doc.fontSize(10).font('Helvetica-Bold')
     .text('DATE(S) OU PERIODE CONCERNEE', { align: 'center' });
   
   doc.moveDown(0.5);
@@ -210,12 +209,6 @@ export function generateInvoicePDF(
   
   // Afficher les dates selon qu'il s'agit d'un rendez-vous unique ou multiple
   if (isMultipleAppointments) {
-    // SÉANCES MULTIPLES
-    doc.fontSize(12).font('Helvetica-Bold')
-      .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
-    
-    doc.moveDown(0.7); // Encore plus d'espace
-    
     // Équilibre optimal entre espace et lisibilité
     // Utiliser 2 colonnes au lieu de 3 pour maximiser l'espacement horizontal
     const datesPerColumn = Math.ceil(dates.length / 2);
@@ -225,13 +218,13 @@ export function generateInvoicePDF(
     // Position de départ pour les colonnes - grand espacement entre les colonnes
     const col1X = 100; // Encore plus d'espace à gauche
     const col2X = 370; // Beaucoup plus d'espace entre colonnes
-    let currentY = doc.y;
+    let currentY = doc.y + 5; // Ajouter un peu d'espace pour éviter que la ligne horizontale ne coupe les dates
     
     // Police encore plus grande pour une meilleure lisibilité
     const fontSize = 10;
     
-    // Espacement très généreux entre les lignes
-    const lineSpacing = 20;
+    // Espacement très généreux entre les lignes mais pas trop pour éviter les débordements
+    const lineSpacing = 18;
     
     // Tracer les lignes une par une pour les 2 colonnes
     const maxLines = Math.max(col1Dates.length, col2Dates.length);
@@ -332,12 +325,12 @@ export function generateInvoicePDF(
   doc.moveTo(50, totalLineY).lineTo(doc.page.width - 50, totalLineY).stroke();
   
   // ==== SECTION TOTAL ====
-  doc.moveDown(0.5); // Réduit encore plus l'espacement
+  doc.moveDown(0.8); // Plus d'espace avant le total
   doc.fontSize(11).font('Helvetica-Bold') // Police légèrement plus petite
     .fillColor(primaryColor)
     .text('TOTAL:', 70);
   doc.fillColor('black')
-    .text(formatCurrency(invoice.totalAmount), 130, doc.y - 12);
+    .text(formatCurrency(invoice.totalAmount), 190, doc.y - 12); // Déplacer le montant plus à droite pour qu'il ne soit pas coupé
   
   // ==== SECTION ATTENTION ====
   // Déterminer l'espacement en fonction du nombre de dates
@@ -349,12 +342,12 @@ export function generateInvoicePDF(
   // Format plus lisible avec une police légèrement plus grande
   doc.fontSize(9).font('Helvetica-Bold')
     .fillColor(primaryColor)
-    .text('ATTENTION:', 70);
+    .text('ATTENTION:', 70, null, {width: 100, align: 'left'}); // Utiliser width pour contrôler l'espace
     
   doc.fillColor('black').font('Helvetica')
     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 5);
   doc.moveDown(0.5); // Plus d'espace entre les points
-  doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
+  doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90, null, {width: 450}); // Limiter la largeur du texte
   
   doc.moveDown(0.5); // Plus d'espace avant le message de remerciement
   doc.text('Merci de votre compréhension', { align: 'center' });
