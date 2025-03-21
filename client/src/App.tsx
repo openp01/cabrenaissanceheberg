@@ -4,6 +4,7 @@ import { Navbar } from "@/components/ui/navbar"; // Importation de la barre de n
 import Home from "./pages/Home";
 import AppointmentList from "./pages/AppointmentList";
 import TherapistSchedule from "./pages/TherapistSchedule";
+import AllTherapistsSchedule from "./pages/AllTherapistsSchedule";
 import Invoices from "./pages/Invoices";
 import InvoiceTemplates from "./pages/InvoiceTemplates";
 import ElectronicSignatures from "./pages/ElectronicSignatures";
@@ -32,10 +33,15 @@ function Router() {
       <ProtectedRoute path="/" component={Home} />
       <ProtectedRoute path="/appointments" component={AppointmentList} />
       
-      {/* Route pour les thérapeutes et le personnel administratif */}
+      {/* Routes pour les thérapeutes et le personnel administratif */}
+      <ProtectedRoute 
+        path="/therapist-schedule" 
+        component={TherapistSchedule} 
+        roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
+      />
       <ProtectedRoute 
         path="/schedule" 
-        component={TherapistSchedule} 
+        component={AllTherapistsSchedule} 
         roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
       />
       

@@ -80,16 +80,28 @@ export function Navbar() {
             </Button>
           </Link>
           
-          <Link href="/schedule">
-            <Button
-              variant={isActive("/schedule") ? "default" : "secondary"}
-              className={`flex items-center font-bold ${isActive("/schedule") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
-              size="lg"
-            >
-              <ClipboardList className="mr-2 h-5 w-5" />
-              Planning
-            </Button>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={isActive("/schedule") || isActive("/therapist-schedule") ? "default" : "secondary"}
+                className={`flex items-center font-bold ${isActive("/schedule") || isActive("/therapist-schedule") ? "bg-primary text-white" : "bg-[#3fb549] text-white hover:bg-[#266d2c] hover:text-white"}`}
+                size="lg"
+              >
+                <ClipboardList className="mr-2 h-5 w-5" />
+                Planning
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setLocation("/schedule")}>
+                <Users className="mr-2 h-4 w-4" />
+                Planning commun
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation("/therapist-schedule")}>
+                <User className="mr-2 h-4 w-4" />
+                Planning par thérapeute
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Afficher ces liens uniquement pour le personnel administratif */}
           {(user.role === UserRole.ADMIN || user.role === UserRole.SECRETARIAT) && (
@@ -216,9 +228,14 @@ export function Navbar() {
                     <Calendar className="mr-2 h-4 w-4" />
                     Rendez-vous
                   </DropdownMenuItem>
+                  <DropdownMenuLabel>Planning</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => setLocation("/schedule")}>
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                    Planning
+                    <Users className="mr-2 h-4 w-4" />
+                    Planning commun
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/therapist-schedule")}>
+                    <User className="mr-2 h-4 w-4" />
+                    Planning par thérapeute
                   </DropdownMenuItem>
                   
                   {/* Options admin */}
