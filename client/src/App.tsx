@@ -44,11 +44,6 @@ function Router() {
         component={AllTherapistsSchedule} 
         roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
       />
-      <ProtectedRoute 
-        path="/all-therapists-schedule" 
-        component={AllTherapistsSchedule} 
-        roles={[UserRole.THERAPIST, UserRole.SECRETARIAT, UserRole.ADMIN]} 
-      />
       
       {/* Routes pour le personnel administratif uniquement */}
       <ProtectedRoute 
