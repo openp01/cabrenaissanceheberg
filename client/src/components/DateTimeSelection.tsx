@@ -658,11 +658,9 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
             recurringFrequency={recurringFrequency}
             recurringCount={recurringCount}
             recurringDates={recurringDates}
-            generateSingleInvoice={generateSingleInvoice}
             onRecurringChange={handleRecurringChange}
             onFrequencyChange={handleFrequencyChange}
             onCountChange={handleCountChange}
-            onGenerateSingleInvoiceChange={handleGenerateSingleInvoiceChange}
           />
           
           {/* Multiple Time Slots Options */}
