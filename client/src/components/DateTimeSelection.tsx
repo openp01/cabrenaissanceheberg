@@ -363,6 +363,12 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
     }
   };
   
+  // Fonction pour gérer le changement de l'option de facturation unique
+  const handleGenerateSingleInvoiceChange = (value: boolean) => {
+    setGenerateSingleInvoice(value);
+    updateFormData({ generateSingleInvoice: value });
+  };
+  
   const generateRecurringDates = (
     baseDate: Date, 
     time: string, 
@@ -652,9 +658,11 @@ export default function DateTimeSelection({ formData, updateFormData }: DateTime
             recurringFrequency={recurringFrequency}
             recurringCount={recurringCount}
             recurringDates={recurringDates}
+            generateSingleInvoice={generateSingleInvoice}
             onRecurringChange={handleRecurringChange}
             onFrequencyChange={handleFrequencyChange}
             onCountChange={handleCountChange}
+            onGenerateSingleInvoiceChange={handleGenerateSingleInvoiceChange}
           />
           
           {/* Multiple Time Slots Options */}
