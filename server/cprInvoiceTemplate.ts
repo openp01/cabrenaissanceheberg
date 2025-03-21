@@ -153,9 +153,6 @@ export function generateInvoicePDF(
   
   // Vérifier si c'est une facture pour des rendez-vous récurrents ou groupés
   if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
-    doc.fontSize(10).font('Helvetica-Bold')
-      .text(`SÉANCES MULTIPLES:`, { align: 'center' });
-    
     // Extraction des dates et formatage pour un affichage clair
     let dates: string[] = [];
     let datesText = '';
@@ -179,69 +176,86 @@ export function generateInvoicePDF(
         dates = datesText.split(',').map(date => date.trim());
       }
     }
+
+    // TOUJOURS AFFICHER TOUTES LES DATES INDIVIDUELLEMENT, MÊME SI AUCUNE DATE N'EST TROUVÉE DANS LES NOTES
     
-    // Si des dates ont été extraites, les afficher une par une avec des puces
-    if (dates.length > 0) {
-      doc.moveDown(0.5);
+    // Ajouter la date principale si aucune date n'est extraite des notes
+    if (dates.length === 0) {
+      dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
       
-      // Trier les dates si possible
-      try {
-        dates.sort((a, b) => {
-          // Essayer d'extraire et de comparer les dates
-          const dateA = new Date(a.split(' à ')[0]);
-          const dateB = new Date(b.split(' à ')[0]);
-          return dateA.getTime() - dateB.getTime();
-        });
-      } catch (e) {
-        // Ignorer les erreurs de tri, garder l'ordre original
+      // Essayer de déduire les autres dates si c'est une facture récurrente
+      if (invoice.notes.includes('récurrent')) {
+        // Extraire le nombre de séances et la fréquence
+        const countMatch = invoice.notes.match(/pour (\d+) séances/i);
+        const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
+        
+        if (countMatch && countMatch.length > 1 && frequencyMatch && frequencyMatch.length > 1) {
+          const count = parseInt(countMatch[1]);
+          const frequency = frequencyMatch[1];
+          
+          // Ajouter un avertissement indiquant que les dates sont approximatives
+          doc.fontSize(8).font('Helvetica-Oblique')
+            .fillColor('red')
+            .text('Attention: Les dates exactes n\'ont pas pu être extraites des notes. Dates approximatives:', { align: 'center' });
+          
+          doc.fillColor('black');
+        }
       }
+    }
+    
+    // Trier les dates si possible
+    try {
+      dates.sort((a, b) => {
+        // Essayer d'extraire et de comparer les dates
+        const dateA = new Date(a.split(' à ')[0]);
+        const dateB = new Date(b.split(' à ')[0]);
+        return dateA.getTime() - dateB.getTime();
+      });
+    } catch (e) {
+      // Ignorer les erreurs de tri, garder l'ordre original
+    }
+    
+    // ANNONCER CLAIREMENT QU'IL S'AGIT DE SÉANCES MULTIPLES
+    doc.fontSize(10).font('Helvetica-Bold')
+      .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
+    
+    doc.moveDown(0.5);
+    
+    // TOUJOURS AFFICHER TOUTES LES DATES, QUELLE QUE SOIT LA SITUATION
+    // Construire une mise en page en deux colonnes si plus de 5 dates
+    if (dates.length > 5) {
+      const leftColDates = dates.slice(0, Math.ceil(dates.length / 2));
+      const rightColDates = dates.slice(Math.ceil(dates.length / 2));
       
-      // Construire une mise en page en deux colonnes si plus de 5 dates
-      if (dates.length > 5) {
-        const leftColDates = dates.slice(0, Math.ceil(dates.length / 2));
-        const rightColDates = dates.slice(Math.ceil(dates.length / 2));
-        
-        // Position de départ pour les deux colonnes
-        const leftColX = 100;
-        const rightColX = 350;
-        let currentY = doc.y;
-        
-        // Tracer les lignes une par une
-        const maxLines = Math.max(leftColDates.length, rightColDates.length);
-        for (let i = 0; i < maxLines; i++) {
-          if (i < leftColDates.length) {
-            doc.fontSize(9).font('Helvetica')
-              .text(`• ${leftColDates[i]}`, leftColX, currentY);
-          }
-          
-          if (i < rightColDates.length) {
-            doc.fontSize(9).font('Helvetica')
-              .text(`• ${rightColDates[i]}`, rightColX, currentY);
-          }
-          
-          currentY += 20; // Espace entre les lignes
+      // Position de départ pour les deux colonnes
+      const leftColX = 100;
+      const rightColX = 350;
+      let currentY = doc.y;
+      
+      // Tracer les lignes une par une
+      const maxLines = Math.max(leftColDates.length, rightColDates.length);
+      for (let i = 0; i < maxLines; i++) {
+        if (i < leftColDates.length) {
+          doc.fontSize(9).font('Helvetica')
+            .text(`• ${leftColDates[i]}`, leftColX, currentY);
         }
         
-        // Mettre à jour la position Y du document
-        doc.y = currentY;
-      } else {
-        // Pour peu de dates, utiliser une seule colonne
-        dates.forEach(date => {
+        if (i < rightColDates.length) {
           doc.fontSize(9).font('Helvetica')
-            .text(`• ${date}`, { indent: 100 });
-        });
+            .text(`• ${rightColDates[i]}`, rightColX, currentY);
+        }
+        
+        currentY += 20; // Espace entre les lignes
       }
-    } else {
-      // Fallback si aucune date n'est extraite des notes
-      doc.moveDown(0.3);
-      doc.fontSize(10).font('Helvetica')
-        .text(`Incluant le rendez-vous principal du ${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, 
-          { align: 'center' });
       
-      // Ajouter les notes pour référence
-      doc.moveDown(0.3);
-      doc.fontSize(9).font('Helvetica-Oblique')
-        .text(`(Voir détails dans la section notes)`, { align: 'center' });
+      // Mettre à jour la position Y du document
+      doc.y = currentY;
+    } else {
+      // Pour peu de dates, utiliser une seule colonne au centre
+      dates.forEach(date => {
+        doc.fontSize(9).font('Helvetica')
+          .text(`• ${date}`, { indent: 150 });
+      });
     }
   } else {
     // Cas standard d'un seul rendez-vous
