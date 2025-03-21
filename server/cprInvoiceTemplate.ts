@@ -155,77 +155,70 @@ export function generateInvoicePDF(
   if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
     // Extraction des dates et formatage pour un affichage clair
     let dates: string[] = [];
-    let datesText = '';
     
-    if (invoice.notes.includes('Facture groupée')) {
+    // Pour les factures avec notes détaillées, extraire les dates directement des notes
+    if (invoice.notes.includes(':')) {
       // Pour les factures groupées, extraire les dates après le ":"
       const noteParts = invoice.notes.split(':');
       if (noteParts.length > 1) {
-        datesText = noteParts[1].trim();
+        const datesText = noteParts[1].trim();
         
         // Extraire chaque date individuelle
         dates = datesText.split(',').map(date => date.trim());
       }
-    } else {
-      // Pour les rendez-vous récurrents, essayer d'extraire les dates
-      const matches = invoice.notes.match(/dates?: (.*?)(?:\.|$)/i);
-      if (matches && matches.length > 1) {
-        datesText = matches[1].trim();
-        
-        // Extraire chaque date individuelle
-        dates = datesText.split(',').map(date => date.trim());
-      }
-    }
-
-    // TOUJOURS AFFICHER TOUTES LES DATES INDIVIDUELLEMENT, MÊME SI AUCUNE DATE N'EST TROUVÉE DANS LES NOTES
+    } 
     
-    // Ajouter la date principale si aucune date n'est extraite des notes
+    // Si aucune date n'est trouvée, utiliser la date principale
     if (dates.length === 0) {
       dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
-      
-      // Essayer de déduire les autres dates si c'est une facture récurrente
-      if (invoice.notes.includes('récurrent')) {
-        // Extraire le nombre de séances et la fréquence
-        const countMatch = invoice.notes.match(/pour (\d+) séances/i);
-        const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
-        
-        if (countMatch && countMatch.length > 1 && frequencyMatch && frequencyMatch.length > 1) {
-          const count = parseInt(countMatch[1]);
-          const frequency = frequencyMatch[1];
-          
-          // Ajouter un avertissement indiquant que les dates sont approximatives
-          doc.fontSize(8).font('Helvetica-Oblique')
-            .fillColor('red')
-            .text('Attention: Les dates exactes n\'ont pas pu être extraites des notes. Dates approximatives:', { align: 'center' });
-          
-          doc.fillColor('black');
-        }
-      }
     }
     
-    // Trier les dates si possible
+    // Trier les dates chronologiquement si possible
     try {
       dates.sort((a, b) => {
         // Essayer d'extraire et de comparer les dates
-        const dateA = new Date(a.split(' à ')[0]);
-        const dateB = new Date(b.split(' à ')[0]);
+        const aDatePart = a.split(' à ')[0];
+        const bDatePart = b.split(' à ')[0];
+        
+        // Format français: convertir "12 mars 2025" en Date
+        const parseDate = (dateStr: string) => {
+          const months = {
+            "janvier": 0, "février": 1, "mars": 2, "avril": 3, "mai": 4, "juin": 5,
+            "juillet": 6, "août": 7, "septembre": 8, "octobre": 9, "novembre": 10, "décembre": 11
+          };
+          
+          const parts = dateStr.split(' ');
+          if (parts.length === 3) {
+            const day = parseInt(parts[0]);
+            const month = months[parts[1] as keyof typeof months];
+            const year = parseInt(parts[2]);
+            
+            if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+              return new Date(year, month, day);
+            }
+          }
+          return new Date(0); // date invalide en cas d'erreur
+        };
+        
+        const dateA = parseDate(aDatePart);
+        const dateB = parseDate(bDatePart);
+        
         return dateA.getTime() - dateB.getTime();
       });
     } catch (e) {
+      console.error("Erreur lors du tri des dates:", e);
       // Ignorer les erreurs de tri, garder l'ordre original
     }
     
-    // ANNONCER CLAIREMENT QU'IL S'AGIT DE SÉANCES MULTIPLES
-    // Déplacé ici pour être plus visible en haut de la section
+    // METTRE EN ÉVIDENCE QU'IL S'AGIT DE SÉANCES MULTIPLES EN HAUT DE LA SECTION
     doc.fontSize(11).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
     doc.moveDown(0.3);
     
-    // OPTIMISÉ POUR TENIR SUR UNE SEULE PAGE
-    // Modifier l'affichage pour utiliser moins d'espace
-    // Toujours utiliser l'affichage en deux colonnes, quelle que soit la quantité de dates
-    const datesPerColumn = Math.ceil(dates.length / 3); // Divisé en 3 colonnes pour économiser de l'espace
+    // OPTIMISATION DE L'AFFICHAGE POUR TENIR SUR UNE SEULE PAGE
+    // Toujours utiliser l'affichage en 3 colonnes pour économiser de l'espace vertical
+    const datesPerColumn = Math.ceil(dates.length / 3);
     const col1Dates = dates.slice(0, datesPerColumn);
     const col2Dates = dates.slice(datesPerColumn, datesPerColumn * 2);
     const col3Dates = dates.slice(datesPerColumn * 2);
@@ -236,12 +229,14 @@ export function generateInvoicePDF(
     const col3X = 480;
     let currentY = doc.y;
     
-    // Ajuster la taille de la police pour économiser de l'espace
+    // Ajuster la taille de la police selon le nombre de dates
     const fontSize = dates.length > 9 ? 8 : 9;
     
-    // Tracer les lignes une par une avec espacement réduit
+    // Espacement réduit pour les factures avec beaucoup de dates
+    const lineSpacing = dates.length > 9 ? 15 : 18;
+    
+    // Tracer les lignes une par une
     const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length);
-    const lineSpacing = dates.length > 9 ? 15 : 18; // Espacement réduit pour plus de 9 dates
     
     for (let i = 0; i < maxLines; i++) {
       if (i < col1Dates.length) {
@@ -263,7 +258,7 @@ export function generateInvoicePDF(
     }
     
     // Mettre à jour la position Y du document
-    doc.y = currentY + 5; // Ajouter un peu d'espace après la liste
+    doc.y = currentY + 5;
   } else {
     // Cas standard d'un seul rendez-vous
     doc.fontSize(10).font('Helvetica')
@@ -335,16 +330,36 @@ export function generateInvoicePDF(
   if (invoice.notes) {
     doc.moveDown(0.5); // Réduit l'espacement
     
-    // Si la note est une note de facture groupée ou récurrente, on peut l'afficher de façon plus concise
-    // puisque les dates sont déjà affichées en haut du document
-    let displayNotes = invoice.notes;
+    // Complètement supprimer l'affichage des dates dans les notes car elles seront affichées
+    // uniquement dans la section "DATE(S) OU PERIODE CONCERNEE"
+    let displayNotes = "";
     
-    if (invoice.notes.includes('Facture groupée') || invoice.notes.includes('récurrent')) {
-      // Pour les factures groupées ou récurrentes, supprimer les détails des dates pour économiser de l'espace
-      // car ces informations sont déjà visibles dans la section des dates
-      displayNotes = displayNotes.replace(/dates?: .*?(?:\.|$)/i, '');
-      displayNotes = displayNotes.replace(/Facture groupée pour \d+ séances: .*/, 'Facture groupée pour plusieurs séances');
-      displayNotes = displayNotes.replace(/Rendez-vous récurrent \(\w+\) pour \d+ séances.*/, 'Rendez-vous récurrents');
+    if (invoice.notes.includes('Facture groupée')) {
+      // Extraire juste l'information sur le type de séances sans les dates
+      const countMatch = invoice.notes.match(/pour (\d+) séances/i);
+      const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
+      
+      displayNotes = `Facture groupée pour ${countMatch ? countMatch[1] : 'plusieurs'} séances`;
+      if (frequencyMatch && frequencyMatch[1]) {
+        displayNotes += ` (${frequencyMatch[1]})`;
+      }
+    } 
+    else if (invoice.notes.includes('récurrent')) {
+      // Extraire juste l'information sur le type de rendez-vous sans les dates
+      const countMatch = invoice.notes.match(/pour (\d+) séances/i);
+      const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
+      
+      displayNotes = `Rendez-vous récurrent`;
+      if (frequencyMatch && frequencyMatch[1]) {
+        displayNotes += ` (${frequencyMatch[1]})`;
+      }
+      if (countMatch && countMatch[1]) {
+        displayNotes += ` pour ${countMatch[1]} séances`;
+      }
+    }
+    else {
+      // Pour les autres notes sans dates, les afficher normalement
+      displayNotes = invoice.notes;
     }
     
     // Afficher les notes avec une taille de police réduite si elles sont longues
