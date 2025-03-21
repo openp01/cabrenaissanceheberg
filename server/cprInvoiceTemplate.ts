@@ -216,47 +216,54 @@ export function generateInvoicePDF(
     }
     
     // ANNONCER CLAIREMENT QU'IL S'AGIT DE SÉANCES MULTIPLES
-    doc.fontSize(10).font('Helvetica-Bold')
+    // Déplacé ici pour être plus visible en haut de la section
+    doc.fontSize(11).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
-    doc.moveDown(0.5);
+    doc.moveDown(0.3);
     
-    // TOUJOURS AFFICHER TOUTES LES DATES, QUELLE QUE SOIT LA SITUATION
-    // Construire une mise en page en deux colonnes si plus de 5 dates
-    if (dates.length > 5) {
-      const leftColDates = dates.slice(0, Math.ceil(dates.length / 2));
-      const rightColDates = dates.slice(Math.ceil(dates.length / 2));
-      
-      // Position de départ pour les deux colonnes
-      const leftColX = 100;
-      const rightColX = 350;
-      let currentY = doc.y;
-      
-      // Tracer les lignes une par une
-      const maxLines = Math.max(leftColDates.length, rightColDates.length);
-      for (let i = 0; i < maxLines; i++) {
-        if (i < leftColDates.length) {
-          doc.fontSize(9).font('Helvetica')
-            .text(`• ${leftColDates[i]}`, leftColX, currentY);
-        }
-        
-        if (i < rightColDates.length) {
-          doc.fontSize(9).font('Helvetica')
-            .text(`• ${rightColDates[i]}`, rightColX, currentY);
-        }
-        
-        currentY += 20; // Espace entre les lignes
+    // OPTIMISÉ POUR TENIR SUR UNE SEULE PAGE
+    // Modifier l'affichage pour utiliser moins d'espace
+    // Toujours utiliser l'affichage en deux colonnes, quelle que soit la quantité de dates
+    const datesPerColumn = Math.ceil(dates.length / 3); // Divisé en 3 colonnes pour économiser de l'espace
+    const col1Dates = dates.slice(0, datesPerColumn);
+    const col2Dates = dates.slice(datesPerColumn, datesPerColumn * 2);
+    const col3Dates = dates.slice(datesPerColumn * 2);
+    
+    // Position de départ pour les colonnes
+    const col1X = 60;
+    const col2X = 270;
+    const col3X = 480;
+    let currentY = doc.y;
+    
+    // Ajuster la taille de la police pour économiser de l'espace
+    const fontSize = dates.length > 9 ? 8 : 9;
+    
+    // Tracer les lignes une par une avec espacement réduit
+    const maxLines = Math.max(col1Dates.length, col2Dates.length, col3Dates.length);
+    const lineSpacing = dates.length > 9 ? 15 : 18; // Espacement réduit pour plus de 9 dates
+    
+    for (let i = 0; i < maxLines; i++) {
+      if (i < col1Dates.length) {
+        doc.fontSize(fontSize).font('Helvetica')
+          .text(`• ${col1Dates[i]}`, col1X, currentY, { width: 210 });
       }
       
-      // Mettre à jour la position Y du document
-      doc.y = currentY;
-    } else {
-      // Pour peu de dates, utiliser une seule colonne au centre
-      dates.forEach(date => {
-        doc.fontSize(9).font('Helvetica')
-          .text(`• ${date}`, { indent: 150 });
-      });
+      if (i < col2Dates.length) {
+        doc.fontSize(fontSize).font('Helvetica')
+          .text(`• ${col2Dates[i]}`, col2X, currentY, { width: 210 });
+      }
+      
+      if (i < col3Dates.length) {
+        doc.fontSize(fontSize).font('Helvetica')
+          .text(`• ${col3Dates[i]}`, col3X, currentY, { width: 210 });
+      }
+      
+      currentY += lineSpacing;
     }
+    
+    // Mettre à jour la position Y du document
+    doc.y = currentY + 5; // Ajouter un peu d'espace après la liste
   } else {
     // Cas standard d'un seul rendez-vous
     doc.fontSize(10).font('Helvetica')
@@ -324,24 +331,40 @@ export function generateInvoicePDF(
   const notesLineY = doc.y + 10;
   doc.moveTo(50, notesLineY).lineTo(doc.page.width - 50, notesLineY).stroke();
   
-  // Notes complémentaires si présentes
+  // Notes complémentaires si présentes - optimisé pour tenir sur une page
   if (invoice.notes) {
-    doc.moveDown(1);
+    doc.moveDown(0.5); // Réduit l'espacement
+    
+    // Si la note est une note de facture groupée ou récurrente, on peut l'afficher de façon plus concise
+    // puisque les dates sont déjà affichées en haut du document
+    let displayNotes = invoice.notes;
+    
+    if (invoice.notes.includes('Facture groupée') || invoice.notes.includes('récurrent')) {
+      // Pour les factures groupées ou récurrentes, supprimer les détails des dates pour économiser de l'espace
+      // car ces informations sont déjà visibles dans la section des dates
+      displayNotes = displayNotes.replace(/dates?: .*?(?:\.|$)/i, '');
+      displayNotes = displayNotes.replace(/Facture groupée pour \d+ séances: .*/, 'Facture groupée pour plusieurs séances');
+      displayNotes = displayNotes.replace(/Rendez-vous récurrent \(\w+\) pour \d+ séances.*/, 'Rendez-vous récurrents');
+    }
+    
+    // Afficher les notes avec une taille de police réduite si elles sont longues
+    const fontSize = displayNotes.length > 100 ? 9 : 10;
+    
     doc.fontSize(10).font('Helvetica-Bold')
-      .text('NOTE(S) COMPLEMENTAIRE(S):', 70);
-    doc.font('Helvetica')
-      .text(invoice.notes, 70, doc.y + 10, { width: pageWidth - 40 });
+      .text('NOTE(S):', 70);
+    doc.fontSize(fontSize).font('Helvetica')
+      .text(displayNotes, 70, doc.y + 5, { width: pageWidth - 40 });
   } else {
-    doc.moveDown(2);
+    doc.moveDown(1); // Réduit l'espacement quand il n'y a pas de notes
   }
   
   // Ligne avant le total
-  doc.moveDown(1);
+  doc.moveDown(0.5); // Réduit l'espacement
   const totalLineY = doc.y + 10;
   doc.moveTo(50, totalLineY).lineTo(doc.page.width - 50, totalLineY).stroke();
   
   // ==== SECTION TOTAL ====
-  doc.moveDown(2);
+  doc.moveDown(1); // Réduit l'espacement
   doc.fontSize(12).font('Helvetica-Bold')
     .fillColor(primaryColor)
     .text('TOTAL:', 70);
@@ -349,18 +372,43 @@ export function generateInvoicePDF(
     .text(formatCurrency(invoice.totalAmount), 130, doc.y - 14);
   
   // ==== SECTION ATTENTION ====
-  doc.moveDown(3);
-  doc.fontSize(10).font('Helvetica-Bold')
-    .fillColor(primaryColor)
-    .text('ATTENTION:', 70);
+  // Vérifier si on a beaucoup de dates (pour les factures avec beaucoup de rendez-vous)
+  // Si c'est le cas, optimiser davantage l'espace
+  const hasManyDates = invoice.notes && 
+    (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée')) &&
+    invoice.notes.split(',').length > 6;
     
-  doc.fillColor('black').font('Helvetica')
-    .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 10);
-  doc.moveDown(0.5);
-  doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
+  // Ajuster l'espacement en fonction du nombre de dates
+  doc.moveDown(hasManyDates ? 1 : 1.5);
   
-  doc.moveDown(1);
-  doc.text('Merci de votre compréhension', { align: 'center' });
+  // On réduit encore l'espace si on a beaucoup de dates
+  if (hasManyDates) {
+    // Afficher la section d'attention de manière plus compacte pour économiser de l'espace
+    doc.fontSize(9).font('Helvetica-Bold')
+      .fillColor(primaryColor)
+      .text('ATTENTION:', 70);
+      
+    doc.fillColor('black').font('Helvetica')
+      .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 5);
+    doc.moveDown(0.3);
+    doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
+    
+    doc.moveDown(0.5);
+    doc.text('Merci de votre compréhension', { align: 'center' });
+  } else {
+    // Format standard pour les factures avec peu de dates
+    doc.fontSize(10).font('Helvetica-Bold')
+      .fillColor(primaryColor)
+      .text('ATTENTION:', 70);
+      
+    doc.fillColor('black').font('Helvetica')
+      .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 7);
+    doc.moveDown(0.4);
+    doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
+    
+    doc.moveDown(0.7);
+    doc.text('Merci de votre compréhension', { align: 'center' });
+  }
   
   // ==== SIGNATURE ====
   // Signature électronique si disponible
@@ -386,7 +434,7 @@ export function generateInvoicePDF(
   // Informations légales
   doc.fontSize(8).text(
     'Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable',
-    50, footerY, { align: 'center', width: pageWidth }
+    20, footerY, { align: 'center', width: pageWidth }
   );
   
   // Finaliser le document
