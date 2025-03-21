@@ -653,7 +653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return `${formattedDate} à ${app.time}`;
             });
             
-            // Enrichir les notes avec les dates formatées
+            // Préparer les informations de facture, en séparant les notes des dates
             let notesBase = `Facture groupée pour ${activeAppointments.length} séances`;
             
             // Extraire la fréquence si elle existe
@@ -662,13 +662,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               notesBase += ` (${frequencyMatch[1]})`;
             }
             
-            // Ajouter les dates
-            notesBase += `: ${allAppointmentDates.join(", ")}`;
+            // Au lieu d'ajouter les dates dans les notes, les conserver séparément
+            // pour les passer au générateur de PDF
             
-            // Mettre à jour l'objet invoice avec les notes enrichies
+            // Mettre à jour l'objet invoice avec les notes (sans les dates) et dates séparées
             invoice = {
               ...invoice,
-              notes: notesBase
+              notes: notesBase,
+              // Ajouter un nouveau champ pour les dates de rendez-vous récurrents/groupés
+              appointmentDates: allAppointmentDates
             };
           }
         } catch (err) {

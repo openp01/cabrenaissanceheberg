@@ -151,27 +151,21 @@ export function generateInvoicePDF(
   
   doc.moveDown(0.5);
   
-  // Vérifier si c'est une facture pour des rendez-vous récurrents ou groupés
-  if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
-    // Extraction des dates et formatage pour un affichage clair
-    let dates: string[] = [];
-    
-    // Pour les factures avec notes détaillées, extraire les dates directement des notes
-    if (invoice.notes.includes(':')) {
-      // Pour les factures groupées, extraire les dates après le ":"
-      const noteParts = invoice.notes.split(':');
-      if (noteParts.length > 1) {
-        const datesText = noteParts[1].trim();
-        
-        // Extraire chaque date individuelle
-        dates = datesText.split(',').map(date => date.trim());
-      }
-    } 
-    
-    // Si aucune date n'est trouvée, utiliser la date principale
-    if (dates.length === 0) {
-      dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
-    }
+  // Préparer les dates à afficher
+  let dates: string[] = [];
+  
+  // Déterminer quelles dates afficher
+  if (invoice.appointmentDates && invoice.appointmentDates.length > 0) {
+    // Utiliser directement les dates fournies dans le champ appointmentDates
+    dates = [...invoice.appointmentDates];
+  } else if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
+    // Fallback: Si le champ appointmentDates n'est pas disponible mais les notes contiennent des indications
+    // de rendez-vous multiples, utiliser la date principale
+    dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
+  } else {
+    // Cas normal d'un rendez-vous unique
+    dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
+  }
     
     // Trier les dates chronologiquement si possible
     try {

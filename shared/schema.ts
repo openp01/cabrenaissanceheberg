@@ -201,6 +201,8 @@ export interface InvoiceWithDetails extends Invoice {
   therapistName: string;
   appointmentDate: string;
   appointmentTime: string;
+  // Champ optionnel pour les dates de rendez-vous multiples (récurrents ou groupés)
+  appointmentDates?: string[];
 }
 
 // Modèle pour les dépenses du cabinet
