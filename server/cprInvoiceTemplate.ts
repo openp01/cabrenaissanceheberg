@@ -97,8 +97,8 @@ export function generateInvoicePDF(
   
   // Logo à droite - Utilisation d'une image
   try {
-    // Ajout du logo à partir du fichier
-    doc.image('public/logos/renaissance-logo.jpg', doc.page.width - 240, 20, { 
+    // Ajout du logo avec fond vert à partir du fichier
+    doc.image('public/logos/renaissance-logo-rev.jpg', doc.page.width - 240, 20, { 
       width: 190, 
       align: 'right'
     });
