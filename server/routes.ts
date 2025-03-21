@@ -1490,37 +1490,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Footer minimal pour compléter le template
           const footerContent = `<div style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;"><p>Paiement à réception - TVA non applicable, article 293B du CGI</p></div>`;
           
-          // Log des paramètres pour dépannage
-          console.log("Paramètres pour l'insertion du template:");
-          console.log("- name:", templateName);
-          console.log("- description:", `Template importé depuis ${req.file.originalname}`);
-          console.log("- headerContent length:", headerContent.length);
-          console.log("- footerContent length:", footerContent.length);
+          console.log("Insertion du template PNG...");
           
-          // Utiliser schema.invoiceTemplates plutôt que SQL brut pour éviter les erreurs
-          const templates = schema.invoiceTemplates;
-          const result = await db.insert(templates).values({
-            name: templateName,
-            description: `Template importé depuis ${req.file.originalname}`,
-            header_content: headerContent,
-            footer_content: footerContent,
-            logo_url: null, // Pas besoin de logo séparé car l'image est déjà intégrée
-            primary_color: '#3fb549', // Couleur principale du cabinet
-            secondary_color: '#266d2c', // Couleur secondaire
-            font_family: 'Arial, sans-serif',
-            show_therapist_signature: true,
-            is_default: false,
-            created_at: new Date(),
-            updated_at: new Date()
-          }).returning();
+          // Utiliser la méthode d'insertion SQL qui fonctionne pour les autres templates
+          const resultSQL = await db.execute(
+            `INSERT INTO invoice_templates (
+              name, description, header_content, footer_content, logo_url, primary_color, 
+              secondary_color, font_family, show_therapist_signature, is_default, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            [
+              templateName,
+              `Template importé depuis ${req.file.originalname}`,
+              headerContent,
+              footerContent,
+              null, // Pas besoin de logo séparé car l'image est déjà intégrée
+              '#3fb549', // Couleur principale du cabinet
+              '#266d2c', // Couleur secondaire
+              'Arial, sans-serif',
+              true,
+              false,
+              new Date(),
+              new Date()
+            ]
+          );
           
-          console.log("Template PNG importé avec succès:", result[0]);
+          console.log("Template PNG importé avec succès");
           
           // Renvoyer le template créé
-          res.status(201).json(result[0]);
-        } catch (importError) {
-          console.error("Erreur détaillée lors de l'importation PNG:", importError);
-          res.status(500).json({ error: `Erreur lors de l'importation PNG: ${importError.message}` });
+          res.status(201).json(resultSQL.rows[0]);
+        } catch (error: any) {
+          console.error("Erreur détaillée lors de l'importation PNG:", error);
+          res.status(500).json({ error: `Erreur lors de l'importation PNG: ${error.message}` });
         }
       } else {
         return res.status(400).json({ error: 'Format de fichier non supporté. Utilisez JSON ou PNG.' });
