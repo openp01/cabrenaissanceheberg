@@ -127,6 +127,7 @@ export interface BookingFormData {
   therapistSchedules?: TherapistSchedule[]; // Horaires spécifiques pour chaque thérapeute
   currentTherapistIndex?: number; // Index du thérapeute actuellement sélectionné
   selectedTimeSlots?: Array<{date: string, time: string}>; // Créneaux horaires sélectionnés pour rendez-vous multiples
+  generateSingleInvoice?: boolean; // Option pour générer une seule facture pour tous les rendez-vous récurrents
 }
 
 // For displaying appointments with related data
