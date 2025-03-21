@@ -1,9 +1,12 @@
-import { useState } from 'react';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { HelpCircle } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 
 interface RecurringInvoiceOptionsProps {
   generateSingleInvoice: boolean;
@@ -15,41 +18,46 @@ export default function RecurringInvoiceOptions({
   onGenerateSingleInvoiceChange
 }: RecurringInvoiceOptionsProps) {
   return (
-    <Card className="mt-4">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-md flex items-center">
-          Options de facturation pour rendez-vous récurrents
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm">
-                <p>Choisissez comment facturer les rendez-vous récurrents.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">Options de facturation</CardTitle>
         <CardDescription>
-          Choisissez entre une facture unique groupée ou des factures individuelles pour chaque séance
+          Choisissez comment facturer les rendez-vous récurrents
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between space-x-2">
           <div className="space-y-0.5">
-            <Label htmlFor="invoice-type">Facture unique pour toutes les séances</Label>
+            <Label htmlFor="generate-single-invoice">
+              Facture unique pour tous les rendez-vous
+            </Label>
             <p className="text-sm text-muted-foreground">
-              {generateSingleInvoice
-                ? "Une seule facture sera générée pour toutes les séances, avec le détail de chaque date."
-                : "Une facture individuelle sera générée pour chaque séance."}
+              {generateSingleInvoice 
+                ? "Une seule facture sera générée pour tous les rendez-vous récurrents" 
+                : "Une facture individuelle sera générée pour chaque rendez-vous récurrent"}
             </p>
           </div>
           <Switch
-            id="invoice-type"
+            id="generate-single-invoice"
             checked={generateSingleInvoice}
             onCheckedChange={onGenerateSingleInvoiceChange}
           />
         </div>
+        {generateSingleInvoice ? (
+          <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md">
+            <p className="text-sm text-green-700 dark:text-green-300">
+              <strong>Facture unique</strong> : Une seule facture regroupant toutes les séances sera générée. 
+              Le montant total sera calculé automatiquement, et toutes les dates de rendez-vous seront indiquées dans la facture.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              <strong>Factures individuelles</strong> : Une facture distincte sera générée pour chaque rendez-vous. 
+              Cela peut être utile pour les remboursements individuels ou lorsque le patient souhaite des factures séparées.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
