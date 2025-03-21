@@ -150,8 +150,50 @@ export function generateInvoicePDF(
     .text('DATE(S) OU PERIODE CONCERNEE', { align: 'center' });
   
   doc.moveDown(0.5);
-  doc.fontSize(10).font('Helvetica')
-    .text(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, { align: 'center' });
+  
+  // Vérifier si c'est une facture pour des rendez-vous récurrents ou groupés
+  if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
+    // Extraction des dates depuis les notes si elles sont présentes
+    let datesText = '';
+    
+    if (invoice.notes.includes('Facture groupée')) {
+      // Pour les factures groupées, extraire les dates après le ":"
+      const noteParts = invoice.notes.split(':');
+      if (noteParts.length > 1) {
+        datesText = noteParts[1].trim();
+      }
+    } else {
+      // Pour les rendez-vous récurrents, essayer d'extraire les dates
+      const matches = invoice.notes.match(/dates?: (.*?)(?:\.|$)/i);
+      if (matches && matches.length > 1) {
+        datesText = matches[1].trim();
+      }
+    }
+    
+    // Si des dates ont été extraites, les afficher
+    if (datesText) {
+      doc.fontSize(10).font('Helvetica')
+        .text(`Séances multiples aux dates suivantes:`, { align: 'center' });
+      
+      doc.moveDown(0.3);
+      doc.fontSize(9).font('Helvetica')
+        .text(datesText, { align: 'center', width: pageWidth });
+    } else {
+      // Fallback si aucune date n'est extraite des notes
+      doc.fontSize(10).font('Helvetica')
+        .text(`Séances multiples incluant le ${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, 
+          { align: 'center' });
+      
+      // Ajouter les notes pour référence
+      doc.moveDown(0.3);
+      doc.fontSize(9).font('Helvetica-Oblique')
+        .text(`(Voir détails dans la section notes)`, { align: 'center' });
+    }
+  } else {
+    // Cas standard d'un seul rendez-vous
+    doc.fontSize(10).font('Helvetica')
+      .text(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, { align: 'center' });
+  }
   
   // Ligne horizontale
   doc.moveDown(1);
@@ -174,8 +216,39 @@ export function generateInvoicePDF(
   // Contenu de la ligne principale (séance)
   doc.moveDown(2);
   doc.fontSize(10).font('Helvetica');
-  doc.text('Séance d\'orthophonie', 70, doc.y);
-  doc.text('1', 340, doc.y - 12);
+  
+  // Déterminer le texte descriptif et le nombre de séances
+  let descriptionText = 'Séance d\'orthophonie';
+  let sessionCount = '1';
+  
+  // Si c'est une facture pour rendez-vous récurrents ou groupés
+  if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
+    descriptionText = 'Séances d\'orthophonie';
+    
+    // Essayer de déterminer le nombre de séances
+    let countMatch;
+    if (invoice.notes.includes('Facture groupée')) {
+      // Rechercher le nombre après "pour X séances"
+      countMatch = invoice.notes.match(/pour (\d+) séances/i);
+    } else {
+      // Rechercher le nombre de rendez-vous récurrents
+      countMatch = invoice.notes.match(/(\d+) rendez-vous/i);
+    }
+    
+    // Si un nombre est trouvé, l'utiliser
+    if (countMatch && countMatch.length > 1) {
+      sessionCount = countMatch[1];
+    } else {
+      // Approximation basée sur le montant (50€ par séance)
+      const estimatedCount = Math.round(parseFloat(invoice.amount.toString()) / 50);
+      if (estimatedCount > 1) {
+        sessionCount = estimatedCount.toString();
+      }
+    }
+  }
+  
+  doc.text(descriptionText, 70, doc.y);
+  doc.text(sessionCount, 340, doc.y - 12);
   doc.text(formatCurrency(invoice.amount), 460, doc.y - 12);
   
   // Ligne pour les notes
