@@ -80,10 +80,11 @@ export function generateInvoicePDF(
   const pageWidth = doc.page.width - 100; // Marge de 50 de chaque côté
   const primaryColor = '#3fb549'; // Vert principal
   const darkGreen = '#266d2c'; // Vert foncé
+  const darkerGreen = '#0d240f'; // Vert très foncé (plus foncé que le darkGreen)
   
   // ==== EN-TÊTE ====
   // Bande verte supérieure
-  doc.rect(0, 0, doc.page.width, 110).fill(primaryColor);
+  doc.rect(0, 0, doc.page.width, 110).fill(darkerGreen);
   
   // Informations de contact à gauche
   doc.font('Helvetica').fontSize(10).fillColor('white');
@@ -94,11 +95,21 @@ export function generateInvoicePDF(
   doc.text('1763 Avenue Cheikh A. DIOP', 50, 80);
   doc.text('DAKAR', 50, 95);
   
-  // Logo à droite - nous utilisons du texte stylisé pour simuler le logo
-  doc.fontSize(18).fillColor('white');
-  doc.text('La Renaissance', doc.page.width - 200, 40);
-  doc.fontSize(10);
-  doc.text('CABINET PARAMÉDICAL', doc.page.width - 200, 65);
+  // Logo à droite - Utilisation d'une image
+  try {
+    // Ajout du logo à partir du fichier
+    doc.image('public/logos/renaissance-logo.jpg', doc.page.width - 240, 20, { 
+      width: 190, 
+      align: 'right'
+    });
+  } catch (error) {
+    console.error("Erreur lors du chargement du logo:", error);
+    // Fallback au texte en cas d'erreur
+    doc.fontSize(18).fillColor('white');
+    doc.text('La Renaissance', doc.page.width - 200, 40);
+    doc.fontSize(10);
+    doc.text('CABINET PARAMÉDICAL', doc.page.width - 200, 65);
+  }
   
   // ==== SECTION NUMÉRO DE FACTURE ====
   doc.fillColor('black');
