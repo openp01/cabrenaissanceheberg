@@ -153,58 +153,59 @@ export function generateInvoicePDF(
   
   // Préparer les dates à afficher
   let dates: string[] = [];
+  let isMultipleAppointments = false;
   
   // Déterminer quelles dates afficher
   if (invoice.appointmentDates && invoice.appointmentDates.length > 0) {
     // Utiliser directement les dates fournies dans le champ appointmentDates
     dates = [...invoice.appointmentDates];
-  } else if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
-    // Fallback: Si le champ appointmentDates n'est pas disponible mais les notes contiennent des indications
-    // de rendez-vous multiples, utiliser la date principale
-    dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
+    isMultipleAppointments = dates.length > 1;
   } else {
-    // Cas normal d'un rendez-vous unique
+    // Cas standard d'un seul rendez-vous
     dates.push(`${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`);
+    isMultipleAppointments = false;
   }
-    
-    // Trier les dates chronologiquement si possible
-    try {
-      dates.sort((a, b) => {
-        // Essayer d'extraire et de comparer les dates
-        const aDatePart = a.split(' à ')[0];
-        const bDatePart = b.split(' à ')[0];
-        
-        // Format français: convertir "12 mars 2025" en Date
-        const parseDate = (dateStr: string) => {
-          const months = {
-            "janvier": 0, "février": 1, "mars": 2, "avril": 3, "mai": 4, "juin": 5,
-            "juillet": 6, "août": 7, "septembre": 8, "octobre": 9, "novembre": 10, "décembre": 11
-          };
-          
-          const parts = dateStr.split(' ');
-          if (parts.length === 3) {
-            const day = parseInt(parts[0]);
-            const month = months[parts[1] as keyof typeof months];
-            const year = parseInt(parts[2]);
-            
-            if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-              return new Date(year, month, day);
-            }
-          }
-          return new Date(0); // date invalide en cas d'erreur
+  
+  // Trier les dates chronologiquement si possible
+  try {
+    dates.sort((a, b) => {
+      // Essayer d'extraire et de comparer les dates
+      const aDatePart = a.split(' à ')[0];
+      const bDatePart = b.split(' à ')[0];
+      
+      // Format français: convertir "12 mars 2025" en Date
+      const parseDate = (dateStr: string) => {
+        const months = {
+          "janvier": 0, "février": 1, "mars": 2, "avril": 3, "mai": 4, "juin": 5,
+          "juillet": 6, "août": 7, "septembre": 8, "octobre": 9, "novembre": 10, "décembre": 11
         };
         
-        const dateA = parseDate(aDatePart);
-        const dateB = parseDate(bDatePart);
-        
-        return dateA.getTime() - dateB.getTime();
-      });
-    } catch (e) {
-      console.error("Erreur lors du tri des dates:", e);
-      // Ignorer les erreurs de tri, garder l'ordre original
-    }
-    
-    // METTRE EN ÉVIDENCE QU'IL S'AGIT DE SÉANCES MULTIPLES EN HAUT DE LA SECTION
+        const parts = dateStr.split(' ');
+        if (parts.length === 3) {
+          const day = parseInt(parts[0]);
+          const month = months[parts[1] as keyof typeof months];
+          const year = parseInt(parts[2]);
+          
+          if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+            return new Date(year, month, day);
+          }
+        }
+        return new Date(0); // date invalide en cas d'erreur
+      };
+      
+      const dateA = parseDate(aDatePart);
+      const dateB = parseDate(bDatePart);
+      
+      return dateA.getTime() - dateB.getTime();
+    });
+  } catch (e) {
+    console.error("Erreur lors du tri des dates:", e);
+    // Ignorer les erreurs de tri, garder l'ordre original
+  }
+  
+  // Afficher les dates selon qu'il s'agit d'un rendez-vous unique ou multiple
+  if (isMultipleAppointments) {
+    // SÉANCES MULTIPLES
     doc.fontSize(11).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
@@ -286,34 +287,14 @@ export function generateInvoicePDF(
   let sessionCount = '1';
   
   // Si c'est une facture pour rendez-vous récurrents ou groupés
-  if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
+  if (isMultipleAppointments) {
     descriptionText = 'Séances d\'orthophonie';
-    
-    // Essayer de déterminer le nombre de séances
-    let countMatch;
-    if (invoice.notes.includes('Facture groupée')) {
-      // Rechercher le nombre après "pour X séances"
-      countMatch = invoice.notes.match(/pour (\d+) séances/i);
-    } else {
-      // Rechercher le nombre de rendez-vous récurrents
-      countMatch = invoice.notes.match(/(\d+) rendez-vous/i);
-    }
-    
-    // Si un nombre est trouvé, l'utiliser
-    if (countMatch && countMatch.length > 1) {
-      sessionCount = countMatch[1];
-    } else {
-      // Approximation basée sur le montant (50€ par séance)
-      const estimatedCount = Math.round(parseFloat(invoice.amount.toString()) / 50);
-      if (estimatedCount > 1) {
-        sessionCount = estimatedCount.toString();
-      }
-    }
+    sessionCount = dates.length.toString();
   }
   
   doc.text(descriptionText, 70, doc.y);
   doc.text(sessionCount, 340, doc.y - 12);
-  doc.text(formatCurrency(invoice.amount), 460, doc.y - 12);
+  doc.text(formatCurrency(50), 460, doc.y - 12); // Prix unitaire fixe de 50€
   
   // Ligne pour les notes
   doc.moveDown(2);
@@ -324,31 +305,26 @@ export function generateInvoicePDF(
   if (invoice.notes) {
     doc.moveDown(0.5); // Réduit l'espacement
     
-    // Complètement supprimer l'affichage des dates dans les notes car elles seront affichées
+    // Complètement supprimer l'affichage des dates dans les notes car elles sont affichées
     // uniquement dans la section "DATE(S) OU PERIODE CONCERNEE"
     let displayNotes = "";
     
     if (invoice.notes.includes('Facture groupée')) {
       // Extraire juste l'information sur le type de séances sans les dates
-      const countMatch = invoice.notes.match(/pour (\d+) séances/i);
       const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
       
-      displayNotes = `Facture groupée pour ${countMatch ? countMatch[1] : 'plusieurs'} séances`;
+      displayNotes = `Facture groupée pour séances`;
       if (frequencyMatch && frequencyMatch[1]) {
         displayNotes += ` (${frequencyMatch[1]})`;
       }
     } 
     else if (invoice.notes.includes('récurrent')) {
       // Extraire juste l'information sur le type de rendez-vous sans les dates
-      const countMatch = invoice.notes.match(/pour (\d+) séances/i);
       const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
       
       displayNotes = `Rendez-vous récurrent`;
       if (frequencyMatch && frequencyMatch[1]) {
         displayNotes += ` (${frequencyMatch[1]})`;
-      }
-      if (countMatch && countMatch[1]) {
-        displayNotes += ` pour ${countMatch[1]} séances`;
       }
     }
     else {
@@ -383,9 +359,7 @@ export function generateInvoicePDF(
   // ==== SECTION ATTENTION ====
   // Vérifier si on a beaucoup de dates (pour les factures avec beaucoup de rendez-vous)
   // Si c'est le cas, optimiser davantage l'espace
-  const hasManyDates = invoice.notes && 
-    (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée')) &&
-    invoice.notes.split(',').length > 6;
+  const hasManyDates = dates.length > 6;
     
   // Ajuster l'espacement en fonction du nombre de dates
   doc.moveDown(hasManyDates ? 1 : 1.5);
