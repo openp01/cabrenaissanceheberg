@@ -137,9 +137,9 @@ export function generateInvoicePDF(
   doc.fontSize(10).font('Helvetica-Bold')
     .text('OBJET:', 50, 270);
   doc.font('Helvetica')
-    .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
+    .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.Nous restons à votre disposition pour toute information complémentaire.', 
       50, 290, { width: pageWidth });
-  doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
+  doc.text('', 
     50, 320, { width: pageWidth });
   
   // Ligne horizontale
@@ -149,7 +149,7 @@ export function generateInvoicePDF(
   doc.fontSize(12).font('Helvetica-Bold')
     .text('DATE(S) OU PERIODE CONCERNEE', { align: 'center' });
   
-  doc.moveDown(0.5);
+  doc.moveDown(1.5);
   
   // Préparer les dates à afficher
   let dates: string[] = [];
@@ -216,7 +216,7 @@ export function generateInvoicePDF(
     doc.fontSize(12).font('Helvetica-Bold')
       .text(`SÉANCES MULTIPLES (${dates.length})`, { align: 'center' });
     
-    doc.moveDown(0.7); // Encore plus d'espace
+    doc.moveDown(1.5); // Encore plus d'espace
     
     // Équilibre optimal entre espace et lisibilité
     // Utiliser 2 colonnes au lieu de 3 pour maximiser l'espacement horizontal
@@ -305,18 +305,38 @@ export function generateInvoicePDF(
   if (invoice.notes) {
     doc.moveDown(0.8); // Plus d'espace avant les notes
     
-    // Toujours conserver les notes originales mais supprimer les dates quand elles sont déjà affichées
+    // Extraire correctement les notes personnalisées dans le cas de factures groupées ou récurrentes
     let displayNotes = invoice.notes;
     
     if (invoice.notes.includes('Facture groupée pour séances') || invoice.notes.includes('Rendez-vous récurrent')) {
-      // Pour les notes auto-générées, simplifier en supprimant les dates
-      // mais préserver toute information supplémentaire
-      if (invoice.notes.includes('Facture groupée pour séances')) {
-        displayNotes = invoice.notes.split('\n')[0]; // Garder uniquement la première ligne
-      } 
-      else if (invoice.notes.includes('Rendez-vous récurrent')) {
-        displayNotes = invoice.notes.split('\n')[0]; // Garder uniquement la première ligne
+      // Vérifier s'il y a des notes additionnelles après la première ligne standard
+      const notesLines = invoice.notes.split('\n');
+      
+      // La première ligne est toujours le texte standard
+      let customNotes = notesLines[0];
+      
+      // S'il y a plus de 2 lignes, c'est qu'il y a des notes personnalisées
+      // (on saute la première ligne et les dates)
+      if (notesLines.length > 2) {
+        // Trouver l'index où commencent les notes personnalisées (après les dates)
+        let customNotesStartIndex = 1;
+        
+        // Ignorer les lignes qui contiennent des dates de rendez-vous
+        while (customNotesStartIndex < notesLines.length && 
+              (notesLines[customNotesStartIndex].includes('/202') || 
+               notesLines[customNotesStartIndex].trim() === '')) {
+          customNotesStartIndex++;
+        }
+        
+        // S'il reste des lignes qui ne sont pas des dates, ce sont des notes personnalisées
+        if (customNotesStartIndex < notesLines.length) {
+          // Ajouter un délimiteur visuel, puis les notes personnalisées
+          customNotes += "\n\nNotes additionnelles :\n" + 
+                        notesLines.slice(customNotesStartIndex).join('\n');
+        }
       }
+      
+      displayNotes = customNotes;
     }
     
     // Afficher les notes avec une taille de police plus lisible
@@ -334,7 +354,7 @@ export function generateInvoicePDF(
   doc.moveTo(50, totalLineY).lineTo(doc.page.width - 50, totalLineY).stroke();
   
   // ==== SECTION TOTAL ====
-  doc.moveDown(0.5); // Réduit encore plus l'espacement
+  doc.moveDown(0.5); // Réduit l'espacement pour optimiser la place
   doc.fontSize(11).font('Helvetica-Bold') // Police légèrement plus petite
     .fillColor(primaryColor)
     .text('TOTAL:', 70);
