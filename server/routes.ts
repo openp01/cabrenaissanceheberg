@@ -575,10 +575,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Récupérer la facture avec tous les détails nécessaires pour le PDF
       const invoicesWithDetails = await storage.getInvoices();
-      const invoice = invoicesWithDetails.find(inv => inv.id === id);
+      let invoice = invoicesWithDetails.find(inv => inv.id === id);
       
       if (!invoice) {
         return res.status(404).json({ error: "Facture non trouvée" });
+      }
+      
+      // Pour les factures de rendez-vous multiples, récupérer tous les rendez-vous associés
+      if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
+        console.log(`Facture ${invoice.invoiceNumber} identifiée comme ayant des séances multiples`);
+        
+        try {
+          // Récupérer le rendez-vous parent
+          const mainAppointment = await pool.query(
+            `SELECT * FROM appointments WHERE id = $1`,
+            [invoice.appointmentId]
+          );
+          
+          if (mainAppointment.rows.length > 0) {
+            const parentAppointmentId = mainAppointment.rows[0].parentappointmentid || mainAppointment.rows[0].id;
+            
+            // Requête pour récupérer tous les rendez-vous liés (parent + enfants)
+            const relatedAppointmentsQuery = `
+              SELECT a.id, a.date, a.time, a.status
+              FROM appointments a
+              WHERE a.id = $1 
+                 OR a.parentAppointmentId = $1 
+                 OR (a.parentAppointmentId IS NOT NULL AND a.parentAppointmentId = $2)
+              ORDER BY a.date, a.time
+            `;
+            
+            const relatedAppointmentsResult = await pool.query(
+              relatedAppointmentsQuery,
+              [invoice.appointmentId, parentAppointmentId]
+            );
+            
+            // Si des rendez-vous multiples ont été trouvés, formater leurs dates pour les notes
+            if (relatedAppointmentsResult.rows.length > 1) {
+              console.log(`Trouvé ${relatedAppointmentsResult.rows.length} rendez-vous liés pour la facture ${invoice.invoiceNumber}`);
+              
+              // Formater toutes les dates en français pour les inclure dans les notes
+              const allAppointmentDates = relatedAppointmentsResult.rows.map(app => {
+                if (app.status === 'cancelled') return null; // Ignorer les rendez-vous annulés
+                
+                // Convertir le format de date DD/MM/YYYY en objet Date
+                const [day, month, year] = app.date.split('/').map(n => parseInt(n));
+                const appDate = new Date(year, month - 1, day);
+                
+                // Formater en français
+                const formattedDate = appDate.toLocaleDateString('fr-FR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                });
+                
+                return `${formattedDate} à ${app.time}`;
+              }).filter(Boolean); // Filtrer les null (rendez-vous annulés)
+              
+              // Créer une version modifiée des notes avec toutes les dates explicites
+              let notesBase = invoice.notes;
+              
+              // S'assurer que les notes incluent toutes les dates
+              if (allAppointmentDates.length > 0) {
+                // Si les notes existent et contiennent déjà "Facture groupée pour X séances", conserver cette partie
+                if (notesBase && notesBase.includes("Facture groupée pour")) {
+                  // Extraire le nombre de séances et la fréquence s'ils existent
+                  const countMatch = notesBase.match(/pour (\d+) séances/i);
+                  const frequencyMatch = notesBase.match(/\((.*?)\)/i);
+                  
+                  // Construire la nouvelle entrée avec les informations originales
+                  notesBase = `Facture groupée pour ${allAppointmentDates.length} séances`;
+                  if (frequencyMatch && frequencyMatch[1]) {
+                    notesBase += ` (${frequencyMatch[1]})`;
+                  }
+                  notesBase += `: ${allAppointmentDates.join(", ")}`;
+                }
+                // Sinon, créer une nouvelle note complète
+                else {
+                  notesBase = `Facture groupée pour ${allAppointmentDates.length} séances: ${allAppointmentDates.join(", ")}`;
+                }
+                
+                // Mettre à jour l'objet invoice avec les notes enrichies
+                invoice = {
+                  ...invoice,
+                  notes: notesBase
+                };
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Erreur lors de la récupération des rendez-vous multiples:", err);
+          // Continuer avec les données de facture existantes
+        }
       }
       
       // Définir les en-têtes de réponse en fonction du mode (prévisualisation ou téléchargement)
