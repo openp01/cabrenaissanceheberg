@@ -18,10 +18,10 @@ import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { 
-  generateInvoicePDF,
   generateTherapistPaymentsPDF,
   generateExpensesPDF
 } from "./pdfGenerator";
+import { generateInvoicePDF } from "./cprInvoiceTemplate";
 import { sendInvoiceDownloadNotification } from "./emailService";
 import { setupAuth } from "./auth";
 import { 
@@ -597,7 +597,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Générer le PDF avec la signature administrative si c'est un téléchargement (pas une prévisualisation)
-      const pdfStream = await generateInvoicePDF(invoice, !isPreview);
+      // Récupérer la signature administrative si nécessaire
+      let adminSignature = undefined;
+      if (!isPreview) {
+        const signatures = await storage.getSignatures();
+        adminSignature = signatures.length > 0 ? signatures[0] : undefined;
+      }
+      
+      const pdfStream = generateInvoicePDF(invoice, adminSignature);
       pdfStream.pipe(res);
       
     } catch (error) {

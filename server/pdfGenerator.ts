@@ -10,7 +10,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { storage } from './storage';
-import { generateInvoicePDF as generateCPRInvoicePDF, formatInvoiceStatus } from './cprInvoiceTemplate';
+import { generateInvoicePDF as generateCPRInvoicePDF } from './cprInvoiceTemplate';
 
 /**
  * Formatte une date au format français
