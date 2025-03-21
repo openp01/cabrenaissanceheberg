@@ -6,7 +6,6 @@ import AppointmentList from "./pages/AppointmentList";
 import TherapistSchedule from "./pages/TherapistSchedule";
 import AllTherapistsSchedule from "./pages/AllTherapistsSchedule";
 import Invoices from "./pages/Invoices";
-import InvoiceTemplates from "./pages/InvoiceTemplates";
 import ElectronicSignatures from "./pages/ElectronicSignatures";
 import Expenses from "./pages/Expenses";
 import ExpenseForm from "./pages/ExpenseForm";
@@ -51,11 +50,7 @@ function Router() {
         component={Invoices} 
         roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
       />
-      <ProtectedRoute 
-        path="/invoice-templates" 
-        component={InvoiceTemplates} 
-        roles={[UserRole.SECRETARIAT, UserRole.ADMIN]} 
-      />
+
       <ProtectedRoute 
         path="/expenses" 
         component={Expenses} 

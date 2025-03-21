@@ -227,35 +227,7 @@ export default function Home() {
                 </CardFooter>
               </Card>
               
-              {/* Carte des modèles de factures */}
-              <Card className="overflow-hidden transition-all hover:shadow-lg">
-                <CardHeader className="bg-[#3fb549] text-white">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">Modèles de factures</CardTitle>
-                    <ScrollText className="h-8 w-8 text-white opacity-80" />
-                  </div>
-                  <CardDescription className="text-white opacity-90">
-                    Personnalisation des modèles
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Créez et modifiez les modèles de factures utilisés pour les documents clients.
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleNavigation("/invoice-templates")}
-                    variant="default"
-                  >
-                    <ScrollText className="h-4 w-4 mr-2" />
-                    Gérer les modèles
-                  </Button>
-                </CardFooter>
-              </Card>
+
               
               {/* Signatures Électroniques - visible uniquement pour les administrateurs */}
               {isAdmin && (
