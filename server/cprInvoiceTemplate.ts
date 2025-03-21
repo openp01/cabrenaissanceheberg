@@ -274,27 +274,27 @@ export function generateInvoicePDF(
       .text(formatDate(invoice.appointmentDate), { align: 'center' });
   }
   
-  // Ligne horizontale
-  doc.moveDown(1);
-  const lineY = doc.y + 10;
+  // Ligne horizontale - moins d'espace
+  doc.moveDown(0.5);
+  const lineY = doc.y + 5;
   doc.moveTo(50, lineY).lineTo(doc.page.width - 50, lineY).stroke();
   
   // ==== TABLEAU DES ACTES ====
-  doc.moveDown(2);
+  doc.moveDown(1); // Réduit l'espacement
   // En-têtes des colonnes
-  doc.fontSize(10).font('Helvetica-Bold');
+  doc.fontSize(9).font('Helvetica-Bold'); // Police plus petite
   doc.text('NATURE DES ACTES', 70, doc.y);
   doc.text('NOMBRE D\'ACTES', 300, doc.y - 12);
   doc.text('TARIF UNITAIRE', 450, doc.y - 12);
   
   // Ligne après les en-têtes
-  doc.moveDown(0.5);
-  const headerLineY = doc.y + 10;
+  doc.moveDown(0.3); // Espacement réduit
+  const headerLineY = doc.y + 5;
   doc.moveTo(50, headerLineY).lineTo(doc.page.width - 50, headerLineY).stroke();
   
   // Contenu de la ligne principale (séance)
-  doc.moveDown(2);
-  doc.fontSize(10).font('Helvetica');
+  doc.moveDown(1); // Espacement réduit
+  doc.fontSize(9).font('Helvetica'); // Police plus petite
   
   // Déterminer le texte descriptif et le nombre de séances
   let descriptionText = 'Séance d\'orthophonie';
@@ -311,64 +311,51 @@ export function generateInvoicePDF(
   doc.text(formatCurrency(50), 460, doc.y - 12); // Prix unitaire fixe de 50€
   
   // Ligne pour les notes
-  doc.moveDown(2);
-  const notesLineY = doc.y + 10;
+  doc.moveDown(1); // Espacement réduit
+  const notesLineY = doc.y + 5; // Moins de marge
   doc.moveTo(50, notesLineY).lineTo(doc.page.width - 50, notesLineY).stroke();
   
   // Notes complémentaires si présentes - optimisé pour tenir sur une page
   if (invoice.notes) {
-    doc.moveDown(0.5); // Réduit l'espacement
+    doc.moveDown(0.3); // Réduit encore plus l'espacement
     
-    // Complètement supprimer l'affichage des dates dans les notes car elles sont affichées
-    // uniquement dans la section "DATE(S) OU PERIODE CONCERNEE"
-    let displayNotes = "";
+    // Toujours conserver les notes originales mais supprimer les dates quand elles sont déjà affichées
+    let displayNotes = invoice.notes;
     
-    if (invoice.notes.includes('Facture groupée')) {
-      // Extraire juste l'information sur le type de séances sans les dates
-      const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
-      
-      displayNotes = `Facture groupée pour séances`;
-      if (frequencyMatch && frequencyMatch[1]) {
-        displayNotes += ` (${frequencyMatch[1]})`;
-      }
-    } 
-    else if (invoice.notes.includes('récurrent')) {
-      // Extraire juste l'information sur le type de rendez-vous sans les dates
-      const frequencyMatch = invoice.notes.match(/\((.*?)\)/i);
-      
-      displayNotes = `Rendez-vous récurrent`;
-      if (frequencyMatch && frequencyMatch[1]) {
-        displayNotes += ` (${frequencyMatch[1]})`;
+    if (invoice.notes.includes('Facture groupée pour séances') || invoice.notes.includes('Rendez-vous récurrent')) {
+      // Pour les notes auto-générées, simplifier en supprimant les dates
+      // mais préserver toute information supplémentaire
+      if (invoice.notes.includes('Facture groupée pour séances')) {
+        displayNotes = invoice.notes.split('\n')[0]; // Garder uniquement la première ligne
+      } 
+      else if (invoice.notes.includes('Rendez-vous récurrent')) {
+        displayNotes = invoice.notes.split('\n')[0]; // Garder uniquement la première ligne
       }
     }
-    else {
-      // Pour les autres notes sans dates, les afficher normalement
-      displayNotes = invoice.notes;
-    }
     
-    // Afficher les notes avec une taille de police réduite si elles sont longues
-    const fontSize = displayNotes.length > 100 ? 9 : 10;
+    // Afficher les notes avec une taille de police réduite
+    const fontSize = 8; // Réduire encore plus la taille pour économiser de l'espace
     
-    doc.fontSize(10).font('Helvetica-Bold')
+    doc.fontSize(9).font('Helvetica-Bold')
       .text('NOTE(S):', 70);
     doc.fontSize(fontSize).font('Helvetica')
-      .text(displayNotes, 70, doc.y + 5, { width: pageWidth - 40 });
+      .text(displayNotes, 70, doc.y + 3, { width: pageWidth - 140 });
   } else {
-    doc.moveDown(1); // Réduit l'espacement quand il n'y a pas de notes
+    doc.moveDown(0.5); // Réduit l'espacement quand il n'y a pas de notes
   }
   
   // Ligne avant le total
-  doc.moveDown(0.5); // Réduit l'espacement
-  const totalLineY = doc.y + 10;
+  doc.moveDown(0.3); // Réduit encore plus l'espacement
+  const totalLineY = doc.y + 5;
   doc.moveTo(50, totalLineY).lineTo(doc.page.width - 50, totalLineY).stroke();
   
   // ==== SECTION TOTAL ====
-  doc.moveDown(1); // Réduit l'espacement
-  doc.fontSize(12).font('Helvetica-Bold')
+  doc.moveDown(0.5); // Réduit encore plus l'espacement
+  doc.fontSize(11).font('Helvetica-Bold') // Police légèrement plus petite
     .fillColor(primaryColor)
     .text('TOTAL:', 70);
   doc.fillColor('black')
-    .text(formatCurrency(invoice.totalAmount), 130, doc.y - 14);
+    .text(formatCurrency(invoice.totalAmount), 130, doc.y - 12);
   
   // ==== SECTION ATTENTION ====
   // Vérifier si on a beaucoup de dates (pour les factures avec beaucoup de rendez-vous)
@@ -376,60 +363,44 @@ export function generateInvoicePDF(
   const hasManyDates = dates.length > 6;
     
   // Ajuster l'espacement en fonction du nombre de dates
-  doc.moveDown(hasManyDates ? 1 : 1.5);
+  doc.moveDown(0.5); // Toujours utiliser un petit espacement
   
-  // On réduit encore l'espace si on a beaucoup de dates
-  if (hasManyDates) {
-    // Afficher la section d'attention de manière plus compacte pour économiser de l'espace
-    doc.fontSize(9).font('Helvetica-Bold')
-      .fillColor(primaryColor)
-      .text('ATTENTION:', 70);
-      
-    doc.fillColor('black').font('Helvetica')
-      .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 5);
-    doc.moveDown(0.3);
-    doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
+  // Format très compact pour économiser l'espace quels que soient le nombre de dates
+  doc.fontSize(8).font('Helvetica-Bold')
+    .fillColor(primaryColor)
+    .text('ATTENTION:', 70);
     
-    doc.moveDown(0.5);
-    doc.text('Merci de votre compréhension', { align: 'center' });
-  } else {
-    // Format standard pour les factures avec peu de dates
-    doc.fontSize(10).font('Helvetica-Bold')
-      .fillColor(primaryColor)
-      .text('ATTENTION:', 70);
-      
-    doc.fillColor('black').font('Helvetica')
-      .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 7);
-    doc.moveDown(0.4);
-    doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
-    
-    doc.moveDown(0.7);
-    doc.text('Merci de votre compréhension', { align: 'center' });
-  }
+  doc.fillColor('black').font('Helvetica')
+    .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 3);
+  doc.moveDown(0.2);
+  doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90);
+  
+  doc.moveDown(0.3);
+  doc.text('Merci de votre compréhension', { align: 'center' });
   
   // ==== SIGNATURE ====
   // Signature électronique si disponible
   if (adminSignature?.signatureData) {
-    // Ajouter la signature
+    // Ajouter la signature (plus petite et plus proche du texte)
     doc.image(Buffer.from(adminSignature.signatureData.replace(/^data:image\/\w+;base64,/, ''), 'base64'), 
-      doc.page.width - 180, doc.y + 20, { width: 120 });
+      doc.page.width - 170, doc.y + 10, { width: 100 });
       
-    // Tampon "PAYÉ" si la facture est marquée comme payée et qu'un tampon est disponible
+    // Tampon "PAYÉ" si la facture est marquée comme payée et qu'un tampon est disponible (plus petit)
     if (invoice.status.toLowerCase() === 'payée' && adminSignature.paidStampData) {
       doc.image(Buffer.from(adminSignature.paidStampData.replace(/^data:image\/\w+;base64,/, ''), 'base64'),
-        100, doc.y + 20, { width: 120 });
+        100, doc.y + 10, { width: 100 });
     }
   }
   
   // ==== PIED DE PAGE ====
-  // Position Y pour le pied de page (en bas de la page)
-  const footerY = doc.page.height - 50;
+  // Position Y pour le pied de page (plus haut dans la page)
+  const footerY = doc.page.height - 30;
   
   // Ligne horizontale pour séparer le pied de page
-  doc.moveTo(50, footerY - 10).lineTo(doc.page.width - 50, footerY - 10).stroke();
+  doc.moveTo(50, footerY - 5).lineTo(doc.page.width - 50, footerY - 5).stroke();
   
-  // Informations légales
-  doc.fontSize(8).text(
+  // Informations légales (police plus petite)
+  doc.fontSize(7).text(
     'Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable',
     20, footerY, { align: 'center', width: pageWidth }
   );
