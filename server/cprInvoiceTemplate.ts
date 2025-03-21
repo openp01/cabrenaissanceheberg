@@ -80,11 +80,11 @@ export function generateInvoicePDF(
   const pageWidth = doc.page.width - 100; // Marge de 50 de chaque côté
   const primaryColor = '#3fb549'; // Vert principal
   const darkGreen = '#266d2c'; // Vert foncé
-  const darkerGreen = '#0d240f'; // Vert très foncé (plus foncé que le darkGreen)
+  const headerGreen = '#266d2c'; // Vert moyen pour l'en-tête (comme dans la capture d'écran)
   
   // ==== EN-TÊTE ====
   // Bande verte supérieure
-  doc.rect(0, 0, doc.page.width, 110).fill(darkerGreen);
+  doc.rect(0, 0, doc.page.width, 110).fill(headerGreen);
   
   // Informations de contact à gauche
   doc.font('Helvetica').fontSize(10).fillColor('white');
@@ -95,11 +95,12 @@ export function generateInvoicePDF(
   doc.text('1763 Avenue Cheikh A. DIOP', 50, 80);
   doc.text('DAKAR', 50, 95);
   
-  // Logo à droite - Utilisation d'une image
+  // Logo à droite - Utilisation d'une image avec taille réduite
   try {
     // Ajout du logo avec fond vert à partir du fichier
-    doc.image('public/logos/renaissance-logo-rev.jpg', doc.page.width - 240, 20, { 
-      width: 190, 
+    // Réduire la taille du logo et l'aligner correctement pour qu'il ne déborde pas
+    doc.image('public/logos/renaissance-logo-rev.jpg', doc.page.width - 220, 20, { 
+      width: 140, // Taille réduite
       align: 'right'
     });
   } catch (error) {
