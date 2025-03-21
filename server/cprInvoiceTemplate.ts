@@ -137,13 +137,11 @@ export function generateInvoicePDF(
   doc.fontSize(10).font('Helvetica-Bold')
     .text('OBJET:', 50, 270);
   doc.font('Helvetica')
-    .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée.', 
+    .text('Facture relative aux prestations paramédicales réalisées par le Cabinet Paramédical de la Renaissance pour la période concernée. Nous restons à votre disposition pour toute information complémentaire.', 
       50, 290, { width: pageWidth });
-  doc.text('Nous restons à votre disposition pour toute information complémentaire.', 
-    50, 320, { width: pageWidth });
   
   // Ligne horizontale
-  doc.moveTo(50, 350).lineTo(doc.page.width - 50, 350).stroke();
+  doc.moveTo(100, 450).lineTo(doc.page.width - 100, 350).stroke();
   
   // ==== SECTION PÉRIODE CONCERNÉE ====
   doc.fontSize(12).font('Helvetica-Bold')
