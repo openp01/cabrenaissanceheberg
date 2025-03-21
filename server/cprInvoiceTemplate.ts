@@ -342,12 +342,12 @@ export function generateInvoicePDF(
   // Format plus lisible avec une police légèrement plus grande
   doc.fontSize(9).font('Helvetica-Bold')
     .fillColor(primaryColor)
-    .text('ATTENTION:', 70, null, {width: 100, align: 'left'}); // Utiliser width pour contrôler l'espace
+    .text('ATTENTION:', 70, undefined, {width: 100, align: 'left'}); // Utiliser width pour contrôler l'espace
     
   doc.fillColor('black').font('Helvetica')
     .text('• Tout rendez-vous non annulé ou annulé moins de 24h à l\'avance est dû.', 90, doc.y + 5);
   doc.moveDown(0.5); // Plus d'espace entre les points
-  doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90, null, {width: 450}); // Limiter la largeur du texte
+  doc.text('• Après trois paiements non réalisés ou en retard, le cabinet se réserve le droit d\'interrompre le suivi.', 90, undefined, {width: 450}); // Limiter la largeur du texte
   
   doc.moveDown(0.5); // Plus d'espace avant le message de remerciement
   doc.text('Merci de votre compréhension', { align: 'center' });
@@ -378,6 +378,23 @@ export function generateInvoicePDF(
     'Cabinet paramédical de la renaissance SUARL - NINEA : 007795305 - Registre de Commerce : SN DKR 2020 B5204 - TVA non applicable',
     20, footerY, { align: 'center', width: pageWidth }
   );
+  
+  // Vérifier si le document a plus d'une page et restreindre à une seule page si nécessaire
+  const pageCount = doc.bufferedPageRange().count;
+  if (pageCount > 1) {
+    // Si le document a plus d'une page, on va redimensionner le contenu pour qu'il tienne sur une seule page
+    console.log(`La facture ${invoice.invoiceNumber} génère ${pageCount} pages, forçage à une seule page`);
+    
+    // Accéder à la première page et la conserver uniquement
+    const pagesRange = doc.bufferedPageRange();
+    for (let i = 1; i < pagesRange.count; i++) {
+      doc.switchToPage(i);
+      doc.text(''); // Page vide
+    }
+    
+    // Revenir à la première page
+    doc.switchToPage(0);
+  }
   
   // Finaliser le document
   doc.end();
