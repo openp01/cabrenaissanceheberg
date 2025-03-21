@@ -225,10 +225,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : 1;
         const invoiceNumber = `F-${today.getFullYear()}-${String(lastInvoiceId).padStart(4, '0')}`;
         
-        // Construire les notes avec les détails de tous les créneaux
-        const appointmentDetails = appointments.map(app => 
-          `${app.date} à ${app.time}`
-        ).join(", ");
+        // Formater les détails de tous les créneaux pour une meilleure lisibilité sur la facture
+        // Format: "JJ mois AAAA à HH:MM" pour chaque date
+        const appointmentDetails = appointments.map(app => {
+          // Formater la date en français
+          const appDate = new Date(app.date);
+          const formattedDate = appDate.toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          });
+          
+          return `${formattedDate} à ${app.time}`;
+        }).join(", ");
         
         const invoice = await storage.createInvoice({
           invoiceNumber,

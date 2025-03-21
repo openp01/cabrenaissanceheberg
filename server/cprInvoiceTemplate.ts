@@ -153,7 +153,11 @@ export function generateInvoicePDF(
   
   // Vérifier si c'est une facture pour des rendez-vous récurrents ou groupés
   if (invoice.notes && (invoice.notes.includes('récurrent') || invoice.notes.includes('Facture groupée'))) {
-    // Extraction des dates depuis les notes si elles sont présentes
+    doc.fontSize(10).font('Helvetica-Bold')
+      .text(`SÉANCES MULTIPLES:`, { align: 'center' });
+    
+    // Extraction des dates et formatage pour un affichage clair
+    let dates: string[] = [];
     let datesText = '';
     
     if (invoice.notes.includes('Facture groupée')) {
@@ -161,27 +165,77 @@ export function generateInvoicePDF(
       const noteParts = invoice.notes.split(':');
       if (noteParts.length > 1) {
         datesText = noteParts[1].trim();
+        
+        // Extraire chaque date individuelle
+        dates = datesText.split(',').map(date => date.trim());
       }
     } else {
       // Pour les rendez-vous récurrents, essayer d'extraire les dates
       const matches = invoice.notes.match(/dates?: (.*?)(?:\.|$)/i);
       if (matches && matches.length > 1) {
         datesText = matches[1].trim();
+        
+        // Extraire chaque date individuelle
+        dates = datesText.split(',').map(date => date.trim());
       }
     }
     
-    // Si des dates ont été extraites, les afficher
-    if (datesText) {
-      doc.fontSize(10).font('Helvetica')
-        .text(`Séances multiples aux dates suivantes:`, { align: 'center' });
+    // Si des dates ont été extraites, les afficher une par une avec des puces
+    if (dates.length > 0) {
+      doc.moveDown(0.5);
       
-      doc.moveDown(0.3);
-      doc.fontSize(9).font('Helvetica')
-        .text(datesText, { align: 'center', width: pageWidth });
+      // Trier les dates si possible
+      try {
+        dates.sort((a, b) => {
+          // Essayer d'extraire et de comparer les dates
+          const dateA = new Date(a.split(' à ')[0]);
+          const dateB = new Date(b.split(' à ')[0]);
+          return dateA.getTime() - dateB.getTime();
+        });
+      } catch (e) {
+        // Ignorer les erreurs de tri, garder l'ordre original
+      }
+      
+      // Construire une mise en page en deux colonnes si plus de 5 dates
+      if (dates.length > 5) {
+        const leftColDates = dates.slice(0, Math.ceil(dates.length / 2));
+        const rightColDates = dates.slice(Math.ceil(dates.length / 2));
+        
+        // Position de départ pour les deux colonnes
+        const leftColX = 100;
+        const rightColX = 350;
+        let currentY = doc.y;
+        
+        // Tracer les lignes une par une
+        const maxLines = Math.max(leftColDates.length, rightColDates.length);
+        for (let i = 0; i < maxLines; i++) {
+          if (i < leftColDates.length) {
+            doc.fontSize(9).font('Helvetica')
+              .text(`• ${leftColDates[i]}`, leftColX, currentY);
+          }
+          
+          if (i < rightColDates.length) {
+            doc.fontSize(9).font('Helvetica')
+              .text(`• ${rightColDates[i]}`, rightColX, currentY);
+          }
+          
+          currentY += 20; // Espace entre les lignes
+        }
+        
+        // Mettre à jour la position Y du document
+        doc.y = currentY;
+      } else {
+        // Pour peu de dates, utiliser une seule colonne
+        dates.forEach(date => {
+          doc.fontSize(9).font('Helvetica')
+            .text(`• ${date}`, { indent: 100 });
+        });
+      }
     } else {
       // Fallback si aucune date n'est extraite des notes
+      doc.moveDown(0.3);
       doc.fontSize(10).font('Helvetica')
-        .text(`Séances multiples incluant le ${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, 
+        .text(`Incluant le rendez-vous principal du ${formatDate(invoice.appointmentDate)} à ${invoice.appointmentTime}`, 
           { align: 'center' });
       
       // Ajouter les notes pour référence

@@ -684,9 +684,22 @@ export class PgStorage implements IStorage {
     
     // Mettre à jour la facture du premier rendez-vous pour indiquer qu'elle couvre plusieurs séances
     if (firstInvoice) {
+      // Collecter toutes les dates pour les inclure dans la note de facture
+      const allFormattedDates = recurringDates.map(rd => {
+        // Formater la date en français
+        const [day, month, year] = rd.date.split('/').map(n => parseInt(n));
+        const date = new Date(year, month - 1, day);
+        const formattedDate = date.toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+        return `${formattedDate} à ${rd.time}`;
+      }).join(", ");
+      
       const totalAmount = (parseFloat(firstInvoice.amount) * count).toFixed(2);
       await this.updateInvoice(firstInvoice.id, {
-        notes: `Facture groupée pour ${count} séances thérapeutiques (${frequency})`,
+        notes: `Facture groupée pour ${count} séances thérapeutiques (${frequency}): ${allFormattedDates}`,
         amount: (parseFloat(firstInvoice.amount) * count).toString(),
         totalAmount: totalAmount
       });
