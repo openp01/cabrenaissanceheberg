@@ -345,7 +345,6 @@ export function generateInvoicePDF(
   if (invoice.notes) {
     // Filtrer les notes pour ne pas afficher les informations de dates qui sont déjà affichées dans la section DATE(S)
     let filteredNotes = invoice.notes;
-    let shouldDisplayNotes = true;
     
     // Supprimer les mentions de dates pour les factures groupées ou récurrentes
     if (invoice.notes.includes('Facture groupée') || invoice.notes.includes('récurrent')) {
@@ -358,20 +357,18 @@ export function generateInvoicePDF(
       // Enlever également toute mention de dates après "dates:"
       filteredNotes = filteredNotes.replace(/dates?: (.*?)(?:\.|$)/i, '');
       
-      // Vérifier si les notes sont maintenant vides
-      shouldDisplayNotes = filteredNotes.trim().length > 0;
+      // Si la note est maintenant vide ou ne contient que des espaces, ne rien afficher
+      if (!filteredNotes.trim()) {
+        doc.moveDown(2);
+        return;
+      }
     }
     
-    // Afficher les notes seulement si elles contiennent du texte après filtrage
-    if (shouldDisplayNotes) {
-      doc.moveDown(1);
-      doc.fontSize(10).font('Helvetica-Bold')
-        .text('NOTE(S) COMPLEMENTAIRE(S):', 70);
-      doc.font('Helvetica')
-        .text(filteredNotes, 70, doc.y + 10, { width: pageWidth - 40 });
-    } else {
-      doc.moveDown(2);
-    }
+    doc.moveDown(1);
+    doc.fontSize(10).font('Helvetica-Bold')
+      .text('NOTE(S) COMPLEMENTAIRE(S):', 70);
+    doc.font('Helvetica')
+      .text(filteredNotes, 70, doc.y + 10, { width: pageWidth - 40 });
   } else {
     doc.moveDown(2);
   }
