@@ -127,6 +127,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route pour mettre à jour un thérapeute
+  app.patch("/api/therapists/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID de thérapeute invalide" });
+      }
+      
+      // Vérifier si l'utilisateur est autorisé (admin, secrétariat ou le thérapeute lui-même)
+      const authenticatedReq = req as AuthenticatedRequest;
+      if (authenticatedReq.user) {
+        if (
+          authenticatedReq.user.role !== UserRole.ADMIN && 
+          authenticatedReq.user.role !== UserRole.SECRETARIAT &&
+          !(authenticatedReq.user.role === UserRole.THERAPIST && authenticatedReq.user.therapistId === id)
+        ) {
+          return res.status(403).json({ error: "Vous n'êtes pas autorisé à modifier ce thérapeute" });
+        }
+      }
+      
+      // Récupérer le thérapeute existant
+      const existingTherapist = await storage.getTherapist(id);
+      if (!existingTherapist) {
+        return res.status(404).json({ error: "Thérapeute non trouvé" });
+      }
+      
+      // Si la requête inclut une mise à jour de couleur
+      if (req.body.color) {
+        // Vérifier que la couleur est un code hexadécimal valide
+        const colorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+        if (!colorRegex.test(req.body.color)) {
+          return res.status(400).json({ error: "Format de couleur invalide. Utilisez un code hexadécimal (#RRGGBB)" });
+        }
+        
+        // Mettre à jour la couleur du thérapeute
+        const updatedTherapist = await db.update(therapists)
+          .set({ color: req.body.color })
+          .where(eq(therapists.id, id))
+          .returning()
+          .execute();
+        
+        return res.json(updatedTherapist[0]);
+      }
+      
+      res.status(400).json({ error: "Aucune modification spécifiée" });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du thérapeute:", error);
+      res.status(500).json({ error: "Erreur lors de la mise à jour du thérapeute" });
+    }
+  });
+
   // Appointment routes
   app.get("/api/appointments", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {

@@ -1,479 +1,212 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { 
-  format, parse, addDays, addMonths, subMonths, 
-  startOfWeek, eachDayOfInterval, endOfWeek, isSameDay, 
-  startOfMonth, endOfMonth, getMonth, getYear 
-} from "date-fns";
+import { format, startOfWeek, addDays, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Appointment, AppointmentWithDetails, Therapist, UserRole } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/hooks/use-auth";
+import { AppointmentWithDetails, Therapist } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ArrowLeft, ArrowRight, Calendar } from "lucide-react";
+
+// Couleurs prédéfinies pour les thérapeutes
+const DEFAULT_COLORS = [
+  "#FF5252", // Rouge
+  "#4CAF50", // Vert
+  "#2196F3", // Bleu
+  "#FF9800", // Orange
+  "#9C27B0", // Violet
+  "#00BCD4", // Cyan
+  "#607D8B", // Bleu gris
+  "#FF4081", // Rose
+  "#009688", // Teal
+  "#FFC107", // Jaune
+  "#795548"  // Marron
+];
+
+// Heures de travail au cabinet
+const WORK_HOURS = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
 export default function AllTherapistsSchedule() {
-  const [location, setLocation] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [weekDates, setWeekDates] = useState<Date[]>([]);
-  const [monthDates, setMonthDates] = useState<Date[]>([]);
-  const [viewMode, setViewMode] = useState<"week" | "month">("week");
-  const { toast } = useToast();
-  
-  // Obtenir les informations de l'utilisateur connecté
-  const { user } = useAuth();
-  
-  // Time slots
-  const timeSlots = [
-    "9:00", "9:30", "10:00", "10:30", "11:00", "11:30", 
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
-  ];
 
-  // Week days in French
-  const weekDaysFull = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
-
-  // Fetch therapists
-  const { data: therapists, isLoading: isLoadingTherapists } = useQuery<Therapist[]>({
+  // Récupération des thérapeutes
+  const { data: therapists } = useQuery({
     queryKey: ['/api/therapists'],
+    select: (data) => data as Therapist[]
   });
 
-  // Fetch all appointments
-  const { data: appointments, isLoading: isLoadingAppointments } = useQuery<AppointmentWithDetails[]>({
+  // Récupération des rendez-vous
+  const { data: appointments } = useQuery({
     queryKey: ['/api/appointments'],
+    select: (data) => data as AppointmentWithDetails[]
   });
 
-  // Couleurs pour chaque thérapeute (palette verte)
-  const therapistColors = useMemo(() => {
-    const baseColors = [
-      "#3fb549", // Vert principal
-      "#266d2c", // Vert foncé
-      "#8cd392", // Vert clair
-      "#0d240f", // Vert très foncé
-      "#60c268", // Vert moyen
-      "#a3dca8", // Vert très clair
-      "#1e5923", // Vert foncé alternatif
-      "#4bc555", // Vert vif
-    ];
-    
-    const colors: Record<number, string> = {};
-    
-    if (therapists) {
-      therapists.forEach((therapist, index) => {
-        colors[therapist.id] = baseColors[index % baseColors.length];
-      });
-    }
-    
-    return colors;
-  }, [therapists]);
-
+  // Initialisation des dates de la semaine
   useEffect(() => {
-    // Mettre à jour les dates de la semaine
-    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-    const days = eachDayOfInterval({ start, end });
-    setWeekDates(days);
-
-    // Mettre à jour les dates du mois
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    let firstDay = startOfWeek(monthStart, { weekStartsOn: 1 });
-    
-    // Si le premier jour du mois est déjà un lundi, on prend la semaine précédente pour avoir un calendrier plus complet
-    if (firstDay.getTime() === monthStart.getTime()) {
-      firstDay = addDays(firstDay, -7);
-    }
-    
-    // On s'assure d'avoir 6 semaines pour un affichage uniforme
-    const lastDay = addDays(endOfWeek(monthEnd, { weekStartsOn: 1 }), 7);
-    const monthDays = eachDayOfInterval({ start: firstDay, end: lastDay });
-    setMonthDates(monthDays);
+    const startDate = startOfWeek(currentDate, { weekStartsOn: 1 }); // Commence le lundi
+    const dates = Array.from({ length: 6 }, (_, i) => addDays(startDate, i)); // Du lundi au samedi
+    setWeekDates(dates);
   }, [currentDate]);
 
-  // Navigation par semaine
-  const handlePrevWeek = () => {
-    setCurrentDate(addDays(currentDate, -7));
+  // Navigation dans les semaines
+  const goToPreviousWeek = () => {
+    setCurrentDate(prevDate => addDays(prevDate, -7));
   };
 
-  const handleNextWeek = () => {
-    setCurrentDate(addDays(currentDate, 7));
-  };
-  
-  // Navigation par mois
-  const handlePrevMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
-  };
-  
-  const handleNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
-  };
-  
-  // Changer le mode d'affichage (semaine ou mois)
-  const handleViewModeChange = (mode: "week" | "month") => {
-    setViewMode(mode);
+  const goToNextWeek = () => {
+    setCurrentDate(prevDate => addDays(prevDate, 7));
   };
 
-  const handleNewAppointment = () => {
-    setLocation("/");
+  const goToCurrentWeek = () => {
+    setCurrentDate(new Date());
   };
 
-  const handleViewAppointments = () => {
-    setLocation("/appointments");
-  };
-
-  const handleViewTherapistSchedule = () => {
-    setLocation("/therapist-schedule");
-  };
-
-  // Obtenir tous les rendez-vous pour une date et heure spécifiques
+  // Récupérer les rendez-vous pour un créneau horaire donné
   const getAppointmentsForTimeSlot = (date: Date, time: string) => {
     if (!appointments) return [];
     
-    const formattedDate = format(date, 'dd/MM/yyyy');
-    
-    return appointments.filter(app => 
-      app.date === formattedDate && 
-      app.time === time
+    const dateString = format(date, 'yyyy-MM-dd');
+    return appointments.filter(appointment => 
+      appointment.date === dateString && 
+      appointment.time === time
     );
   };
 
-  // Générer une légende des thérapeutes avec leurs couleurs associées
-  const renderTherapistLegend = () => {
-    if (!therapists || therapists.length === 0) return null;
+  // Obtenir la couleur à utiliser pour un thérapeute
+  const getTherapistColor = (therapistId: number): string => {
+    if (!therapists) return DEFAULT_COLORS[0];
     
-    return (
-      <div className="flex flex-wrap gap-2 mb-4 mt-2">
-        {therapists.map(therapist => (
-          <Badge 
-            key={therapist.id}
-            className="text-white"
-            style={{ backgroundColor: therapistColors[therapist.id] }}
-          >
-            {therapist.name}
-          </Badge>
-        ))}
-      </div>
-    );
+    const therapist = therapists.find(t => t.id === therapistId);
+    if (!therapist || !therapist.color) {
+      // Si pas de couleur attribuée, utiliser une couleur par défaut en fonction de l'ID
+      return DEFAULT_COLORS[(therapistId - 1) % DEFAULT_COLORS.length];
+    }
+    
+    return therapist.color;
   };
 
   return (
-    <>
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Cabinet Paramédical de la Renaissance</h1>
-            <div className="flex space-x-2">
-              <button 
-                onClick={handleNewAppointment}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <span className="material-icons mr-2 text-sm">add</span>
-                Nouveau rendez-vous
-              </button>
-              <button 
-                onClick={handleViewTherapistSchedule}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <span className="material-icons mr-2 text-sm">person</span>
-                Vue par thérapeute
-              </button>
-              <button 
-                onClick={handleViewAppointments}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <span className="material-icons mr-2 text-sm">calendar_today</span>
-                Liste des rendez-vous
-              </button>
-            </div>
-          </div>
+    <div className="container py-8">
+      <h1 className="text-3xl font-bold mb-6">Planning commun des thérapeutes</h1>
+      
+      {/* Navigation des semaines */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <Button variant="outline" onClick={goToPreviousWeek}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Semaine précédente
+          </Button>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-grow">
-        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <div className="flex justify-between items-center flex-wrap">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Planning complet du cabinet (tous les thérapeutes)
-                </h2>
-              </div>
-              {renderTherapistLegend()}
-            </div>
+        
+        <div className="text-xl font-medium">
+          {weekDates.length > 0 && (
+            <>
+              {format(weekDates[0], "d MMMM", { locale: fr })} - {format(weekDates[weekDates.length - 1], "d MMMM yyyy", { locale: fr })}
+            </>
+          )}
+        </div>
+        
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={goToCurrentWeek}>
+            <Calendar className="mr-2 h-4 w-4" />
+            Aujourd'hui
+          </Button>
+          <Button variant="outline" onClick={goToNextWeek}>
+            Semaine suivante
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      
+      {/* Légende des thérapeutes */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h3 className="text-lg font-medium mb-3">Thérapeutes</h3>
+        <div className="flex flex-wrap gap-3">
+          {therapists?.map((therapist) => (
+            <Badge 
+              key={therapist.id} 
+              style={{ 
+                backgroundColor: getTherapistColor(therapist.id),
+                color: 'white'
+              }}
+              className="text-sm py-1 px-3"
+            >
+              {therapist.name}
+            </Badge>
+          ))}
+        </div>
+      </div>
+      
+      {/* Grille de planning */}
+      <div className="grid grid-cols-7 gap-2">
+        {/* En-tête des heures */}
+        <div className="col-span-1">
+          <Card className="h-20 flex items-center justify-center bg-gray-100">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-semibold text-center">Horaires</CardTitle>
+            </CardHeader>
+          </Card>
+          
+          {WORK_HOURS.map((hour) => (
+            <Card key={hour} className="h-16 flex items-center justify-center">
+              <CardContent className="p-2 text-center">
+                {hour}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        {/* Colonnes des jours */}
+        {weekDates.map((date) => (
+          <div key={date.toString()} className="col-span-1">
+            {/* En-tête du jour */}
+            <Card className={`h-20 flex flex-col items-center justify-center ${isToday(date) ? 'bg-blue-100' : 'bg-gray-50'}`}>
+              <CardHeader className="p-4">
+                <CardTitle className="text-sm font-semibold text-center">
+                  {format(date, "EEEE", { locale: fr })}
+                </CardTitle>
+                <p className={`text-center text-sm mt-1 ${isToday(date) ? 'font-bold' : ''}`}>
+                  {format(date, "d MMM", { locale: fr })}
+                </p>
+              </CardHeader>
+            </Card>
             
-            <div className="px-4 py-5 sm:p-6">
-              {/* View mode selector */}
-              <div className="mb-6">
-                <Tabs value={viewMode} onValueChange={(value) => handleViewModeChange(value as "week" | "month")}>
-                  <TabsList className="grid grid-cols-2 w-[400px]">
-                    <TabsTrigger value="week" className="flex items-center">
-                      <span className="material-icons mr-2 text-sm">view_week</span>
-                      Vue Semaine
-                    </TabsTrigger>
-                    <TabsTrigger value="month" className="flex items-center">
-                      <span className="material-icons mr-2 text-sm">calendar_month</span>
-                      Vue Mois
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  {/* Vue Semaine */}
-                  <TabsContent value="week">
-                    {/* Calendar Navigation - Week View */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h4 className="text-lg font-medium text-gray-900">
-                          Semaine du {format(weekDates[0] || new Date(), 'dd MMMM', { locale: fr })}
-                          {' au '}
-                          {format(weekDates[6] || new Date(), 'dd MMMM yyyy', { locale: fr })}
-                        </h4>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button 
-                          className="p-2 rounded-full hover:bg-gray-100" 
-                          onClick={handlePrevWeek}
-                        >
-                          <span className="material-icons">chevron_left</span>
-                        </button>
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentDate(new Date())}
-                          className="mx-1"
-                        >
-                          Aujourd'hui
-                        </Button>
-                        <button 
-                          className="p-2 rounded-full hover:bg-gray-100"
-                          onClick={handleNextWeek}
-                        >
-                          <span className="material-icons">chevron_right</span>
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Weekly Calendar */}
-                    {isLoadingAppointments || isLoadingTherapists ? (
-                      <div className="space-y-4">
-                        <Skeleton className="h-[600px] w-full" />
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Heures
-                              </th>
-                              {weekDates.map((date, index) => (
-                                <th 
-                                  key={index} 
-                                  scope="col" 
-                                  className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                  style={{ minWidth: '100px' }}
-                                >
-                                  <div>{weekDaysFull[index]}</div>
-                                  <div className="text-sm mt-1">{format(date, 'dd/MM', { locale: fr })}</div>
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {timeSlots.map((time, timeIndex) => (
-                              <tr key={timeIndex} className={timeIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {time}
-                                </td>
-                                {weekDates.map((date, dateIndex) => {
-                                  const slotAppointments = getAppointmentsForTimeSlot(date, time);
-                                  
-                                  return (
-                                    <td 
-                                      key={dateIndex} 
-                                      className="px-2 py-2 whitespace-nowrap text-xs border-l"
-                                    >
-                                      <div className="flex flex-col space-y-1">
-                                        {slotAppointments.length > 0 ? (
-                                          slotAppointments.map(appointment => (
-                                            <TooltipProvider key={appointment.id}>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <div 
-                                                    className="text-white p-1 rounded text-center overflow-hidden text-ellipsis"
-                                                    style={{ backgroundColor: therapistColors[appointment.therapistId] }}
-                                                  >
-                                                    <div className="font-medium truncate">{appointment.patientName}</div>
-                                                  </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  <div>
-                                                    <div><strong>Patient:</strong> {appointment.patientName}</div>
-                                                    <div><strong>Thérapeute:</strong> {appointment.therapistName}</div>
-                                                    <div><strong>Date:</strong> {appointment.date}</div>
-                                                    <div><strong>Heure:</strong> {appointment.time}</div>
-                                                  </div>
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          ))
-                                        ) : (
-                                          <div className="h-6"></div>
-                                        )}
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  {/* Vue Mois */}
-                  <TabsContent value="month">
-                    {/* Calendar Navigation - Month View */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h4 className="text-lg font-medium text-gray-900">
-                          {format(currentDate, 'MMMM yyyy', { locale: fr }).charAt(0).toUpperCase() + 
-                          format(currentDate, 'MMMM yyyy', { locale: fr }).slice(1)}
-                        </h4>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button 
-                          className="p-2 rounded-full hover:bg-gray-100" 
-                          onClick={handlePrevMonth}
-                        >
-                          <span className="material-icons">chevron_left</span>
-                        </button>
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentDate(new Date())}
-                          className="mx-1"
-                        >
-                          Aujourd'hui
-                        </Button>
-                        <button 
-                          className="p-2 rounded-full hover:bg-gray-100"
-                          onClick={handleNextMonth}
-                        >
-                          <span className="material-icons">chevron_right</span>
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Monthly Calendar */}
-                    {isLoadingAppointments || isLoadingTherapists ? (
-                      <div className="space-y-4">
-                        <Skeleton className="h-[600px] w-full" />
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <div className="grid grid-cols-7 gap-px bg-gray-200">
-                          {/* Calendar header - Jours de la semaine */}
-                          {weekDaysFull.map((day, i) => (
-                            <div key={i} className="bg-gray-50 p-2 text-center">
-                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">{day}</div>
+            {/* Créneaux horaires */}
+            {WORK_HOURS.map((hour) => {
+              const appointmentsForSlot = getAppointmentsForTimeSlot(date, hour);
+              
+              return (
+                <Card key={`${date.toString()}-${hour}`} className="h-16 relative overflow-hidden">
+                  <CardContent className="p-0 h-full">
+                    <div className="h-full border border-gray-100 p-1">
+                      {appointmentsForSlot.length > 0 ? (
+                        <div className="flex flex-col space-y-1 h-full">
+                          {appointmentsForSlot.map((appointment) => (
+                            <div 
+                              key={appointment.id}
+                              className="text-xs truncate px-1 py-0.5 rounded-sm text-white font-medium"
+                              style={{ 
+                                backgroundColor: getTherapistColor(appointment.therapistId),
+                                maxHeight: `${90 / appointmentsForSlot.length}%`
+                              }}
+                              title={`${appointment.patientName} - ${appointment.therapistName}`}
+                            >
+                              {appointment.patientName}
                             </div>
                           ))}
-                          
-                          {/* Calendar body - Jours du mois */}
-                          {monthDates.map((date, i) => {
-                            const isOtherMonth = getMonth(date) !== getMonth(currentDate);
-                            const isToday = isSameDay(date, new Date());
-                            
-                            // Récupérer tous les rendez-vous pour cette date
-                            const dateAppointments = !appointments ? [] : appointments.filter(app => {
-                              const [day, month, year] = app.date.split('/').map(Number);
-                              const appDate = new Date(year, month - 1, day);
-                              return isSameDay(appDate, date);
-                            });
-                            
-                            // Grouper les RDV par thérapeute pour cette date
-                            const therapistAppointments: Record<number, number> = {};
-                            dateAppointments.forEach(app => {
-                              therapistAppointments[app.therapistId] = (therapistAppointments[app.therapistId] || 0) + 1;
-                            });
-                            
-                            return (
-                              <div 
-                                key={i} 
-                                className={`
-                                  bg-white min-h-[100px] p-1 border-b border-r
-                                  ${isOtherMonth ? 'bg-gray-50 text-gray-400' : ''}
-                                  ${isToday ? 'bg-blue-50' : ''}
-                                `}
-                              >
-                                <div className="flex justify-between items-start">
-                                  <span className={`text-sm ${isToday ? 'font-bold text-blue-600' : ''}`}>
-                                    {format(date, 'd')}
-                                  </span>
-                                </div>
-                                
-                                {/* Rendez-vous du jour */}
-                                <div className="mt-1 space-y-1">
-                                  {Object.entries(therapistAppointments).map(([therapistId, count]) => {
-                                    const therapist = therapists?.find(t => t.id === Number(therapistId));
-                                    if (!therapist) return null;
-                                    
-                                    return (
-                                      <TooltipProvider key={therapistId}>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div 
-                                              className="text-white text-xs p-1 rounded text-center"
-                                              style={{ backgroundColor: therapistColors[Number(therapistId)] }}
-                                            >
-                                              <div className="font-medium truncate">
-                                                {therapist.name}: {count} RDV
-                                              </div>
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <div>
-                                              <strong>{therapist.name}</strong>: {count} rendez-vous
-                                              <ul className="mt-1">
-                                                {dateAppointments
-                                                  .filter(app => app.therapistId === Number(therapistId))
-                                                  .map(app => (
-                                                    <li key={app.id} className="text-xs">
-                                                      {app.time} - {app.patientName}
-                                                    </li>
-                                                  ))
-                                                }
-                                              </ul>
-                                            </div>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
                         </div>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
+                      ) : (
+                        <div className="h-full w-full"></div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </div>
-      </main>
-    </>
+        ))}
+      </div>
+    </div>
   );
 }
