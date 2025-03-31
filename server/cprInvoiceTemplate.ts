@@ -99,8 +99,8 @@ export function generateInvoicePDF(
   try {
     // Ajout du logo avec fond vert à partir du fichier
     // Réduire la taille du logo et l'aligner correctement pour qu'il ne déborde pas
-    doc.image('public/logos/renaissance-logo-rev.jpg', doc.page.width - 220, 20, { 
-      width: 140, // Taille réduite
+    doc.image('public/logos/renaissance-logo-rev.jpg', doc.page.width - 180, 10, { 
+      width: 100, // Taille réduite
       align: 'right'
     });
   } catch (error) {
