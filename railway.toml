@@ -1,3 +1,4 @@
+# Configuration pour Railway deployment
 [build]
 builder = "nixpacks"
 buildCommand = "npm run build"
